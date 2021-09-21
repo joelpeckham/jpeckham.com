@@ -28,15 +28,15 @@ jobs:
     - run: npm run build --if-present
     - name: Create SSH key
       run: |
-        mkdir -p ~/.ssh/
-        echo "$SSH_PRIVATE_KEY" > ../private.key
-        sudo chmod 600 ../private.key
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       shell: bash
       env:
         SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
         SSH_KEY_PATH: ${{ github.workspace }}/../private.key
       #Run scp to transfer build files to joel@jpeckham.com:/var/www/jpeckham.com/html/
     - run: |
-        scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/build joel@jpeckham.com:/var/www/jpeckham.com/html/
+        rsync -rav --delete build joel@jpeckham.com:/var/www/jpeckham.com/html/
         
         
