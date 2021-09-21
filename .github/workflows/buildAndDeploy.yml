@@ -27,16 +27,16 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - name: Create SSH key
-        run: |
-          mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" > ../private.key
-          sudo chmod 600 ../private.key
-        shell: bash
-        env:
-          SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
-          SSH_KEY_PATH: ${{ github.workspace }}/../private.key
-        #Run scp to transfer build files to joel@jpeckham.com:/var/www/jpeckham.com/html/
-        run: |
-          scp -i ${{env.SSH_KEY_PATH}} -o StrictHostKeyChecking=no -r ${{ github.workspace }}/build joel@jpeckham.com:/var/www/jpeckham.com/html/
-          
+      run: |
+        mkdir -p ~/.ssh/
+        echo "$SSH_PRIVATE_KEY" > ../private.key
+        sudo chmod 600 ../private.key
+      shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
+        SSH_KEY_PATH: ${{ github.workspace }}/../private.key
+      #Run scp to transfer build files to joel@jpeckham.com:/var/www/jpeckham.com/html/
+      run: |
+        scp -i ${{env.SSH_KEY_PATH}} -o StrictHostKeyChecking=no -r ${{ github.workspace }}/build joel@jpeckham.com:/var/www/jpeckham.com/html/
+        
         
