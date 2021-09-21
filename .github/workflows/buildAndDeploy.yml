@@ -37,6 +37,7 @@ jobs:
         SSH_KEY_PATH: ${{ github.workspace }}/../private.key
       #Run scp to transfer build files to joel@jpeckham.com:/var/www/jpeckham.com/html/
     - run: |
-        rsync -rav --delete build joel@jpeckham.com:/var/www/jpeckham.com/html/
+        ls build
+        scp -r build/* joel@jpeckham.com:/var/www/jpeckham.com/html/
         
         
