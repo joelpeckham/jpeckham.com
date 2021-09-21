@@ -26,6 +26,8 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: npm run build --if-present
-    - run: echo "$SUPER_SECRET" | ssh joel@jpeckham.com
+    - name: Deploy to Onyx]
       with: # Set the secret as an input
         super_secret: ${{ secrets.ONYX_DEPLOY }}
+      run: |
+      echo "$SUPER_SECRET" | ssh joel@jpeckham.com
