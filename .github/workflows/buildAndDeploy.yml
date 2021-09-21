@@ -37,6 +37,6 @@ jobs:
         SSH_KEY_PATH: ${{ github.workspace }}/../private.key
       #Run scp to transfer build files to joel@jpeckham.com:/var/www/jpeckham.com/html/
     - run: |
-        scp -i ${{env.SSH_KEY_PATH}} -r ${{ github.workspace }}/build joel@jpeckham.com:/var/www/jpeckham.com/html/
+        scp -i $SSH_KEY_PATH -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r ${{ github.workspace }}/build joel@jpeckham.com:/var/www/jpeckham.com/html/
         
         
