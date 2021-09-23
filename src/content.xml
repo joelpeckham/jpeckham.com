@@ -1,0 +1,38 @@
+<menu>
+    <title>Joel Peckham</title>
+    <link link="joelpeckham.github.com">Resumé</link>
+</menu>
+<header>
+    <title>Hi, I'm Joel!</title>
+    <subtitle>I'm a software developer.</subtitle>
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <hstack>
+        <cta link="joelpeckham.github.com">Github</cta>
+        <cta link="joelpeckham.github.com">Resumé</cta>
+        <cta link="joelpeckham.github.com">Instagram</cta>
+    </hstack>
+</header>
+<section id="projects">
+    <title>Latest Projects</title>
+    <carousel>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ocean Monitor</title>
+            <paragraph>A web application that monitors the ocean and alerts the user when it's too dangerous to swim.</paragraph>
+            <caption>March 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>aihuffpo.com</title>
+            <paragraph>A website that uses machine learning to re-write huffington post's content.</paragraph>
+            <caption>February 2020</caption>
+        </card>
+    </carousel>
+</section>
+<section id="skills"></section>
