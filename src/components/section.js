@@ -11,5 +11,5 @@ exports.section = (el) => {
             childString += components[child.name](child);
         }
     });
-    return `<section ${attrString}>${childString}</section>`;
+    return `<section ${attrString}>\n${childString}</section>\n`;
 }

@@ -1,21 +1,25 @@
 const fs = require('fs');
 const cheerio = require('cheerio');
 const components = require('./components');
-const format = require('xml-formatter');
+const prettifyHTML = require('html-prettify');
 
-const $ = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
+const contentxml = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
 
 outputHTML = ""
-$.root().children().each((i, el) => {
+contentxml.root().children().each((i, el) => {
     if (typeof(components[el.name]) == 'function') {
         outputHTML += components[el.name](el);
     }
 });
-console.log(format(`<html>${outputHTML}</html>`));
 
-
+//Delete and re-create build folder
 if (fs.existsSync('build')) {
     fs.rmdirSync('build', {recursive: true});
 }
 fs.mkdirSync('build');
+
+const indexhtml = cheerio.load(fs.readFileSync('src/index.html'));
+indexhtml('body').html(`\n${outputHTML}`);
+fs.writeFileSync('build/index.html', prettifyHTML(indexhtml.root().html()));
+
 

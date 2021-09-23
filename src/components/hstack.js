@@ -1,10 +1,10 @@
 const components = require('../components');
-exports.header = (el) => {
+exports.hstack = (el) => {
     childString = '';
     el.children.forEach((child) => {
         if (child.type === 'tag' && typeof(components[child.name]) === 'function') {
             childString += components[child.name](child);
         }
     });
-    return `<div class = 'header'>\n${childString}</div>\n`;
+    return `<div class = 'hstack'>\n${childString}</div>\n`
 }
