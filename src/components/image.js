@@ -1,4 +1,8 @@
 const components = require('../components');
 exports.image = (el) => {
-    return `<img src="${el.attribs.src}" alt="${el.children[0].data}">\n`
+    let name = '';
+    if (el.children.length > 0) {
+        name = el.children[0].data;
+    }
+    return `<img src="${el.attribs.src}" alt="${name}">\n`
 }
