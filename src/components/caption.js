@@ -1,4 +1,5 @@
 const components = require('../components');
 exports.caption = (el) => {
-    return `<small></small>\n`
+    let caption = el.children[0].data;
+    return `<small class ='caption'>${caption}</small>\n`
 }
