@@ -3,23 +3,28 @@ const cheerio = require('cheerio');
 const components = require('./components');
 const prettifyHTML = require('html-prettify');
 
-const contentXML = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
+function build(){
+    const contentXML = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
 
-outputHTML = ""
-contentXML.root().children().each((_,el) => {
-    if (typeof(components[el.name]) == 'function') {
-        outputHTML += components[el.name](el);
+    outputHTML = ""
+    contentXML.root().children().each((_,el) => {
+        if (typeof(components[el.name]) == 'function') {
+            outputHTML += components[el.name](el);
+        }
+    });
+
+    //Delete and re-create build folder
+    if (fs.existsSync('build')) {
+        fs.rmSync('build', {recursive: true});
     }
-});
+    fs.mkdirSync('build');
 
-//Delete and re-create build folder
-if (fs.existsSync('build')) {
-    fs.rmdirSync('build', {recursive: true});
+    const indexhtml = cheerio.load(fs.readFileSync('src/index.html'));
+    indexhtml('body').html(`\n${outputHTML}`);
+    fs.writeFileSync('build/index.html', prettifyHTML(indexhtml.root().html()));
+
 }
-fs.mkdirSync('build');
 
-const indexhtml = cheerio.load(fs.readFileSync('src/index.html'));
-indexhtml('body').html(`\n${outputHTML}`);
-fs.writeFileSync('build/index.html', prettifyHTML(indexhtml.root().html()));
+build()
 
-
+exports.build = build;

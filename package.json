@@ -9,7 +9,9 @@
     "xml-formatter": "^2.4.1"
   },
   "scripts": {
-    "build": "node src/build.js"
+    "build": "node src/build.js",
+    "devBuild": "node src/devBuild.js",
+    "start":"node src/devBuild.js"
   },
   "browserslist": {
     "production": [
