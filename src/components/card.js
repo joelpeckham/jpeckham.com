@@ -1,15 +1,18 @@
 const components = require('../components');
+const { image } = require('./image');
 exports.card = (el) => {
-    let childString = '';
+    let textElements = '';
+    let imageElements = '';
     el.children.forEach((child) => {
-        hasImage = false;
         if (child.type === 'tag' && typeof(components[child.name]) === 'function') {
-            childString += components[child.name](child);
             if (child.name === 'image') {
-                hasImage = true;
+                imageElements = components[child.name](child);
+            }
+            else{
+                textElements += components[child.name](child);
             }
         }
     });
 
-    return `<div class = 'card ${hasImage?"":"cardWithImage"}'>\n${childString}</div>\n`
+    return `<div class = 'card ${imageElements==''?"":"cardWithImage"}'>\n${imageElements}<div class = cardText>${textElements}</div></div>\n`
 }
