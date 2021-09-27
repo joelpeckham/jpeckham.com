@@ -1,0 +1,89 @@
+/* Define default color scheme in :root vars */
+:root {
+    --color-foreground: rgb(36, 36, 36);
+    --color-background: #fff;
+}
+/* Define dark color scheme in media query */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-foreground: #fff;
+        --color-background: rgb(15, 15, 15);
+    }
+}
+/* Define default font */
+html {
+    font-family: sans-serif;
+    font-size: 16px;
+}
+/* Define body background color */
+body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    margin:0px;
+    display:flex;
+    justify-content:center;
+}
+#contentContainer{
+    max-width: 1000px;
+}
+img{
+    width: 100%;
+
+}
+
+.menu{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top:1rem;
+    margin-bottom:1rem;
+}
+.menuLinks{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.menuTitle{
+    margin:1rem ;
+}
+.menuLink{
+    box-sizing: border-box;
+    position:relative;
+    transition: all 200ms ease-out 0s;
+    text-decoration: none;
+    font-weight: bold;
+    color: var(--color-foreground);
+    margin:1rem;
+    padding:0.8rem 1.5rem;
+    background: linear-gradient(90deg, var(--color-foreground) 50%, var(--color-background) 50%);
+    background-size: 200% 100%;
+    background-position: 100% 100%;
+    border-radius:16px;
+    outline: var(--color-foreground) solid 0.18em;
+    outline-offset: -0.18em;
+}
+.menuLink:hover{
+    /* border-width: 0px; */
+    background-position: 0% 100%;
+    color:var(--color-background);
+}
+.menuSectionLink{
+    text-decoration: none;
+    font-weight: bold;
+    color: var(--color-foreground);
+    margin:1rem;
+    position: relative;
+}
+
+.menuSectionLink::before{
+    transition: all 200ms ease-out 0s;
+    height: 0.17em;
+    content: "";
+    position: absolute;
+    background-color: var(--color-foreground);
+    width: 0%;
+    bottom: -0.2em;
+}
+.menuSectionLink:hover::before{
+    width: 100%;
+}

@@ -4,6 +4,7 @@ const components = require('./components');
 const prettifyHTML = require('html-prettify');
 
 function build(){
+    // console.log("Building...");
     const contentXML = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
 
     outputHTML = ""
@@ -20,8 +21,12 @@ function build(){
     fs.mkdirSync('build');
 
     const indexhtml = cheerio.load(fs.readFileSync('src/index.html'));
-    indexhtml('body').html(`\n${outputHTML}`);
+    //Attach output HTML to div with id 'contentContainer'
+    indexhtml('#contentContainer').html(`\n${outputHTML}`);
     fs.writeFileSync('build/index.html', prettifyHTML(indexhtml.root().html()));
+    //Copy index.css to build folder
+    fs.copyFileSync('src/index.css', 'build/index.css');
+    // console.log("Build Done!");
 
 }
 

@@ -1,6 +1,6 @@
 <menu>
     <title>Joel Peckham</title>
-    <link link="joelpeckham.github.com">Resumé</link>
+    <link link="https://joelpeckham.github.com">Resumé</link>
 </menu>
 <header>
     <title>Hi, I'm Joel!</title>
@@ -12,7 +12,7 @@
         <cta link="joelpeckham.github.com">Instagram</cta>
     </hstack>
 </header>
-<section id="projects">
+<section id="Projects">
     <title>Latest Projects</title>
     <carousel>
         <card link="joelpeckham.github.com">
@@ -34,4 +34,6 @@
         </card>
     </carousel>
 </section>
-<section id="skills"></section>
+<section id="Skills">
+    <title>Skills</title>
+</section>

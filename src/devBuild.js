@@ -18,7 +18,7 @@ function addDevBuildHTML(){
                     window.location.reload();
                 }
             });
-        }, 1000);
+        }, 250);
     </script>`);
     fs.writeFileSync('./build/index.html', $.html());
 }
@@ -35,7 +35,21 @@ const server = http.createServer((req, res) => {
     } else if (req.url === '/') {
         res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(fs.readFileSync('./build/index.html', 'utf8'));
-    } else {
+    } else if(fs.existsSync('./build' + req.url)){
+        contentTypes = {
+            '.html': 'text/html',
+            '.css': 'text/css',
+            '.js': 'application/javascript',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.svg': 'image/svg+xml'
+        }
+        res.writeHead(200, {'Content-Type': contentTypes[req.url.substr(req.url.lastIndexOf('.'))]});
+        res.end(fs.readFileSync('./build' + req.url, 'utf8'));
+    }
+    else {
         res.writeHead(404, {'Content-Type': 'text/plain'});
         res.end('404');
     }
