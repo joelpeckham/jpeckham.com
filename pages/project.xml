@@ -1,0 +1,9 @@
+<header>
+    <title>This is a project page</title>
+    <subtitle>I'm a software developer.</subtitle>
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <hstack>
+        <cta link="https://github.com/joelpeckham">Github</cta>
+        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+    </hstack>
+</header>

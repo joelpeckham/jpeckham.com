@@ -3,12 +3,13 @@ const { image } = require('./image');
 exports.card = (el) => {
     let textElements = '';
     let imageElements = '';
+    let otherElements = '';
     el.children.forEach((child) => {
         if (child.type === 'tag' && typeof(components[child.name]) === 'function') {
             if (child.name === 'image') {
                 imageElements = components[child.name](child);
             }
-            else{
+            else {
                 textElements += components[child.name](child);
             }
         }

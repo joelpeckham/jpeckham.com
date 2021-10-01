@@ -3,30 +3,8 @@ const build = require("./build.js").build;
 const fs = require('fs');
 
 let currentBuild = 0;
-build();
-addDevBuildHTML();
+build(currentBuild);
 
-function addDevBuildHTML(){
-    const html = fs.readFileSync('./build/index.html', 'utf8');
-    const $ = cheerio.load(html);
-    $('body').append(
-    `<script>
-        setInterval(function(){
-            fetch('/buildStatus').then(response => response.text()).then(text => {
-                //reload window
-                if(text != ${currentBuild}){
-                    window.location.reload();
-                }
-            });
-        }, 250);
-    </script>`);
-    fs.writeFileSync('./build/index.html', $.html());
-}
-
-// Spin up minimal node server to host the build directory for development.
-// Don't use express.
-// Server reponds to GET requests to /build/index.html and serves the build directory.
-// Server responds to GET requests to /buildStatus and returns json with the build changed status.
 const http = require('http');
 const static = require('node-static');
 const file = new static.Server('./build');
@@ -46,15 +24,11 @@ const server = http.createServer((req, res) => {
     }
 });
 server.listen(8080);
-//Server is now running on port 8080
-
-
-// If a file in the src directory is changed, rebuild the site.
-fs.watch('./src', (eventType, filename) => {
-    if (filename) {
-        currentBuild++;
-        build();
-        addDevBuildHTML();
-    }
+fs.watch('./pages', (eventType, filename) => {
+    currentBuild++;
+    build(currentBuild);
 });
-
+fs.watch('./rootFiles', (eventType, filename) => {
+    currentBuild++;
+    build(currentBuild);
+});

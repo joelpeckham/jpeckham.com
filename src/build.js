@@ -3,35 +3,68 @@ const cheerio = require('cheerio');
 const components = require('./components');
 const prettifyHTML = require('html-prettify');
 
-function build(){
-    // console.log("Building...");
-    const contentXML = cheerio.load(fs.readFileSync('src/content.xml'), { xmlMode: true });
-
-    outputHTML = ""
-    contentXML.root().children().each((_,el) => {
-        if (typeof(components[el.name]) == 'function') {
-            outputHTML += components[el.name](el);
-        }
-    });
-
+function build(devBuildNumber = null){
+    // console.log('Building... with', devBuildNumber);
+    let devCode = `
+    <script>
+    setInterval(function(){
+            fetch('/buildStatus').then(response => response.text()).then(text => {
+                if(text != ${devBuildNumber}){
+                    window.location.reload();
+                }
+            });
+        }, 250);
+    </script>`
     //Delete and re-create build folder
     if (fs.existsSync('build')) {
         fs.rmSync('build', {recursive: true});
     }
     fs.mkdirSync('build');
+    // Loop through all files in the pages directory
+    let files = fs.readdirSync('./pages');
+    files.forEach(file => {
+        //get file name without extension
+        const fileName = file.split('.')[0];
+        // console.log("Handling", file);
+        const contentXML = cheerio.load(fs.readFileSync(`./pages/${file}`), { xmlMode: true });
 
-    const indexhtml = cheerio.load(fs.readFileSync('src/index.html'));
-    //Attach output HTML to div with id 'contentContainer'
-    indexhtml('#contentContainer').html(`\n${outputHTML}`);
-    fs.writeFileSync('build/index.html', prettifyHTML(indexhtml.root().html()));
-    //Copy index.css to build folder
-    fs.copyFileSync('src/index.css', 'build/index.css');
-    // console.log("Build Done!");
+        outputHTML = ""
+        contentXML.root().children().each((_,el) => {
+            if (typeof(components[el.name]) == 'function') {
+                outputHTML += components[el.name](el);
+            }
+        });
 
-    //Copy entire /static directory into /build folder with fs-extra
+        const indexhtml = cheerio.load(`
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <link rel="stylesheet" href="/theme.css" type="text/css">
+                <meta charset="UTF-8">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Joel Peckham</title>
+            </head>
+            <body>${(devBuildNumber != null)?devCode:''}
+                <div id="contentContainer">
+
+                </div>
+            </body>
+        </html>
+        `);
+        //Attach output HTML to div with id 'contentContainer'
+        indexhtml('#contentContainer').html(`\n${outputHTML}`);
+        if (fileName == 'index') {
+            fs.writeFileSync(`build/index.html`, prettifyHTML(indexhtml.html()));
+        } else {
+            //Create a new folder for each page
+            fs.mkdirSync(`build/${fileName}`);
+            fs.writeFileSync(`build/${fileName}/index.html`, prettifyHTML(indexhtml.html()));
+        }
+    });
+    fs.copyFileSync('rootFiles/theme.css', 'build/theme.css');
     fs.copySync('static', 'build/static');
 }
 
-build()
-
 exports.build = build;
+build();
