@@ -62,7 +62,7 @@ function build(devBuildNumber = null){
             fs.writeFileSync(`build/${fileName}/index.html`, prettifyHTML(indexhtml.html()));
         }
     });
-    fs.copyFileSync('rootFiles/theme.css', 'build/theme.css');
+    fs.copySync('rootFiles', 'build/');
     fs.copySync('static', 'build/static');
 }
 
