@@ -3,12 +3,13 @@
     <link link="/static/Joel_Peckham_Resume.pdf">Resumé</link>
 </menu>
 <header>
-    <title>Hi, I'm Joel</title>
-    <subtitle>I'm a software developer.</subtitle>
-    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <title>Hello!</title>
+    <subtitle>I'm a full-stack developer & graphic designer.</subtitle>
+    <!-- <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph> -->
     <hstack>
         <cta link="https://github.com/joelpeckham">Github</cta>
         <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+        <cta link="mailto:joelskyler@gmail.com">Email Me</cta>
     </hstack>
 </header>
 <section id="Projects">
