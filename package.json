@@ -4,14 +4,16 @@
   "private": true,
   "dependencies": {
     "cheerio": "^1.0.0-rc.10",
+    "fs-extra": "^10.0.0",
     "html-format": "^1.0.1",
     "html-prettify": "^1.0.3",
+    "node-static": "^0.7.11",
     "xml-formatter": "^2.4.1"
   },
   "scripts": {
     "build": "node src/build.js",
     "devBuild": "node src/devBuild.js",
-    "start":"node src/devBuild.js"
+    "start": "node src/devBuild.js"
   },
   "browserslist": {
     "production": [

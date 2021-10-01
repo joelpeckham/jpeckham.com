@@ -1,15 +1,14 @@
 <menu>
     <title>Joel Peckham</title>
-    <link link="https://joelpeckham.github.com">Resumé</link>
+    <link link="/static/Joel_Peckham_Resume.pdf">Resumé</link>
 </menu>
 <header>
     <title>Hi, I'm Joel!</title>
     <subtitle>I'm a software developer.</subtitle>
     <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
     <hstack>
-        <cta link="joelpeckham.github.com">Github</cta>
-        <cta link="joelpeckham.github.com">Resumé</cta>
-        <cta link="joelpeckham.github.com">Instagram</cta>
+        <cta link="https://github.com/joelpeckham">Github</cta>
+        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
     </hstack>
 </header>
 <section id="Projects">

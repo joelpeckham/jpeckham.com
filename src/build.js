@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs-extra');
 const cheerio = require('cheerio');
 const components = require('./components');
 const prettifyHTML = require('html-prettify');
@@ -28,6 +28,8 @@ function build(){
     fs.copyFileSync('src/index.css', 'build/index.css');
     // console.log("Build Done!");
 
+    //Copy entire /static directory into /build folder with fs-extra
+    fs.copySync('static', 'build/static');
 }
 
 build()
