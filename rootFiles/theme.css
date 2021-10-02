@@ -8,6 +8,7 @@
     --card-height: 220px;
     --card-background: rgb(250, 250, 250);
     --standard-margin: 1rem;
+    --side-gutter:2rem;
 }
 /* Define dark color scheme in media query */
 @media (prefers-color-scheme: dark) {
@@ -16,6 +17,9 @@
         --color-background: rgb(15, 15, 15);
         --card-background: rgb(34, 34, 34);
     }
+}
+*{
+    z-index: 10;
 }
 /* Define default font */
 html {
@@ -35,6 +39,7 @@ body {
     max-width: 1000px;
     overflow: hidden;
 }
+
 img{
     width: 100%;
 
@@ -52,9 +57,7 @@ img{
     justify-content: space-around;
     align-items: center;
 }
-.menuTitle{
-    margin:var(--standard-margin);
-}
+
 .menuLink{
     box-sizing: border-box;
     position:relative;
@@ -62,7 +65,7 @@ img{
     text-decoration: none;
     font-weight: bold;
     color: var(--color-foreground);
-    margin:var(--standard-margin);
+    margin-left:var(--standard-margin);
     padding:0.8rem 1.5rem;
     background: linear-gradient(90deg, var(--color-foreground) 50%, var(--color-background) 50%);
     background-size: 200% 100%;
@@ -114,6 +117,7 @@ img{
     background-position: 100% 100%;
     border-radius:16px;
     box-shadow: inset 0 0 0 0.18em var(--color-foreground);
+    white-space: nowrap;
 }
 
 .cta:hover{
@@ -131,6 +135,7 @@ img{
 }
 
 .card{
+    z-index: -100;
     width:var(--card-width);
     height: var(--card-height);
     min-width: var(--card-width);
@@ -176,17 +181,67 @@ img{
 }
 
 .carousel{
-    /* takes width of container */
     width:100%;
+    margin:0px;
     overflow: scroll;
     display:flex;
     justify-content: space-between;
     align-items: center;
-    /* background-color: var(--carousel-background);
-    border-radius: 16px;
-    box-shadow: rgba(0, 0, 0, 0.082) 0px 0px 12px -2px inset; */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.carousel::-webkit-scrollbar{
+    display: none;
+}
+.carousel .card:first-child{
+    margin-left:var(--side-gutter);
+} 
+
+@media (min-width: 1000px){
+    .carousel::before{
+        content: "";
+        z-index: -10;
+        display: block;
+        position:absolute;
+        height:100%;
+        width:calc(var(--side-gutter)*1.2);
+        background: linear-gradient(90deg, var(--color-background) 0%, rgba(127,127,127,0) 100%);
+        top:0px;
+        left:calc(-(100vw - 1000px - (var(--side-gutter)*2)));
+        animation-name: fadeInOpacity;
+        animation-duration: .2s;
+    
+    }
+    .carousel::after{
+        z-index: -1;
+        content: "";
+        display: block;
+        position:absolute;
+        height:100%;
+        width:calc(var(--side-gutter)*1.8);
+        background: linear-gradient(270deg, var(--color-background) 0%, rgba(127,127,127,0) 100%);
+        top:0px;
+        right:calc((100vw - 1000px)/2);
+        animation-name: fadeInOpacity;
+        animation-duration: .2s;
+    }
+    @keyframes fadeInOpacity {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
 }
 
+
+section > *, .header, .menu{
+    margin-left:var(--side-gutter);
+    margin-right:var(--side-gutter);
+
+}
 section{
-    margin:var(--standard-margin);
+    margin-top:var(--standard-margin);
+    margin-bottom:var(--standard-margin);
 }

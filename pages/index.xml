@@ -28,9 +28,16 @@
             <caption>January 2020</caption>
         </card>
         <card link="joelpeckham.github.com">
-            <title>aihuffpo.com</title>
-            <paragraph>A website that uses machine learning to re-write huffington post's content.</paragraph>
-            <caption>February 2020</caption>
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
         </card>
     </carousel>
 </section>

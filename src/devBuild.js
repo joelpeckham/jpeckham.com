@@ -32,3 +32,4 @@ fs.watch('./rootFiles', (eventType, filename) => {
     currentBuild++;
     build(currentBuild);
 });
+console.log(`Dev Server Running at: http://localhost:8080`);
