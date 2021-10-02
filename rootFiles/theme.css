@@ -101,6 +101,10 @@ img{
 .hstack{
     display:flex;
     justify-content: flex-start;
+    flex-wrap: wrap;
+    row-gap:calc(var(--standard-margin)*0.8);
+    column-gap: calc(var(--standard-margin)*0.8);
+
 }
 
 .cta{
@@ -110,7 +114,7 @@ img{
     text-decoration: none;
     font-weight: bold;
     color: var(--color-foreground);
-    margin:var(--standard-margin);
+    /* margin-right:var(--standard-margin); */
     padding:0.8rem 1.5rem;
     background: linear-gradient(90deg, var(--color-foreground) 50%, var(--color-background) 50%);
     background-size: 200% 100%;
@@ -129,9 +133,28 @@ img{
 .header{
     margin:var(--standard-margin);
     width: 80%;
+    padding-bottom:calc(var(--standard-margin)*2);
+}
+
+.header .title{
+    margin-bottom: calc(var(--standard-margin));
+}
+.header .subtitle{
+    margin-top: calc(var(--standard-margin));
+    margin-bottom: calc(var(--standard-margin));
+}
+.header p{
+    margin-top: calc(var(--standard-margin));
+    margin-bottom: calc(var(--standard-margin));
 }
 .header .cta{
     margin-left:0;
+}
+.header .hstack{
+    margin-top: calc(var(--standard-margin));
+    position:relative;
+    left:-2px;
+    /* margin-bottom: calc(var(--standard-margin)/2); */
 }
 
 .card{

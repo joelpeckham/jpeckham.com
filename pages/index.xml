@@ -5,7 +5,7 @@
 <header>
     <title>Hello!</title>
     <subtitle>I'm a full-stack developer & graphic designer.</subtitle>
-    <!-- <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph> -->
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
     <hstack>
         <cta link="https://github.com/joelpeckham">Github</cta>
         <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
