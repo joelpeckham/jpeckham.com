@@ -1,7 +1,7 @@
 /* Define default color scheme in :root vars */
 :root {
     --color-foreground: rgb(36, 36, 36);
-    --color-background: #fff;
+    --color-background: rgb(255, 255, 255);
 
     --carousel-background: rgb(248, 248, 248);
     --card-width: 280px;
@@ -46,12 +46,14 @@ img{
 }
 
 .menu{
+    /* position: relative; */
     display:flex;
     justify-content: space-between;
     align-items: center;
     margin-top:var(--standard-margin);
     margin-bottom:var(--standard-margin);
 }
+
 .menuLinks{
     display: flex;
     justify-content: space-around;
@@ -74,7 +76,6 @@ img{
     box-shadow: inset 0 0 0 0.18em var(--color-foreground);
 }
 .menuLink:hover{
-    /* border-width: 0px; */
     background-position: 0% 100%;
     color:var(--color-background);
 }
@@ -98,6 +99,29 @@ img{
 .menuSectionLink:hover::before{
     width: 100%;
 }
+
+.menu > *{
+    transition: all 0.2s;
+}
+@media (max-width: 800px){
+    .menu {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .menu .menuLinks{
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-left:0px;
+    }
+    .menu .menuSectionLink{
+        margin-left:0px;
+    }
+    .menu .menuLink{
+        margin-left:0px;
+    }
+
+}
+
 .hstack{
     display:flex;
     justify-content: flex-start;
@@ -287,3 +311,4 @@ section{
     margin-top:var(--standard-margin);
     margin-bottom:var(--standard-margin);
 }
+

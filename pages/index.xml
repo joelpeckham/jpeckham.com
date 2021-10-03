@@ -43,4 +43,63 @@
 </section>
 <section id="Skills">
     <title>Skills</title>
+    <header>
+    <subtitle>I'm a full-stack developer & graphic designer.</subtitle>
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <hstack>
+        <cta link="https://github.com/joelpeckham">Github</cta>
+        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+        <cta link="mailto:joelskyler@gmail.com">Email Me</cta>
+    </hstack>
+</header>
+</section>
+<section id="Pills">
+    <title>Pills</title>
+    <header>
+    <subtitle>I'm a full-stack developer & graphic designer.</subtitle>
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <hstack>
+        <cta link="https://github.com/joelpeckham">Github</cta>
+        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+        <cta link="mailto:joelskyler@gmail.com">Email Me</cta>
+    </hstack>
+</header>
+</section>
+<section id="Frills">
+    <title>Frills</title>
+    <header>
+    <subtitle>I'm a full-stack developer & graphic designer.</subtitle>
+    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <hstack>
+        <cta link="https://github.com/joelpeckham">Github</cta>
+        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+        <cta link="mailto:joelskyler@gmail.com">Email Me</cta>
+    </hstack>
+    <carousel>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ocean Monitor</title>
+            <paragraph>A web application that monitors the ocean and alerts the user when it's too dangerous to swim.</paragraph>
+            <caption>March 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
+        </card>
+        <card link="joelpeckham.github.com">
+            <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
+            <title>Ultra-Fast-Food</title>
+            <paragraph>A web application that allows users to order food in real-time.</paragraph>
+            <caption>January 2020</caption>
+        </card>
+    </carousel>
+</header>
 </section>

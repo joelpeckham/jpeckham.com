@@ -42,5 +42,12 @@ exports.menu = (el) => {
         }
     });
 
-    return `<div class = 'menu'>${titleHtml}<div class = "menuLinks">${linkHtml}</div></div>\n`;
+    return( 
+    `
+    <div class = 'menu'>${titleHtml}
+        <div class = "menuLinks">${linkHtml}
+        </div>
+    </div>
+    `
+    );
 }
