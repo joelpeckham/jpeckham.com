@@ -44,8 +44,10 @@ exports.menu = (el) => {
 
     return( 
     `
-    <div class = 'menu'>${titleHtml}
-        <div class = "menuLinks">${linkHtml}
+    <div class = 'menuContainer'>
+        <div class = 'menu'>${titleHtml}
+            <div class = "menuLinks">${linkHtml}
+            </div>
         </div>
     </div>
     `

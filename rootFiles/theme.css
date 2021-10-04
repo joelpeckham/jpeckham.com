@@ -12,14 +12,15 @@
     --standard-margin: 1rem;
     --side-gutter:2rem;
 }
+
 /* Define dark color scheme in media query */
 @media (prefers-color-scheme: dark) {
     :root {
         --color-foreground: #fff;
         --color-background: rgba(15, 15, 15,255);
         --card-background: rgba(34, 34, 34,255);
-        --background-transparent: rgba(36, 36, 36,0);
-        --round-transparent: rgba(255, 255, 255,0);
+        --background-transparent: rgba(15, 15, 15,0);
+        --foreground-transparent: rgba(255, 255, 255,0);
     }
 }
 *{
@@ -36,26 +37,59 @@ body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     margin:0px;
-    display:flex;
-    justify-content:center;
+    /* display:flex;
+    justify-content:center; */
 }
 #contentContainer{
+    display:absolute;
     max-width: 1000px;
-    overflow: hidden;
+    margin-left: auto;
+    margin-right:auto;
 }
-
 img{
     width: 100%;
 
 }
 
+.menuContainer{
+    margin-top: var(--standard-margin);
+    background-color: var(--card-background);
+    max-width: none;
+    margin:0px;
+    position:relative;
+    top:var(--standard-margin);
+    margin-bottom: var(--standard-margin);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:20;
+    border-radius: 16px;
+    box-shadow: rgba(0, 0, 0, 0.15) 0px 0px 16px -4px;
+    transition: all 0.2s;
+}
+@media (max-width: 1030px) {
+    .menuContainer{
+        margin-left: calc(var(--standard-margin)*2);
+        margin-right: calc(var(--standard-margin)*2);
+    }
+}
+.menuContainer + *{
+    margin-top: calc(var(--standard-margin)*3) !important;
+}
+
 .menu{
+    max-width: 1000px;
+    width:100%;
     /* position: relative; */
     display:flex;
     justify-content: space-between;
     align-items: center;
     margin-top:var(--standard-margin);
     margin-bottom:var(--standard-margin);
+}
+
+ .menuTitle{
+    color:var(--color-foreground);
 }
 
 .menuLinks{
@@ -73,7 +107,7 @@ img{
     color: var(--color-foreground);
     margin-left:var(--standard-margin);
     padding:0.8rem 1.5rem;
-    background: linear-gradient(90deg, var(--color-foreground) 50%, var(--color-background) 50%);
+    background: linear-gradient(90deg, var(--color-foreground) 50%, var(--card-background) 50%);
     background-size: 200% 100%;
     background-position: 100% 100%;
     border-radius:16px;
@@ -107,17 +141,16 @@ img{
 .menu > *{
     transition: all 0.2s;
 }
-@media (max-width: 800px){
+@media (max-width: 600px){
     .menu {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
     .menu .menuLinks{
         flex-wrap: wrap;
+        flex-direction: column;
         justify-content: flex-start;
-        margin-left:0px;
-    }
-    .menu .menuSectionLink{
+        align-content: flex-start;
         margin-left:0px;
     }
     .menu .menuLink{
