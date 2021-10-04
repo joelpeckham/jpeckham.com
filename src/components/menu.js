@@ -45,7 +45,9 @@ exports.menu = (el) => {
     return( 
     `
     <div class = 'menuContainer'>
-        <div class = 'menu'>${titleHtml}
+        <input type = 'checkbox' class = 'menuToggle'/>
+        <div class = 'menu'>
+        ${titleHtml}
             <div class = "menuLinks">${linkHtml}
             </div>
         </div>
