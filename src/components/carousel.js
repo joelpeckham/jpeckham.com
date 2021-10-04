@@ -6,5 +6,14 @@ exports.carousel = (el) => {
             childString += components[child.name](child);
         }
     });
-    return `<div class = 'carousel'>\n${childString}</div>\n`
+    return (
+        `
+        <div class="carouselContainer">
+            <div class = 'carousel'>
+                <div class = 'fadeBefore'></div>
+                <div class = 'fadeAfter'></div>
+                ${childString}
+            </div>
+        </div>
+        `);
 }

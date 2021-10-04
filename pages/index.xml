@@ -75,7 +75,8 @@
         <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
         <cta link="mailto:joelskyler@gmail.com">Email Me</cta>
     </hstack>
-    <carousel>
+</header>
+   <carousel>
         <card link="joelpeckham.github.com">
             <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
             <title>Ocean Monitor</title>
@@ -101,5 +102,4 @@
             <caption>January 2020</caption>
         </card>
     </carousel>
-</header>
 </section>
