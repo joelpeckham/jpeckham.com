@@ -38,7 +38,7 @@ exports.menu = (el) => {
             titleHtml = `<h1 class = 'menuTitle'>${child.children[0].data}</h1>`;
         }
         else if (child.type == 'tag' && child.name == 'link') {
-            linkHtml += `<a class = 'menuLink' href = '${child.attribs.link}'>${child.children[0].data}</a>`;
+            linkHtml += `<a class = 'menuSectionLink cta canBeCTA' href = '${child.attribs.link}'>${child.children[0].data}</a>`;
         }
     });
 
@@ -49,8 +49,8 @@ exports.menu = (el) => {
         ${titleHtml}
             <div class = "menuLinks">${linkHtml}
             </div>
-            <div class="hamburger">
-                <div id = 'burger' class="hamburger-box hamburger--collapse">
+            <div id = 'burger' class="hamburger">
+                <div class="hamburger-box hamburger--collapse">
                     <div class="hamburger-inner"></div>
                 </div>
             </div>
@@ -59,8 +59,18 @@ exports.menu = (el) => {
     <script>
         let burger = document.getElementById('burger');
         burger.addEventListener('click', function(){
-            burger.classList.toggle('is-active');
+            Array.from(document.getElementsByClassName('canBeCTA')).forEach(link => {
+                link.classList.toggle('cta');
+            });
+            burger.children[0].classList.toggle('is-active');
             document.getElementById('menuInside').classList.toggle('menuOpen');
+        });
+        window.addEventListener('resize', function(){
+            let burger = document.getElementById('burger');
+            if (window.innerWidth > 800 && burger.children[0].classList.contains('is-active')) {
+                burger.click();
+                console.log('clicked');
+            }
         });
     </script>
     `
