@@ -140,10 +140,6 @@ img{
     .menu .menuLinks .menuLink.cta, .menu .menuLinks .menuSectionLink{
         margin-left:0px;
     }
-
-    .menu .menuTitle{
-        /* font-size:1.5rem; */
-    }
     .menu.menuOpen .menuTitle{
         display:none;
     }
