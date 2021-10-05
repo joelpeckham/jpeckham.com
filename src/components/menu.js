@@ -45,17 +45,24 @@ exports.menu = (el) => {
     return( 
     `
     <div class = 'menuContainer'>
-        <div class = 'menu'>
+        <div id = 'menuInside' class = 'menu'>
         ${titleHtml}
             <div class = "menuLinks">${linkHtml}
             </div>
             <div class="hamburger">
-                <div class="hamburger-box hamburger--squeeze">
+                <div id = 'burger' class="hamburger-box hamburger--collapse">
                     <div class="hamburger-inner"></div>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        let burger = document.getElementById('burger');
+        burger.addEventListener('click', function(){
+            burger.classList.toggle('is-active');
+            document.getElementById('menuInside').classList.toggle('menuOpen');
+        });
+    </script>
     `
     );
 }
