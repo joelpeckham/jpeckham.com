@@ -138,43 +138,9 @@ img{
     width: 100%;
 }
 
-.menu{
-    transition: all 0.2s;
-}
-.menuContainer input.menuToggle{
-    position:absolute;
-    top:0;
-    right:0;
-
-}
 
 @media (max-width: 600px){
-    .menu {
-        flex-direction: column;
-        align-items: flex-start;
-        height:1px;
-    }   
-    .menu .menuLinks{
-        display:flex;
-        flex-direction: column;
-        align-items: flex-start;
-        margin-left:0px;
-        position: relative;
-        top:-100px;
-        opacity:100%;
-        transition: all 1s;
-    }
-    .menuContainer input.menuToggle:checked ~ .menu .menuLinks{
-        top:0px;
-        opacity:100%;
-    }
-    .menuContainer input.menuToggle:checked ~ .menu{
-        height:90vh;
-    }
-    .menu .menuLink, .menu .menuSectionLink{
-        margin-left:0px;
-    }
-    
+ 
 
 }
 
