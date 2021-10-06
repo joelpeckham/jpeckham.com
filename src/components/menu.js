@@ -47,12 +47,13 @@ exports.menu = (el) => {
     <div class = 'menuContainer'>
         <div id = 'menuInside' class = 'menu'>
         ${titleHtml}
-            <div class = "menuLinks">${linkHtml}
+            <div class = "menuLinks">
+                ${linkHtml}
             </div>
-            <div id = 'burger' class="hamburger">
-                <div class="hamburger-box hamburger--collapse">
-                    <div class="hamburger-inner"></div>
-                </div>
+        </div>
+        <div id = 'burger' class="hamburger">
+            <div class="hamburger-box hamburger--collapse">
+                <div class="hamburger-inner"></div>
             </div>
         </div>
     </div>
