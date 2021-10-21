@@ -184,7 +184,6 @@ _::-webkit-full-page-media, _:future, :root .hstack > *{
 .header{
     box-sizing: border-box;
     margin:var(--standard-margin);
-    width: 80%;
     padding-bottom:calc(var(--standard-margin)*2);
 }
 
@@ -207,6 +206,15 @@ _::-webkit-full-page-media, _:future, :root .hstack > *{
     position:relative;
     left:-2px;
     /* margin-bottom: calc(var(--standard-margin)/2); */
+}
+.headerWithImage{
+    position: relative;
+}
+.headerWithImage img{
+    position: relative;
+    float:right;
+    width:400px;
+    border-radius: 16px;
 }
 
 .card{

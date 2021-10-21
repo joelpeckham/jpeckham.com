@@ -1,9 +1,15 @@
+<menu>
+    <title>Joel Peckham</title>
+    <link link="/static/Joel_Peckham_Resume.pdf">Resumé</link>
+</menu>
 <header>
-    <title>This is a project page</title>
-    <subtitle>I'm a software developer.</subtitle>
-    <paragraph>I'm a software developer, and I'm passionate about creating software that improves the world.</paragraph>
+    <title>Trading like a human with GPT-J</title>
+    <subtitle>Undergraduate Research Project</subtitle>
+    <paragraph>Investigates the viability of using large language models as a stock trading decision engine.</paragraph>
     <hstack>
-        <cta link="https://github.com/joelpeckham">Github</cta>
-        <cta link="/static/Joel_Peckham_Resume.pdf">Resumé</cta>
+        <cta link="https://github.com/joelpeckham">Project Code</cta>
+        <cta link="https://jpeckham.com/paper">Paper PDF</cta>
+        <cta link="https://jpeckham.com/paper">Paper HTML</cta>
     </hstack>
+    <image src="https://i.imgur.com/Zf0v9Ta.jpeg" />
 </header>
