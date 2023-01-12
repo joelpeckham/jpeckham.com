@@ -63,7 +63,7 @@ params:
 
   socialIcons:
     - name: github
-      url: "https://github.com/"
+      url: "https://github.com/joelpeckham"
     - name: email
       url: "mailto:mail@jpeckham.com"
     - name: linkedin
