@@ -1,5 +1,5 @@
 baseURL: "https://jpeckham.com/"
-title: ExampleSite
+title: Joel Peckham
 paginate: 5
 theme: PaperMod
 
@@ -8,18 +8,16 @@ buildDrafts: false
 buildFuture: false
 buildExpired: false
 
-googleAnalytics: UA-123-45
-
 minify:
   disableXML: true
   minifyOutput: true
 
 params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
-  title: ExampleSite
-  description: "ExampleSite description"
-  keywords: [Blog, Portfolio, PaperMod]
-  author: Me
+  title: Joel Peckham
+  description: "Joel Peckham's Software Portfolio & Personal Website"
+  keywords: [Portfolio, Joel Peckham, Software Devloper, Software Engineer]
+  author: Joel Peckham
   # author: ["Me", "You"] # multiple authors
   images: ["<link or path of image for opengraph, twitter-cards>"]
   DateFormat: "January 2, 2006"
@@ -41,7 +39,6 @@ params:
   hideSummary: false
   showtoc: false
   tocopen: false
-
   assets:
     # disableHLJS: true # to disable highlight.js
     # disableFingerprinting: true
@@ -74,23 +71,17 @@ params:
   # home-info mode
   homeInfoParams:
     Title: "Hi there \U0001F44B"
-    Content: Welcome to my blog
+    Content: I'm a software developer who hates the British.
+    # image: "https://source.unsplash.com/random/1920x1080"
+    # imageAlt: "Home Page Image"
 
   socialIcons:
-    - name: twitter
-      url: "https://twitter.com/"
-    - name: stackoverflow
-      url: "https://stackoverflow.com"
     - name: github
       url: "https://github.com/"
-
-  analytics:
-    google:
-      SiteVerificationTag: "XYZabc"
-    bing:
-      SiteVerificationTag: "XYZabc"
-    yandex:
-      SiteVerificationTag: "XYZabc"
+    - name: email
+      url: "mailto:mail@jpeckham.com"
+    - name: linkedin
+      url: "https://www.linkedin.com/in/joelpeckham/"
 
   cover:
     hidden: true # hide everywhere but not in structured data
