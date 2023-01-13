@@ -18,19 +18,19 @@ params:
   title: Joel Peckham
   description: "Joel Peckham's Software Portfolio & Personal Website"
   keywords: [Portfolio, Joel Peckham, Software Devloper, Software Engineer]
-  author: Joel Peckham
+  # author: Joel Peckham
   # author: ["Me", "You"] # multiple authors
   images: ["<link or path of image for opengraph, twitter-cards>"]
   DateFormat: "January 2, 2006"
   defaultTheme: auto # dark, light
   disableThemeToggle: false
 
-  ShowReadingTime: true
-  ShowShareButtons: true
+  ShowReadingTime: false
+  ShowShareButtons: false
   ShowPostNavLinks: true
   ShowBreadCrumbs: true
   ShowCodeCopyButtons: false
-  ShowWordCount: true
+  ShowWordCount: false
   ShowRssButtonInSectionTermList: true
   UseHugoToc: true
   disableSpecial1stPost: false
@@ -74,11 +74,6 @@ params:
     hiddenInList: true # hide on list pages and home
     hiddenInSingle: true # hide on single page
 
-  editPost:
-    URL: "https://github.com/<path_to_repo>/content"
-    Text: "Suggest Changes" # edit text
-    appendFilePath: true # to append file path to Edit link
-
   # for search
   # https://fusejs.io/api/options.html
   fuseOpts:
@@ -91,13 +86,13 @@ params:
     keys: ["title", "permalink", "summary", "content"]
 menu:
   main:
-    - identifier: categories
-      name: categories
-      url: /categories/
+    - identifier: projects
+      name: projects
+      url: /projects/
       weight: 10
-    - identifier: tags
-      name: tags
-      url: /tags/
+    - identifier: about
+      name: about
+      url: /about/
       weight: 20
     - identifier: example
       name: example.org
