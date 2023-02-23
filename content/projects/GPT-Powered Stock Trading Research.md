@@ -27,7 +27,7 @@ Input: News article about a company  ⮕  Output: Buy/Sell/Neutral signal
 #### Data gathering
 
 For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intented to test with. I scraped and labelled 140,000 news articles from the below web sources:
-![Data Sources](https://raw.githubusercontent.com/joelpeckham/seniorProjectPaper/main/domainCounts.png)
+![Data Sources](../images/domainCounts.jpg)
 
 To avoid rate limiting, I created a custom web scraper to use and manage a pool of rotating proxies. I also used a custom rate limiter to ensure that I was not making too many requests to any given domain. Running the scraper from an OracleVM, I was able to scrape around 40 articles per minute and complete all 140,000 articles in around 2.5 days.
 
@@ -278,7 +278,7 @@ Because the model weights are over 60GB, specilized computing was required for t
 ```
 #### Training Loss
 I was encouraged by the seeing a meaningful decrease in training loss, however now I believe this was due to overfitting to the training set. 
-![Training Loss](https://s3.amazonaws.com/media-p.slid.es/uploads/2012985/images/9529970/Screen_Shot_2022-05-02_at_9.25.19_AM.png)
+![Training Loss](../images/trainLoss.png)
 
 ## Results
 
