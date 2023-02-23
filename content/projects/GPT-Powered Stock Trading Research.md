@@ -3,7 +3,7 @@ title: "GPT-Powered Stock Trading Research"
 ShowBreadCrumbs: true
 ---
 
-Read the full paper [here](/joel_peckham_evaluating_transformer_networks_2022.pdf).
+[Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf).
 ![newspaper](../images/NewspaperTransparent.webp)
 
 ## Background
