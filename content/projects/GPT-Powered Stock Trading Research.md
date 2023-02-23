@@ -10,7 +10,7 @@ ShowBreadCrumbs: true
 
 Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAi’s GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAi was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working a breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
 
-#### Timeline
+### Timeline
 
 ![Timeline](../images/transformerTimeline.svg)
 <!-- add image with img tag -->
@@ -18,13 +18,13 @@ Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), 
 
 ## My Research Project
 
-#### Concept
+### Concept
 
 In mid 2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if the model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company. 
 
 Input: News article about a company  ⮕  Output: Buy/Sell/Neutral signal
 
-#### Data gathering
+### Data gathering
 
 For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intented to test with. I scraped and labelled 140,000 news articles from the below web sources:
 ![Data Sources](../images/domainCounts.jpg)
@@ -276,7 +276,7 @@ Because the model weights are over 60GB, specilized computing was required for t
   "keep_every": 10000
 }
 ```
-#### Training Loss
+### Training Loss
 I was encouraged by the seeing a meaningful decrease in training loss, however now I believe this was due to overfitting to the training set. 
 ![Training Loss](../images/trainLoss.png)
 
