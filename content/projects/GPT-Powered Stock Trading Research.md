@@ -4,7 +4,7 @@ ShowBreadCrumbs: true
 ---
 
 Read the full paper [here](/joel_peckham_evaluating_transformer_networks_2022.pdf).
-![newspaper](../images/NewspaperTransparent.png)
+![newspaper](../images/NewspaperTransparent.webp)
 
 ## Background
 
