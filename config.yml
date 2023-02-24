@@ -57,7 +57,7 @@ params:
   # home-info mode
   homeInfoParams:
     Title: "Hi there \U0001F44B"
-    Content: I'm a software developer who hates the British.
+    Content: I'm a backend and AI developer looking for a home.
     # image: "https://source.unsplash.com/random/1920x1080"
     # imageAlt: "Home Page Image"
 
