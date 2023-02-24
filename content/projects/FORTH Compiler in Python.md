@@ -1,5 +1,5 @@
 ---
-Title: FORTH in 130* lines of Python
+Title: FORTH interpreter in 130* lines of Python
 Description: An interactive FORTH compiler and interpreter written in Python.
 ---
 
