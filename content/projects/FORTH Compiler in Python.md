@@ -14,7 +14,7 @@ FORTH is a simple stack-based language. It is a great language to learn about co
 
 * Firstly, this is not a perfect, standards compliant FORTH. It's just a fun little project to learn about compilers and interpreters. 
 * Secondly, this is more of a rough guide and less of a tutorial. I'm not going to go into a lot of detail about how things work. I'm just going to show you how to get things working. If you want to learn more about compilers and interpreters, I recommend [Crafting Interpreters](https://craftinginterpreters.com/).
-* Finally, it's really it's around 480 lines total, but since most of that is defining primitives which could be done runtime, it's not really relevant. It's just nice to have some starting points to work from :)
+* Finally, it's really it's around 480 lines total, but since most of that is defining primitives which could be done in runtime, it's not really relevant. It's just nice to have some starting points to work from :)
 
 ## A language in two parts
 
