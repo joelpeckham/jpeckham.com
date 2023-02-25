@@ -1,0 +1,276 @@
+---
+Title: 8 Puzzle Solver
+Description: A simple 8 puzzle solver using A* search algorithm.
+---
+
+<p>
+  This is a simple 8 puzzle solver using A* search algorithm. The puzzle is a
+  3x3 grid with 8 tiles and one empty space. The goal is to move the tiles
+  around to get the puzzle solved. The puzzle is solved when the tiles are in
+  the correct order and the empty space is in the bottom right corner.
+</p>
+
+<style>
+  #solver-app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background-color: var(--code-bg);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+  }
+  #controls input,
+  #controls select {
+    background-color: var(--theme);
+    border: none;
+    color: var(--primary);
+    padding: 0.2rem 0.3rem;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--radius);
+    border: 1px solid var(--tertiary);
+    transition: all 0.1s ease-in-out;
+    margin: 0.1rem;
+    font-size: 0.8rem;
+  }
+  #controls input:focus {
+    outline: 2px solid #225fc5;
+  }
+  #controls input:hover,
+  #controls select:hover {
+    background-color: var(--tertiary);
+  }
+  #controls input:disabled:hover {
+    background-color: var(--theme);
+  }
+  #controls input:disabled {
+    opacity: 0.4;
+  }
+  #controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin: -0.1rem 0 0 0;
+    width: 100%;
+  }
+  #controls > * {
+    margin-top: 0.1rem;
+  }
+  .controlItem {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+  #timeMachine {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  #timeMachine input {
+    width: 100%;
+  }
+  .divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--tertiary);
+    margin: 0.5rem 0;
+  }
+
+  .invalidInput {
+    border: 1px solid rgb(208, 25, 25) !important;
+    color: rgb(208, 25, 25) !important;
+  }
+  #solutionArea {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height:40vh;
+    text-align: center;
+  }
+  .invisible {
+    display: none !important;
+  }
+  #loading {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid var(--secondary);
+    border-radius: 50%;
+    border-top-color: var(--tertiary);
+    animation: spin 1s ease-in-out infinite;
+    -webkit-animation: spin 1s ease-in-out infinite;
+  }
+  
+  @keyframes spin {
+    to { -webkit-transform: rotate(360deg); }
+  }
+  @-webkit-keyframes spin {
+    to { -webkit-transform: rotate(360deg); }
+  }
+</style>
+
+<div id="solver-app">
+  <div id="controls">
+    <div class="controlItem">
+      <select name="Heuristic Function" id="heurFunc">
+        <option value="manhattan">Manhattan Distance</option>
+        <option value="hamming">Hamming Distance</option>
+      </select>
+      <select name="Search Function" id="searchFunc">
+        <option value="astar">A-Star</option>
+        <option value="bfs">Breadth First</option>
+        <option value="bestfs">Best First</option>
+      </select>
+    </div>
+    <div class="controlItem"></div>
+    <div class="controlItem">
+      <input
+        role="button"
+        type="button"
+        value="Randomize ↻"
+        class="inputButton"
+        onclick="randomizePuzzleString()"
+      />
+      <input
+        type="text"
+        name="Puzzle String"
+        id="puzStr"
+        placeholder="Puzzle String"
+        maxlength="9"
+        onchange="verifyPuzzleString()"
+        onkeyup="verifyPuzzleString()"
+      />
+    </div>
+    <input
+      type="button"
+      value="Solve ⭢"
+      class="inputButton"
+      id="solveBtn"
+      onclick="solve()"
+      disabled
+    />
+  </div>
+  <div class="divider"></div>
+  <div id="timeMachine">
+    <input
+      class="inactiveSlider"
+      type="range"
+      name="Progress"
+      id="timeSlider"
+      min="1"
+      max="1000"
+      value="1000"
+      disabled
+    />
+  </div>
+    <div class="divider"></div>
+    <div id="solutionArea">
+            <div id="loading" class="invisible"></div>
+            <p id="solutionInstructions"><strong>Enter a puzzle string above and click solve!</strong></p>
+        <div id="solutionStats"></div>
+    </div>
+</div>
+<script src="../8puzzleCode/8puzzle.js"></script>
+<script>
+  function fyshuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    let puzStrVal = "";
+    for (let i = 0; i < arr.length; i++) {
+      puzStrVal += arr[i];
+    }
+    return puzStrVal;
+  }
+  function randomizePuzzleString() {
+    let puzStr = document.getElementById("puzStr");
+    let puzStrVal = fyshuffle(["1", "2", "3", "4", "5", "6", "7", "8", "-"]);
+    while (!isSolvable(puzStrVal)) {
+      puzStrVal = fyshuffle(["1", "2", "3", "4", "5", "6", "7", "8", "-"]);
+    }
+    puzStr.value = puzStrVal;
+    verifyPuzzleString();
+  }
+  
+  function verifyPuzzleString() {
+    let puzStr = document.getElementById("puzStr");
+    let solveBtn = document.querySelector("#solveBtn");
+    let puzStrVal = puzStr.value;
+    let neededChars = ["1", "2", "3", "4", "5", "6", "7", "8", "-"];
+    // Check if the string is 9 characters long and contains needed chars in any order.
+    if (
+      !puzStrVal.length == 9 ||
+      (!neededChars.every((val) => puzStrVal.includes(val)) ||
+        !isSolvable(puzStrVal))
+    ) {
+      puzStr.classList.add("invalidInput");
+      solveBtn.disabled = true;
+    } else {
+      puzStr.classList.remove("invalidInput");
+      solveBtn.disabled = false;
+    }
+  }
+
+  async function solve() {
+    let puzStr = document.getElementById("puzStr");
+    let puzStrVal = puzStr.value;
+    console.log(puzStrVal);
+    let heurFunc = document.getElementById("heurFunc");
+    if (heurFunc.value == "manhattan") {
+      heurFunc = manhattanDistance;
+    } else if (heurFunc.value == "hamming") {
+      heurFunc = hammingDistance;
+    }
+    let searchFunc = document.getElementById("searchFunc");
+    if (searchFunc.value == "astar") {
+      searchFunc = a_star_search;
+    } else if (searchFunc.value == "bfs") {
+      searchFunc = breadth_first_search;
+    } else if (searchFunc.value == "bestfs") {
+      searchFunc = best_first_search;
+    }
+    document.getElementById("loading").classList.remove("invisible");
+    document.getElementById("solutionInstructions").classList.add("invisible");
+    document.getElementById("solutionStats").classList.add("invisible");
+    await new Promise(r => setTimeout(r, 100));
+    solution = await searchFunc(heurFunc, puzStrVal);
+    console.log(heurFunc);
+    console.log(searchFunc);
+    console.log(solution);
+    document.getElementById("loading").classList.add("invisible");
+    document.getElementById("solutionStats").classList.remove("invisible");
+    document.getElementById("solutionStats").innerHTML = solution;
+
+  }
+  function isSolvable(puzzle) {
+    var inversions = 0;
+    puzzle.replace("-", "0");
+    var puzzleArray = [];
+    for (var i = 0; i < puzzle.length; i++) {
+      puzzleArray.push(parseInt(puzzle.charAt(i)));
+    }
+  
+    // Count the number of inversions
+    for (var i = 0; i < puzzleArray.length - 1; i++) {
+      for (var j = i + 1; j < puzzleArray.length; j++) {
+        if (puzzleArray[i] != 0 && puzzleArray[j] != 0 && puzzleArray[i] > puzzleArray[j]) {
+          inversions++;
+        }
+      }
+    }
+  
+    // Check if the number of inversions is even or odd
+    return (inversions % 2 == 0);
+  }
+
+</script>
