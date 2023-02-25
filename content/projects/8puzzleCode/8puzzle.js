@@ -1,4 +1,4 @@
-class FlatQueue {
+class priorityQueue {
   constructor() {
     this.ids = [];
     this.values = [];
@@ -137,11 +137,13 @@ function getPuzzleChildren(puzzle) {
 }
 
 async function a_star_search(heuristic, puzzle, targetPuzzle = "12345678-") {
-  let q = new FlatQueue();
+  let q = new priorityQueue();
   let visited = new Set();
   let parent = {};
   let g = {};
   let f = {};
+  let maxDepth = 0;
+  let totalVisited = 0;
   q.push(puzzle, 0);
   g[puzzle] = 0;
   f[puzzle] = heuristic(puzzle);
@@ -155,10 +157,16 @@ async function a_star_search(heuristic, puzzle, targetPuzzle = "12345678-") {
       }
       path.push(puzzle);
       path.reverse();
-      return path;
+      console.log("Max depth reached:", maxDepth);
+      console.log("Total puzzles visited:", totalVisited);
+      return [path, maxDepth, totalVisited];
     }
     visited.add(currentPuzzle);
     let children = getPuzzleChildren(currentPuzzle);
+    if (g[currentPuzzle] > maxDepth) {
+      maxDepth = g[currentPuzzle];
+    }
+    totalVisited++;
     for (let i = 0; i < children.length; i++) {
       let child = children[i];
       if (visited.has(child)) {
@@ -173,14 +181,22 @@ async function a_star_search(heuristic, puzzle, targetPuzzle = "12345678-") {
       }
     }
   }
+  console.log("Max depth reached:", maxDepth);
+  console.log("Total puzzles visited:", totalVisited);
   return null;
 }
 
-async function best_first_search(heuristic, puzzle, targetPuzzle = "12345678-") {
-  let q = new FlatQueue();
+async function best_first_search(
+  heuristic,
+  puzzle,
+  targetPuzzle = "12345678-"
+) {
+  let q = new priorityQueue();
   let visited = new Set();
   let parent = {};
   let f = {};
+  let maxDepth = 0;
+  let totalVisited = 0;
   q.push(puzzle, 0);
   f[puzzle] = heuristic(puzzle);
   while (q.length > 0) {
@@ -193,10 +209,18 @@ async function best_first_search(heuristic, puzzle, targetPuzzle = "12345678-") 
       }
       path.push(puzzle);
       path.reverse();
-      return path;
+      console.log("Max depth reached:", maxDepth);
+      console.log("Total puzzles visited:", totalVisited);
+      return [path, maxDepth, totalVisited];
     }
     visited.add(currentPuzzle);
     let children = getPuzzleChildren(currentPuzzle);
+    if (parent[currentPuzzle] && parent[currentPuzzle] != puzzle) {
+      totalVisited++;
+    }
+    if (parent[currentPuzzle] && f[parent[currentPuzzle]] > maxDepth) {
+      maxDepth = f[parent[currentPuzzle]];
+    }
     for (let i = 0; i < children.length; i++) {
       let child = children[i];
       if (visited.has(child)) {
@@ -207,19 +231,27 @@ async function best_first_search(heuristic, puzzle, targetPuzzle = "12345678-") 
       q.push(child, f[child]);
     }
   }
+  console.log("Max depth reached:", maxDepth);
+  console.log("Total puzzles visited:", totalVisited);
   return null;
 }
+
 async function breadth_first_search(_ = 0, puzzle, targetPuzzle = "12345678-") {
   let q = [];
   q.push([puzzle]);
   let visited = new Set();
+  let maxDepth = 0;
+  let totalVisited = 0;
   while (q.length > 0) {
     let currentPath = q.shift();
     let currentPuzzle = currentPath[currentPath.length - 1];
     if (currentPuzzle == targetPuzzle) {
-      return currentPath;
+      console.log(`Max depth: ${maxDepth}`);
+      console.log(`Total visited: ${totalVisited}`);
+      return [currentPath, maxDepth, totalVisited];
     }
     visited.add(currentPuzzle);
+    totalVisited++;
     let children = getPuzzleChildren(currentPuzzle);
     for (let i = 0; i < children.length; i++) {
       let child = children[i];
@@ -230,6 +262,11 @@ async function breadth_first_search(_ = 0, puzzle, targetPuzzle = "12345678-") {
       newPath.push(child);
       q.push(newPath);
     }
+    if (currentPath.length > maxDepth) {
+      maxDepth = currentPath.length;
+    }
   }
+  console.log(`Max depth: ${maxDepth}`);
+  console.log(`Total visited: ${totalVisited}`);
   return null;
 }

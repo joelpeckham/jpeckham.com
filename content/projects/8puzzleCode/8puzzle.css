@@ -1,0 +1,206 @@
+#solver-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: var(--code-bg);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+}
+#controls input,
+#controls select {
+  background-color: var(--theme);
+  border: none;
+  color: var(--primary);
+  padding: 0.2rem 0.3rem;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+  border: 1px solid var(--tertiary);
+  transition: all 0.1s ease-in-out;
+  margin: 0.1rem;
+  font-size: 0.8rem;
+}
+#controls input:focus {
+  outline: 2px solid #225fc5;
+}
+#controls input:hover,
+#controls select:hover {
+  background-color: var(--tertiary);
+}
+#controls input:disabled:hover {
+  background-color: var(--theme);
+}
+#controls input:disabled {
+  opacity: 0.4;
+}
+#controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin: -0.1rem 0 0 0;
+  width: 100%;
+}
+#controls > * {
+  margin-top: 0.1rem;
+}
+.controlItem {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+#timeMachine {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+#timeMachine input {
+  width: 100%;
+}
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--tertiary);
+  margin: 0.5rem 0;
+}
+
+.invalidInput {
+  border: 1px solid rgb(208, 25, 25) !important;
+  color: rgb(208, 25, 25) !important;
+}
+
+#puzzleContainer{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* width: 100%; */
+    height: 40vh;
+    text-align: center;
+  }
+
+#puzzleContainer.invalidPuzzle > *{
+    background: rgb(208, 25, 25) !important;
+}
+
+#solutionArea {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 40vh;
+  text-align: center;
+}
+.invisible {
+  display: none !important;
+}
+#loading {
+  display:block;
+  float: left;
+  position:absolute;
+  z-index: 100;
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--secondary);
+  border-radius: 50%;
+  border-top-color: var(--theme);
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
+  box-shadow: 0rem 0rem 5rem 2rem #00000084;
+  background: #00000049;
+}
+
+body.dark #loading {
+    box-shadow: 0rem 0rem 5rem 2rem #ffffff84;
+    background: #ffffff49;
+    border-top-color: #fff;
+}
+
+@keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+@-webkit-keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+.puzzle{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    aspect-ratio: 1/1;
+    height:25vh;
+    background: var(--secondary);
+    border-radius: var(--radius);
+    padding:0.5rem;
+    box-shadow: .2rem .2rem 1rem -0.4rem #00000079;
+    transition: all 0.2s ease-in-out;
+}
+.psquare{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color: var(--content);
+    background: var(--code-bg);
+    border-radius: var(--radius);
+    box-shadow: .1rem .1rem .2rem -0.1rem #00000084;
+    transform:translate(0%,0%);
+    transition: all 0.2s ease-in-out;
+    margin:0.1rem;
+}
+.psquare p{
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    margin:0;
+}
+.psquare.empty{
+    opacity: 0;
+    background:none;
+}
+#arrowNav{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    height: 100%;
+    text-align: center;
+}
+#arrowNav>p{
+    /* margin:2rem; */
+    user-select: none;
+    font-size: 7vh;
+    color: var(--tertiary);
+    text-shadow: 0.1rem 0.1rem 0.5rem rgba(0, 0, 0, 0.117);
+    transition: all 0.2s ease-in-out;
+}
+#arrowNav>p:hover{
+    transform: translateY(-0.1rem);
+    opacity: 0.8;
+}
+body.dark #arrowNav>p{
+    color: var(--secondary);
+}
+#stats{
+    display: flex;
+    flex-direction: row;
+    align-items: left;
+    width: 100%;
+    padding-left:0.1rem;
+}
+#stats p{
+    margin:0;
+    font-size: 0.8rem;
+    color: var(--primary);
+}
