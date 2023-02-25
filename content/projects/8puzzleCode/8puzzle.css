@@ -180,7 +180,7 @@ body.dark #loading {
 #arrowNav>p{
     /* margin:2rem; */
     user-select: none;
-    font-size: 7vh;
+    font-size: 5vh;
     color: var(--tertiary);
     text-shadow: 0.1rem 0.1rem 0.5rem rgba(0, 0, 0, 0.117);
     transition: all 0.2s ease-in-out;
@@ -203,4 +203,25 @@ body.dark #arrowNav>p{
     margin:0;
     font-size: 0.8rem;
     color: var(--primary);
+}
+#solveBtn{
+    background-color: rgb(232, 241, 255) !important;
+    border-color: #225fc5 !important;
+    font-weight: bold;
+    color: #225fc5 !important;
+}
+body.dark #solveBtn{
+    background-color: #3e64a4 !important;
+    border-color: rgb(232, 241, 255) !important;
+    color: rgb(232, 241, 255) !important;
+}
+#solveBtn:hover{
+    background-color: var(--tertiary) !important;
+    border-color: var(--secondary) !important;
+    color: var(--secondary) !important;
+}
+body.dark #solveBtn:hover{
+    background-color: var(--tertiary) !important;
+    border-color: var(--secondary) !important;
+    color: var(--secondary) !important;
 }

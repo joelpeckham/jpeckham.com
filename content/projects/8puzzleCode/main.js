@@ -93,7 +93,7 @@ async function solve() {
   endTime = new Date();
   timeDelta = (endTime - startTime) / 1000;
   console.info(`Solved in ${timeDelta} seconds`);
-  document.querySelector("#stats p").innerText = `Stats: "${puzStrVal}" solved in ${timeDelta} seconds. Max depth: ${maxDepth}. Total visited: ${totalVisited}.`;
+  document.querySelector("#stats p").innerText = `Stats: "${puzStrVal}" solved in ${timeDelta} seconds. Max depth: ${maxDepth}. Total visited: ${totalVisited}. Solution length: ${solution.length}`;
   lastSolution = solution;
   console.info(solution);
   document.getElementById("loading").classList.add("invisible");
