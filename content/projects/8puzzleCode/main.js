@@ -108,7 +108,7 @@ async function solve() {
   timeMachine.value = 0;
   // document.querySelector("#arrowNav p.bw").classList.remove("disabled");
   document.querySelector("#arrowNav p.fw").classList.remove("disabled");
-  timeMachine.addEventListener("input", () => {
+  let tmInput = () => {
     if (timeMachine.valueAsNumber == 0) {
       document.querySelector("#arrowNav p.bw").classList.add("disabled");
     }
@@ -123,8 +123,9 @@ async function solve() {
     parent.innerHTML = "";
       let np = createPuzzleElem(solution[timeMachine.value]);
       parent.appendChild(np);
-  });
-
+  }
+  timeMachine.addEventListener("input", tmInput);
+  tmInput();
 }
 var animationInProgress = false;
 
