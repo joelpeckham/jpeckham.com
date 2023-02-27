@@ -10,11 +10,11 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
 <div id="solver-app">
   <div id="controls">
     <div class="controlItem">
-      <select name="Heuristic Function" id="heurFunc">
+      <select aria-label="Select Heuristic Function" name="Heuristic Function" id="heurFunc">
         <option value="manhattan">Manhattan Distance</option>
         <option value="hamming">Hamming Distance</option>
       </select>
-      <select name="Search Function" id="searchFunc">
+      <select aria-label="Select Search Algorithm" name="Search Function" id="searchFunc">
         <option value="astar">A-Star Search</option>
         <option value="bfs">Breadth First</option>
         <option value="bestfs">Greedy Best First</option>
@@ -27,6 +27,7 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
         type="button"
         value="Randomize ↻"
         class="inputButton"
+        aria-label="Randomize Puzzle"
         onclick="randomizePuzzleString()"
       />
       <input
@@ -34,6 +35,7 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
         name="Puzzle String"
         id="puzStr"
         placeholder="Puzzle String"
+        aria-label="Input Puzzle String"
         maxlength="9"
         onchange="verifyPuzzleString()"
         onkeyup="verifyPuzzleString()"
@@ -44,6 +46,7 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
       value="Solve ⭢"
       class="inputButton"
       id="solveBtn"
+      aria-label="Solve Puzzle"
       onclick="solve()"
       disabled
     />
@@ -55,6 +58,7 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
       type="range"
       name="Progress"
       id="timeSlider"
+      aria-label="Solution Progress Slider"
       min="0"
       max="1000"
       value="0"
@@ -66,9 +70,9 @@ Description: A simple 8 puzzle solver. (With your choice of heuristic function a
   <div id="solutionArea">
     <div id="loading" class="invisible"></div>
     <div id="arrowNav">
-      <p role="button" name="Animate Backward" onclick="animateBackward()">◀</p>
+      <p role="button" name="Animate Backward" class = "bw" onclick="animateBackward()">◀</p>
       <div id="puzzleContainer"></div>
-      <p role="button" name="Animate Forward" onclick="animateForward()">▶</p>
+      <p role="button" name="Animate Forward"class = "fw" onclick="animateForward()">▶</p>
     </div>
     <div class="puzzle invisible" id="puzzleTemplate">
       <div class="psquare" id="ps_0">

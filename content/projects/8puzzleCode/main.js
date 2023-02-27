@@ -28,7 +28,12 @@ function verifyPuzzleString() {
   parent.innerHTML = "";
   let np = createPuzzleElem(puzStrVal);
   parent.appendChild(np);
-  document.querySelector("#timeMachine input").disabled = true;
+  let tm = document.querySelector("#timeMachine input");
+  tm.disabled = true;
+  tm.value = 0;
+  document.querySelector("#arrowNav p.bw").classList.add("disabled");
+  document.querySelector("#arrowNav p.fw").classList.add("disabled");
+  document.querySelector("#stats p").innerText = "Stats:";
   lastSolution = null;
   let neededChars = ["1", "2", "3", "4", "5", "6", "7", "8", "-"];
   // Check if the string is 9 characters long and contains needed chars in any order.
@@ -101,7 +106,19 @@ async function solve() {
   timeMachine.max = solution.length - 1;
   timeMachine.disabled = false;
   timeMachine.value = 0;
+  // document.querySelector("#arrowNav p.bw").classList.remove("disabled");
+  document.querySelector("#arrowNav p.fw").classList.remove("disabled");
   timeMachine.addEventListener("input", () => {
+    if (timeMachine.valueAsNumber == 0) {
+      document.querySelector("#arrowNav p.bw").classList.add("disabled");
+    }
+    else if (timeMachine.value == timeMachine.max) {
+      document.querySelector("#arrowNav p.fw").classList.add("disabled");
+    }
+    else {
+      document.querySelector("#arrowNav p.bw").classList.remove("disabled");
+      document.querySelector("#arrowNav p.fw").classList.remove("disabled");
+    }
     let parent = document.querySelector("#puzzleContainer");
     parent.innerHTML = "";
       let np = createPuzzleElem(solution[timeMachine.value]);
@@ -117,6 +134,10 @@ function animateForward() {
   if (timeMachine.valueAsNumber < parseInt(timeMachine.max)) {
     timeMachine.valueAsNumber++;
     animateTranslations(lastSolution, timeMachine.valueAsNumber - 1, 1);
+    document.querySelector("#arrowNav p.bw").classList.remove("disabled");
+  }
+  if (timeMachine.valueAsNumber == parseInt(timeMachine.max)) {
+    document.querySelector("#arrowNav p.fw").classList.add("disabled");
   }
 }
 function animateBackward() {
@@ -125,6 +146,10 @@ function animateBackward() {
   if (timeMachine.valueAsNumber > 0) {
     timeMachine.valueAsNumber--;
     animateTranslations(lastSolution, timeMachine.valueAsNumber + 1, -1);
+    document.querySelector("#arrowNav p.fw").classList.remove("disabled");
+  }
+  if (timeMachine.valueAsNumber == 0) {
+    document.querySelector("#arrowNav p.bw").classList.add("disabled");
   }
 }
 
