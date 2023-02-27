@@ -56,8 +56,8 @@ params:
 
   # home-info mode
   homeInfoParams:
-    Title: "Hi there \U0001F44B"
-    Content: I'm a backend and AI developer looking for a home.
+    Title: "Hello, friend!"
+    Content: I'm a backend and AI developer looking for a home. <br /> Check out my projects below!
     # image: "https://source.unsplash.com/random/1920x1080"
     # imageAlt: "Home Page Image"
 
@@ -87,16 +87,16 @@ params:
 menu:
   main:
     - identifier: projects
-      name: projects
+      name: Projects
       url: /projects/
       weight: 10
     - identifier: about
-      name: about
+      name: About me
       url: /about/
       weight: 20
-    - identifier: example
-      name: example.org
-      url: https://example.org
+    - identifier: My Github
+      name: Github
+      url: https://github.com/joelpeckham
       weight: 30
 # Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
 pygmentsUseClasses: true

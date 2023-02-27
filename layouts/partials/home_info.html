@@ -1,18 +1,85 @@
+<style>
+  #mimojiContainer {
+    position: relative;
+    width: 35%;
+    padding-bottom: 1rem;
+  }
+  #mimoji {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+  #mimoji > img {
+    width: 76%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #shadow {
+    position: absolute;
+    bottom: -2.5%;
+    width: 100%;
+    mix-blend-mode: multiply;
+  }
+  #headerGroup {
+    padding-left: 0.4rem;
+  }
+  body.dark #shadow {
+    mix-blend-mode: screen;
+    filter: invert(1);
+  }
+  #sideBySide {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  @media (max-width: 640px) {
+    #mimojiContainer {
+      width: 30%;
+    }
+    #sideBySide {
+      flex-direction: column;
+      align-items: start;
+    }
+  }
+</style>
 {{- with site.Params.homeInfoParams }}
 <article class="first-entry home-info">
-    <header class="entry-header">
+  <div id="sideBySide">
+    <div id="mimojiContainer">
+      <div id="mimoji">
+        <img src="/mimoji.webp" alt="mimoji" />
+        <div id="shadow">
+          <img src="/shadow.jpg" alt="slitShadow" />
+        </div>
+      </div>
+    </div>
+    <div id="headerGroup">
+      <header class="entry-header">
         <h1>{{ .Title | markdownify }}</h1>
         {{ if site.Params.homeInfoParams.image }}
-        <figure class = "entry-cover">
-            <img loading="lazy" src="{{ site.Params.homeInfoParams.image }}" alt="{{ site.Params.homePageImage.imageAlt }}" />
+        <figure class="entry-cover">
+          <img
+            loading="lazy"
+            src="{{ site.Params.homeInfoParams.image }}"
+            alt="{{ site.Params.homePageImage.imageAlt }}"
+          />
         </figure>
         {{end}}
-    </header>
-    <div class="entry-content">
-        {{ .Content | markdownify }}
-    </div>
-    <footer class="entry-footer">
+      </header>
+      {{/*
+      <div class="entry-content">{{ .Content | markdownify }}</div>
+      */}}
+      <div class="entry-content">
+        <p>
+          I'm a backend and AI developer looking for a home. <br />
+          Check out my projects below!
+        </p>
+      </div>
+      <footer class="entry-footer">
         {{ partial "social_icons.html" site.Params.socialIcons }}
-    </footer>
+      </footer>
+    </div>
+  </div>
 </article>
+
 {{- end -}}
