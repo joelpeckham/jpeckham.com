@@ -1,0 +1,101 @@
+#raidContainer {
+  background: var(--code-bg);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--tertiary);
+  margin: 0.5rem 0;
+}
+
+#raidContainer input,
+#raidContainer select,
+#raidContainer button {
+  background: revert;
+  border: revert;
+  margin: revert;
+  padding: 0.3em 0.7em;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease-in-out;
+  background-color: var(--theme);
+  color: var(--primary);
+  height: 100%;
+}
+
+#raidContainer input:focus,
+#raidContainer select:focus,
+#raidContainer textarea:focus,
+#raidContainer button:focus {
+  outline: revert;
+}
+
+.noDisplay {
+  display: none;
+}
+
+#raidContainer button {
+  background-color: var(--button-bg);
+  border: 1px solid var(--button-fg);
+  border-radius: var(--radius);
+  color: var(--button-fg);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+#raidContainer button:hover {
+  background-color: var(--button-fg);
+  color: var(--button-bg);
+  border-color: var(--button-bg);
+}
+
+#raidContainer button:disabled {
+  background-color: var(--button-bg);
+  border-color: var(--button-fg);
+  color: var(--button-fg);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#raidContainer input,
+#raidContainer select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s ease-in-out;
+}
+
+#raidContainer #animationProgress{
+    width: 100%;
+    margin: 0;
+    padding:0;
+    height: 1rem;
+}
+#raidControlContainer .topLevel{
+    display:flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap:0.5rem;
+}
+.inputGroup{
+    display:flex;
+    flex-direction: row;
+    gap:1rem;
+    flex-wrap: wrap;
+}
+#raidControlContainer{
+    font-size: smaller;
+}
+ textarea{
+    width: 100%;
+    height: 10rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease-in-out;
+    background-color: var(--theme);
+    color: var(--primary);
+    padding: 0.3em 0.7em;
+}
