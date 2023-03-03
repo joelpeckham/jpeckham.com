@@ -132,7 +132,7 @@ class NeuralNetwork {
 
 /* neural network's hyper parameters */
 const inputnodes = 25;
-var hiddennodes = 20;
+var hiddennodes = 4;
 const outputnodes = 10;
 const learningrate = 0.2;
 const threshold = 0.5;
@@ -176,7 +176,7 @@ function resizeSvgViewBox() {
   const svgWidth = svgContainer.clientWidth;
   const svgHeight = svgContainer.clientHeight;
   svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
-  redrawEdges();
+  // redrawEdges();
 }
 function redrawEdges() {
   // Start by finding the positions of all the nodes relative to the top left of the graph area
@@ -354,7 +354,6 @@ for (let i = 0; i < trainingImages.length; i++) {
   const image = trainingImages[i];
   image.addEventListener("mouseover", function () {
     const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
-    const predictedLabel = prediction.indexOf(Math.max(...prediction));
 
     updateGraph(i);
     // redrawEdges();
@@ -382,10 +381,10 @@ function updateStats() {
 }
 
 function updateHiddenLayer() {
-  hiddenNodes = document.querySelector("#hiddenNodes").valueAsNumber;
+  hiddennodes = document.querySelector("#hiddenNodes").valueAsNumber;
   nodeDomContainer = document.querySelector("div.gaCol.col_2");
   nodeDomContainer.innerHTML = "";
-  for (let i = 0; i < hiddenNodes; i++) {
+  for (let i = 0; i < hiddennodes; i++) {
     const node = document.createElement("div");
     node.classList.add("hiddenNode");
     node.classList.add("node");
