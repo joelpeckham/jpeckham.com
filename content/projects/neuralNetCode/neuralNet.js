@@ -132,7 +132,7 @@ class NeuralNetwork {
 
 /* neural network's hyper parameters */
 const inputnodes = 25;
-var hiddennodes = 4;
+var hiddennodes = 6;
 const outputnodes = 10;
 const learningrate = 0.2;
 const threshold = 0.5;
