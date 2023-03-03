@@ -10,7 +10,6 @@ Description: An interactive tool to visualize neural networks and their training
   referrerpolicy="no-referrer"
 ></script>
 <link rel="stylesheet" href="../neuralNetCode/nn.css" />
-<!-- <script src="../neuralNetCode/neuralNet.js" defer></script> -->
 
 <div class="divider"></div>
 
@@ -26,19 +25,19 @@ Description: An interactive tool to visualize neural networks and their training
         max="100"
         value="30"
       /> </label
-    ><label for="maxIterations"
-      >Iterations:
+    ><label for="stepSize"
+      >Step Size:
       <input
         type="number"
-        id="maxIterations"
-        name="maxIterations"
+        id="stepSize"
+        name="stepSize"
         min="1"
-        max="10000"
-        value="1000"
+        max="1000"
+        value="100"
       />
     </label>
   </div>
-  <button type="button">Train →</button>
+  <button type="button" id="trainButton">Train Step →</button>
 </div>
 
 <div class="divider"></div>
@@ -108,143 +107,77 @@ Description: An interactive tool to visualize neural networks and their training
 
 <div class="divider"></div>
 
-<div id="graphAreaContainer">
-  <div id="svgContainer">
-    <svg width="100%" height="100%" id="edgesSvg" viewbox = "0,0,100,100"></svg>
-  </div>
-  <div id="graphArea">
-    <div class="colWrapper">
-    <div class="gaCol col_1">
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-      <div class="node inputNode"></div>
-    </div></div>
-    <div class="gaCol col_2">
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
-      <div class="node hiddenNode"></div>
+<div id="gaWrapper">
+  <div id="graphAreaContainer">
+    <div id="svgContainer">
+      <svg width="100%" height="100%" id="edgesSvg" viewbox = "0,0,100,100"></svg>
     </div>
-    <div class="gaCol col_3">
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
-      <div class="node outputNode"></div>
+    <div id="graphArea">
+      <div class="colWrapper">
+      <div class="gaCol col_1">
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+        <div class="node inputNode"></div>
+      </div></div>
+      <div class="gaCol col_2">
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+        <div class="node hiddenNode"></div>
+      </div>
+      <div class="gaCol col_3">
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+        <div class="node outputNode"></div>
+      </div>
     </div>
   </div>
 </div>
 
-<script>
-  function resizeSvgViewBox() {
-    const svg = document.querySelector("#edgesSvg");
-    const svgContainer = document.querySelector("#svgContainer");
-    const svgWidth = svgContainer.clientWidth;
-    const svgHeight = svgContainer.clientHeight;
-    svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
-    redrawEdges();
-  }
-  function redrawEdges(){
-    // Start by finding the positions of all the nodes relative to the top left of the graph area
-    const graphArea = document.querySelector("#graphArea");
-    const graphAreaRect = graphArea.getBoundingClientRect();
-    const graphAreaTop = graphAreaRect.top;
-    const graphAreaLeft = graphAreaRect.left;
-    const inputNodes = document.querySelectorAll(".inputNode");
-    const hiddenNodes = document.querySelectorAll(".hiddenNode");
-    const outputNodes = document.querySelectorAll(".outputNode");
-    // Get the positions each node and store them in an array
-    function getNodePositions(nodeList){
-      const nodePositions = [];
-      for (let i = 0; i < nodeList.length; i++) {
-        const node = nodeList[i];
-        const nodeRect = node.getBoundingClientRect();
-        let nodeTop = nodeRect.top - graphAreaTop;
-        let nodeLeft = nodeRect.left - graphAreaLeft;
-        const nodeWidth = nodeRect.width;
-        const nodeHeight = nodeRect.height;
-        nodeTop += nodeHeight / 2;
-        nodeLeft += nodeWidth / 2;
-        nodePositions.push({ top: nodeTop, left: nodeLeft });
-      }
-      return nodePositions;
-    }
-    const inputNodePositions = getNodePositions(inputNodes);
-    const hiddenNodePositions = getNodePositions(hiddenNodes);
-    const outputNodePositions = getNodePositions(outputNodes);
-    // Now that we have the positions of all the nodes, we can draw the edges
-    const svg = document.querySelector("#edgesSvg");
-    // First, clear the svg of any existing edges
-    svg.innerHTML = "";
-    // Now, draw the edges
-    function drawEdges(nodePositions1, nodePositions2, nodeSize){
-      for (let i = 0; i < nodePositions1.length; i++) {
-        const node1 = nodePositions1[i];
-        for (let j = 0; j < nodePositions2.length; j++) {
-          const node2 = nodePositions2[j];
-          const curve = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          let wiggle = Math.floor(Math.random() * nodeWidth/3);
-          const graphArea = document.querySelector("#graphArea");
-          let computedStyle = window.getComputedStyle(graphArea);
-          const handleScale = 3;
-          let hd = (node2.left - node1.left) / handleScale;
-          let curvePath = `M ${node1.left} ${node1.top} C ${node1.left + hd} ${node1.top + wiggle } ${node2.left - hd} ${node2.top - wiggle} ${node2.left} ${node2.top + wiggle}`;
-          if (computedStyle.gridTemplateRows.split(" ").length > 1) {
-            //Graph is vertical, so adjust the curve path handle positions
-            hd = (node2.top - node1.top) / handleScale;
-            curvePath = `M ${node1.left} ${node1.top} C ${node1.left + wiggle} ${node1.top + hd} ${node2.left - wiggle} ${node2.top - hd} ${node2.left + wiggle} ${node2.top}`;
-          }
 
-          curve.setAttribute("d", curvePath);
-          curve.setAttribute("stroke", "rgba(0,0,0,0.1)");
-          curve.setAttribute("stroke-width", "1");
-          curve.setAttribute("fill", "none");
-          svg.appendChild(curve);
-        }
-      }
-    }
-    let nodeWidth = document.querySelector(".inputNode").getBoundingClientRect().width;
-    drawEdges(inputNodePositions, hiddenNodePositions, nodeWidth);
-    drawEdges(hiddenNodePositions, outputNodePositions, nodeWidth);
-
-  }
-  window.addEventListener("resize", resizeSvgViewBox);
-  resizeSvgViewBox();
-</script>
+<script src="../neuralNetCode/neuralNet.js"></script>

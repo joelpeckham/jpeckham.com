@@ -122,11 +122,17 @@ class NeuralNetwork {
     this.backward(target);
     this.update();
   };
+  getWeights() {
+    return {
+      wih: this.wih,
+      who: this.who,
+    };
+  }
 }
 
 /* neural network's hyper parameters */
 const inputnodes = 25;
-const hiddennodes = 5;
+const hiddennodes = 20;
 const outputnodes = 10;
 const learningrate = 0.2;
 const threshold = 0.5;
@@ -163,33 +169,207 @@ function oneHotEncoding(label) {
 }
 
 const encodedTrainLabels = trainingLabels.map((label) => oneHotEncoding(label));
-console.log(trainingData);
-console.log(encodedTrainLabels);
 
-// Train the neural network
-for (let i = 0; i < iterations; i++) {
-  trainingData.forEach((data, i) => {
-    myNN.train(data, encodedTrainLabels[i]);
-  });
+// // Train the neural network
+// for (let i = 0; i < iterations; i++) {
+//   trainingData.forEach((data, i) => {
+//     myNN.train(data, encodedTrainLabels[i]);
+//   });
+// }
+
+// // Predict the output
+// let predictions = [];
+// trainingData.forEach((data, i) => {
+//   const prediction = myNN.predict(data);
+//   predictions.push(prediction);
+// });
+// console.log(predictions);
+// let correct = 0;
+// for (let i = 0; i < predictions.length; i++) {
+//   const prediction = predictions[i];
+//   const predArray = prediction._data.map((p) => p[0]);
+//   console.log(predArray);
+//   const max = Math.max(...predArray);
+//   const index = predArray.indexOf(max);
+//   console.log("Prediction: " + index + " Actual: " + trainingLabels[i]);
+//   if (index === trainingLabels[i]) {
+//     correct++;
+//   }
+// }
+// console.log("Accuracy: " + (correct / predictions.length) * 100 + "%");
+
+function resizeSvgViewBox() {
+  const svg = document.querySelector("#edgesSvg");
+  const svgContainer = document.querySelector("#svgContainer");
+  const svgWidth = svgContainer.clientWidth;
+  const svgHeight = svgContainer.clientHeight;
+  svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
+  redrawEdges();
 }
-
-// Predict the output
-let predictions = [];
-trainingData.forEach((data, i) => {
-  const prediction = myNN.predict(data);
-  predictions.push(prediction);
-});
-console.log(predictions);
-let correct = 0;
-for (let i = 0; i < predictions.length; i++) {
-  const prediction = predictions[i];
-  const predArray = prediction._data.map((p) => p[0]);
-  console.log(predArray);
-  const max = Math.max(...predArray);
-  const index = predArray.indexOf(max);
-  console.log("Prediction: " + index + " Actual: " + trainingLabels[i]);
-  if (index === trainingLabels[i]) {
-    correct++;
+function redrawEdges() {
+  // Start by finding the positions of all the nodes relative to the top left of the graph area
+  const graphArea = document.querySelector("#graphArea");
+  const graphAreaRect = graphArea.getBoundingClientRect();
+  const graphAreaTop = graphAreaRect.top;
+  const graphAreaLeft = graphAreaRect.left;
+  const inputNodes = document.querySelectorAll(".inputNode");
+  const hiddenNodes = document.querySelectorAll(".hiddenNode");
+  const outputNodes = document.querySelectorAll(".outputNode");
+  // Get the positions each node and store them in an array
+  function getNodePositions(nodeList) {
+    const nodePositions = [];
+    for (let i = 0; i < nodeList.length; i++) {
+      const node = nodeList[i];
+      const nodeRect = node.getBoundingClientRect();
+      let nodeTop = nodeRect.top - graphAreaTop;
+      let nodeLeft = nodeRect.left - graphAreaLeft;
+      const nodeWidth = nodeRect.width;
+      const nodeHeight = nodeRect.height;
+      nodeTop += nodeHeight / 2;
+      nodeLeft += nodeWidth / 2;
+      nodePositions.push({ top: nodeTop, left: nodeLeft });
+    }
+    return nodePositions;
   }
+  const inputNodePositions = getNodePositions(inputNodes);
+  const hiddenNodePositions = getNodePositions(hiddenNodes);
+  const outputNodePositions = getNodePositions(outputNodes);
+  // Now that we have the positions of all the nodes, we can draw the edges
+  const svg = document.querySelector("#edgesSvg");
+  // First, clear the svg of any existing edges
+  svg.innerHTML = "";
+  // Now, draw the edges
+  function drawEdges(nodePositions1, nodePositions2, nodeSize, weightLayer) {
+    const edgeWeights = weightLayer === "hidden" ? myNN.wih : myNN.who;
+    const minWeight = Math.min(...edgeWeights._data.flat());
+    const maxWeight = Math.max(...edgeWeights._data.flat());
+    console.log(minWeight, maxWeight);
+    for (let i = 0; i < nodePositions1.length; i++) {
+      const node1 = nodePositions1[i];
+      for (let j = 0; j < nodePositions2.length; j++) {
+        let edgeWeight = edgeWeights._data[j][i];
+        const node2 = nodePositions2[j];
+        const curve = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path"
+        );
+        let wiggle = Math.floor((Math.random() * nodeWidth) / 3);
+        const graphArea = document.querySelector("#graphArea");
+        let computedStyle = window.getComputedStyle(graphArea);
+        const handleScale = 3;
+        let hd = (node2.left - node1.left) / handleScale;
+        let curvePath = `M ${node1.left} ${node1.top} C ${node1.left + hd} ${
+          node1.top + wiggle
+        } ${node2.left - hd} ${node2.top - wiggle} ${node2.left} ${
+          node2.top + wiggle
+        }`;
+        if (computedStyle.gridTemplateRows.split(" ").length > 1) {
+          //Graph is vertical, so adjust the curve path handle positions
+          hd = (node2.top - node1.top) / handleScale;
+          curvePath = `M ${node1.left} ${node1.top} C ${node1.left + wiggle} ${
+            node1.top + hd
+          } ${node2.left - wiggle} ${node2.top - hd} ${node2.left + wiggle} ${
+            node2.top
+          }`;
+        }
+        const normalizedEdgeWeight = Math.abs((edgeWeight - minWeight) / (maxWeight - minWeight));
+        curve.setAttribute("d", curvePath);
+        curve.setAttribute(
+          "stroke",
+          `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
+        );
+        curve.setAttribute("stroke-width", `${normalizedEdgeWeight * 2 }`);
+        curve.setAttribute("fill", "none");
+        svg.appendChild(curve);
+      }
+    }
+  }
+  let nodeWidth = document
+    .querySelector(".inputNode")
+    .getBoundingClientRect().width;
+  drawEdges(inputNodePositions, hiddenNodePositions, nodeWidth, "hidden");
+  drawEdges(hiddenNodePositions, outputNodePositions, nodeWidth, "output");
 }
-console.log("Accuracy: " + (correct / predictions.length) * 100 + "%");
+window.addEventListener("resize", resizeSvgViewBox);
+resizeSvgViewBox();
+
+var currentTrainingIteration = 0;
+function runTrainingIteration(display = true) {
+  const currentInputData =
+    trainingData[currentTrainingIteration % trainingData.length];
+  const currentTrainingLabel =
+    encodedTrainLabels[currentTrainingIteration % trainingData.length];
+  myNN.train(currentInputData, currentTrainingLabel);
+  if (display) {
+    updateGraph();
+    redrawEdges();
+  }
+  currentTrainingIteration++;
+}
+
+function updateGraph() {
+  // Update the graph
+  const inputNodes = document.querySelectorAll(".inputNode");
+  const hiddenNodes = document.querySelectorAll(".hiddenNode");
+  const outputNodes = document.querySelectorAll(".outputNode");
+  const currentInputData =
+    trainingData[currentTrainingIteration % trainingData.length];
+  // Update the input nodes
+  for (let i = 0; i < inputNodes.length; i++) {
+    const node = inputNodes[i];
+    const nodeValues = currentInputData[i];
+    // update node color
+    const nodeColor = nodeValues * 255;
+    node.style.backgroundColor = `rgba(${nodeColor}, ${nodeColor}, ${nodeColor}, 1)`;
+    const inverseNodeColor = 255 - nodeColor;
+    node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
+  }
+  // Update the hidden nodes
+  if (myNN.cache.h_out) {
+    const hiddenNodeValues = myNN.cache.h_out._data;
+    for (let i = 0; i < hiddenNodes.length; i++) {
+      const node = hiddenNodes[i];
+      const nodeValues = hiddenNodeValues[i];
+      // update node color
+      const nodeColor = nodeValues * 255;
+      node.style.backgroundColor = `rgba(${nodeColor}, ${nodeColor}, ${nodeColor}, 1)`;
+      const inverseNodeColor = 255 - nodeColor;
+      node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
+    }
+  }
+  // Update the output nodes
+  const prediction = myNN.predict(currentInputData)._data.map((x) => x[0]);
+  for (let i = 0; i < outputNodes.length; i++) {
+    const node = outputNodes[i];
+    const nodeValues = prediction[i];
+    // update node color
+    const nodeColor = nodeValues * 255;
+    node.style.backgroundColor = `rgba(${nodeColor}, ${nodeColor}, ${nodeColor}, 1)`;
+    const inverseNodeColor = 255 - nodeColor;
+    node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
+  }
+  const predictedLabel = prediction.indexOf(Math.max(...prediction));
+  console.log("Predicted Label: " + predictedLabel);
+}
+
+document.querySelector("#trainButton").addEventListener("click", function () {
+  runTrainingStep();
+});
+
+function runTrainingStep() {
+  const trainingStep = document.querySelector("#stepSize").valueAsNumber;
+  for (let i = 0; i < trainingStep; i++) {
+    runTrainingIteration(false);
+  }
+  updateGraph();
+  redrawEdges();
+}
+
+function resetApp() {
+  myNN = new NeuralNetwork(inputnodes, hiddennodes, outputnodes, learningrate);
+  currentTrainingIteration = 0;
+  updateGraph();
+  redrawEdges();
+}
+updateGraph();
+redrawEdges();
