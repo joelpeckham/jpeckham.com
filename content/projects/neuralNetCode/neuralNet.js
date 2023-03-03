@@ -126,33 +126,41 @@ class NeuralNetwork {
 
 /* neural network's hyper parameters */
 const inputnodes = 25;
-const hiddennodes = 50;
+const hiddennodes = 5;
 const outputnodes = 10;
 const learningrate = 0.2;
 const threshold = 0.5;
 let iter = 0;
-const iterations = 1000;
+const iterations = 2000;
 
 // 5x5 pixel image of 0-9
 const trainingData = [
-  [0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0], // 0
-  [0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0], // 1
+  [0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0],
+  [0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
+  [0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1],
+  [0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+  [0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  [0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+  [0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1],
+  [0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+  [0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1],
+  [0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1],
 ];
 
-const trainingLabels = [
-  0,
-  1
-];
+const trainingLabels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-
-let myNN = new NeuralNetwork(inputnodes, hiddennodes, outputnodes, learningrate);
+let myNN = new NeuralNetwork(
+  inputnodes,
+  hiddennodes,
+  outputnodes,
+  learningrate
+);
 
 function oneHotEncoding(label) {
-    const encoded = new Array(10).fill(0.0);
-    encoded[label] = 0.99;
-    return encoded;
+  const encoded = new Array(10).fill(0.0);
+  encoded[label] = 0.99;
+  return encoded;
 }
-
 
 const encodedTrainLabels = trainingLabels.map((label) => oneHotEncoding(label));
 console.log(trainingData);
@@ -160,15 +168,28 @@ console.log(encodedTrainLabels);
 
 // Train the neural network
 for (let i = 0; i < iterations; i++) {
-    trainingData.forEach((data, i) => {
-        myNN.train(data, encodedTrainLabels[i]);
-    });
+  trainingData.forEach((data, i) => {
+    myNN.train(data, encodedTrainLabels[i]);
+  });
 }
 
 // Predict the output
-const prediction = myNN.predict(trainingData[0]);
-console.log(prediction); 
-
-// Predict the output
-const prediction2 = myNN.predict(trainingData[1]);
-console.log(prediction2); 
+let predictions = [];
+trainingData.forEach((data, i) => {
+  const prediction = myNN.predict(data);
+  predictions.push(prediction);
+});
+console.log(predictions);
+let correct = 0;
+for (let i = 0; i < predictions.length; i++) {
+  const prediction = predictions[i];
+  const predArray = prediction._data.map((p) => p[0]);
+  console.log(predArray);
+  const max = Math.max(...predArray);
+  const index = predArray.indexOf(max);
+  console.log("Prediction: " + index + " Actual: " + trainingLabels[i]);
+  if (index === trainingLabels[i]) {
+    correct++;
+  }
+}
+console.log("Accuracy: " + (correct / predictions.length) * 100 + "%");
