@@ -15,7 +15,7 @@
   gap:1rem;
   font-size: smaller;
 }
-@media screen and (max-width: 500px) {
+@media screen and (max-width: 560px) {
   #controls {
     font-size: small;
 
@@ -48,6 +48,16 @@ button[type="button"]:enabled:hover {
   color:var(--button-bg);
   border: solid 1px var(--button-fg);
 }
+#resetButton{
+  background: #fdeae4;
+  border: solid 1px rgb(170, 0, 0);
+  color: rgb(170, 0, 0);
+}
+#resetButton:hover{
+  background: rgb(170, 0, 0);
+  color: rgb(253, 234, 228);
+  border: solid 1px #aa0000;
+}
 input, select{
   background: var(--code-bg);
   border-radius: var(--radius);
@@ -64,7 +74,7 @@ input:focus, select:focus{
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   column-gap: 0.4rem;
-
+  padding: 0.4rem;
 }
 .trainingImage img{
   width: 100%;
@@ -72,21 +82,20 @@ input:focus, select:focus{
   image-rendering: pixelated;
   border-radius: 0px;
   margin:0px;
+  cursor: pointer;
+  opacity: 0.7;
 }
 .trainingImage{
   height:100%;
   width:100%;
 }
 .trainingImage img:hover{
-  filter: invert(74%) sepia(58%) saturate(428%) hue-rotate(67deg) brightness(91%) contrast(88%);
+  opacity: 1;
 }
 
 
 body.dark .trainingImage img{
   filter: invert(1);
-}
-body.dark .trainingImage img:hover{
-  filter: invert(100%) sepia(31%) saturate(4870%) hue-rotate(54deg) brightness(94%) contrast(80%);
 }
 
 #graphAreaContainer {
@@ -125,15 +134,7 @@ body.dark .trainingImage img:hover{
   align-items: center;
   overflow:scroll;
 }
-@media screen and (max-width: 500px) {
-  #graphArea {
-    grid-template-rows:1fr 1fr 1fr;
-    grid-template-columns: none;
-  }
-  .gaCol{
-    flex-direction: row;
-  }
-}
+
 .gaCol.col_1{
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
@@ -148,7 +149,7 @@ body.dark .trainingImage img:hover{
   background: black;
   margin: 0;
   padding: 0;
-  border: solid 2px white;
+  border: solid 0.1rem white;
 }
 
 .colWrapper{
@@ -166,4 +167,20 @@ body.dark .trainingImage img:hover{
   top:0;
   left:0;
   z-index: 0;
+}
+
+#statsText {
+  margin:0;
+}
+@media screen and (max-width: 500px) {
+  .node{
+    height:1rem;
+    width: 1rem; 
+  }
+  .gaCol{
+    gap:3px;
+  }
+  #svgContainer{
+    opacity: 0.8;
+  }
 }

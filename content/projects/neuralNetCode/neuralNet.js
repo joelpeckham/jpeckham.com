@@ -132,7 +132,7 @@ class NeuralNetwork {
 
 /* neural network's hyper parameters */
 const inputnodes = 25;
-const hiddennodes = 20;
+var hiddennodes = 20;
 const outputnodes = 10;
 const learningrate = 0.2;
 const threshold = 0.5;
@@ -169,34 +169,6 @@ function oneHotEncoding(label) {
 }
 
 const encodedTrainLabels = trainingLabels.map((label) => oneHotEncoding(label));
-
-// // Train the neural network
-// for (let i = 0; i < iterations; i++) {
-//   trainingData.forEach((data, i) => {
-//     myNN.train(data, encodedTrainLabels[i]);
-//   });
-// }
-
-// // Predict the output
-// let predictions = [];
-// trainingData.forEach((data, i) => {
-//   const prediction = myNN.predict(data);
-//   predictions.push(prediction);
-// });
-// console.log(predictions);
-// let correct = 0;
-// for (let i = 0; i < predictions.length; i++) {
-//   const prediction = predictions[i];
-//   const predArray = prediction._data.map((p) => p[0]);
-//   console.log(predArray);
-//   const max = Math.max(...predArray);
-//   const index = predArray.indexOf(max);
-//   console.log("Prediction: " + index + " Actual: " + trainingLabels[i]);
-//   if (index === trainingLabels[i]) {
-//     correct++;
-//   }
-// }
-// console.log("Accuracy: " + (correct / predictions.length) * 100 + "%");
 
 function resizeSvgViewBox() {
   const svg = document.querySelector("#edgesSvg");
@@ -243,7 +215,7 @@ function redrawEdges() {
     const edgeWeights = weightLayer === "hidden" ? myNN.wih : myNN.who;
     const minWeight = Math.min(...edgeWeights._data.flat());
     const maxWeight = Math.max(...edgeWeights._data.flat());
-    console.log(minWeight, maxWeight);
+
     for (let i = 0; i < nodePositions1.length; i++) {
       const node1 = nodePositions1[i];
       for (let j = 0; j < nodePositions2.length; j++) {
@@ -272,13 +244,15 @@ function redrawEdges() {
             node2.top
           }`;
         }
-        const normalizedEdgeWeight = Math.abs((edgeWeight - minWeight) / (maxWeight - minWeight));
+        const normalizedEdgeWeight = Math.abs(
+          (edgeWeight - minWeight) / (maxWeight - minWeight)
+        );
         curve.setAttribute("d", curvePath);
         curve.setAttribute(
           "stroke",
           `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
         );
-        curve.setAttribute("stroke-width", `${normalizedEdgeWeight * 2 }`);
+        curve.setAttribute("stroke-width", `${normalizedEdgeWeight * 2}`);
         curve.setAttribute("fill", "none");
         svg.appendChild(curve);
       }
@@ -307,13 +281,15 @@ function runTrainingIteration(display = true) {
   currentTrainingIteration++;
 }
 
-function updateGraph() {
+function updateGraph(current = "sentinel") {
   // Update the graph
   const inputNodes = document.querySelectorAll(".inputNode");
   const hiddenNodes = document.querySelectorAll(".hiddenNode");
   const outputNodes = document.querySelectorAll(".outputNode");
   const currentInputData =
-    trainingData[currentTrainingIteration % trainingData.length];
+    current === "sentinel"
+      ? trainingData[currentTrainingIteration % trainingData.length]
+      : trainingData[current];
   // Update the input nodes
   for (let i = 0; i < inputNodes.length; i++) {
     const node = inputNodes[i];
@@ -348,8 +324,6 @@ function updateGraph() {
     const inverseNodeColor = 255 - nodeColor;
     node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
   }
-  const predictedLabel = prediction.indexOf(Math.max(...prediction));
-  console.log("Predicted Label: " + predictedLabel);
 }
 
 document.querySelector("#trainButton").addEventListener("click", function () {
@@ -363,13 +337,68 @@ function runTrainingStep() {
   }
   updateGraph();
   redrawEdges();
+  updateStats();
 }
 
 function resetApp() {
   myNN = new NeuralNetwork(inputnodes, hiddennodes, outputnodes, learningrate);
   currentTrainingIteration = 0;
+  updateStats();
   updateGraph();
   redrawEdges();
 }
-updateGraph();
-redrawEdges();
+
+const trainingImages = document.querySelectorAll(".trainingImage");
+
+for (let i = 0; i < trainingImages.length; i++) {
+  const image = trainingImages[i];
+  image.addEventListener("mouseover", function () {
+    const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
+    const predictedLabel = prediction.indexOf(Math.max(...prediction));
+
+    updateGraph(i);
+    // redrawEdges();
+  });
+}
+
+function calculateAccuracy() {
+  let correct = 0;
+  for (let i = 0; i < trainingData.length; i++) {
+    const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
+    const predictedLabel = prediction.indexOf(Math.max(...prediction));
+    if (predictedLabel === trainingLabels[i]) {
+      correct++;
+    }
+  }
+  return (correct / trainingData.length) * 100;
+}
+
+function updateStats() {
+  const accuracy = calculateAccuracy();
+  document.querySelector("#accuracy").innerText = `${accuracy}`;
+  document.querySelector(
+    "#trainingIterations"
+  ).innerText = `${currentTrainingIteration}`;
+}
+
+function updateHiddenLayer() {
+  hiddenNodes = document.querySelector("#hiddenNodes").valueAsNumber;
+  nodeDomContainer = document.querySelector("div.gaCol.col_2");
+  nodeDomContainer.innerHTML = "";
+  for (let i = 0; i < hiddenNodes; i++) {
+    const node = document.createElement("div");
+    node.classList.add("hiddenNode");
+    node.classList.add("node");
+    nodeDomContainer.appendChild(node);
+  }
+  resizeSvgViewBox();
+  resetApp();
+}
+
+const hiddenNodesInput = document.querySelector("#hiddenNodes");
+hiddenNodesInput.addEventListener("change", updateHiddenLayer);
+
+const resetButton = document.querySelector("#resetButton");
+resetButton.addEventListener("click", resetApp);
+
+resetApp();

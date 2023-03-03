@@ -1,7 +1,14 @@
 ---
 Title: Neural Net Visualizer
-Description: An interactive tool to visualize neural networks and their training.
+Description: An interactive tool to visualize the training of neural networks.
 ---
+
+<p style="display: none;">
+  An interactive tool to visualize the training of neural networks. 
+  This neural network is a simple classifier. 
+  It takes 5x5 pixel images as input, and outputs the digit that each image represents.
+  All 25 pixels of the image are fed into the neural network as input nodes.
+</p>
 
 <script
   src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.6.0/math.js"
@@ -21,9 +28,9 @@ Description: An interactive tool to visualize neural networks and their training
         type="number"
         id="hiddenNodes"
         name="hiddenNodes"
-        min="5"
-        max="100"
-        value="30"
+        min="1"
+        max="30"
+        value="4"
       /> </label
     ><label for="stepSize"
       >Step Size:
@@ -33,11 +40,15 @@ Description: An interactive tool to visualize neural networks and their training
         name="stepSize"
         min="1"
         max="1000"
-        value="100"
+        value="50"
+        step="10"
       />
     </label>
   </div>
-  <button type="button" id="trainButton">Train Step →</button>
+  <div class="controlGroup">
+    <button type="button" id="resetButton">Reset ↺</button>
+    <button type="button" id="trainButton">Training Step →</button>
+  </div>
 </div>
 
 <div class="divider"></div>
@@ -106,58 +117,49 @@ Description: An interactive tool to visualize neural networks and their training
 </div>
 
 <div class="divider"></div>
+<p id="statsText">
+  Iterations: <span id="trainingIterations">0</span> | Accuracy:
+  <span id="accuracy">0</span>%
+</p>
+
+<div class="divider"></div>
 
 <div id="gaWrapper">
   <div id="graphAreaContainer">
     <div id="svgContainer">
-      <svg width="100%" height="100%" id="edgesSvg" viewbox = "0,0,100,100"></svg>
+      <svg width="100%" height="100%" id="edgesSvg" viewbox="0,0,100,100"></svg>
     </div>
     <div id="graphArea">
       <div class="colWrapper">
-      <div class="gaCol col_1">
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-        <div class="node inputNode"></div>
-      </div></div>
+        <div class="gaCol col_1">
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+          <div class="node inputNode"></div>
+        </div>
+      </div>
       <div class="gaCol col_2">
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
-        <div class="node hiddenNode"></div>
         <div class="node hiddenNode"></div>
         <div class="node hiddenNode"></div>
         <div class="node hiddenNode"></div>
@@ -178,6 +180,18 @@ Description: An interactive tool to visualize neural networks and their training
     </div>
   </div>
 </div>
-
-
+<div class="divider"></div>
 <script src="../neuralNetCode/neuralNet.js"></script>
+
+<h2>About</h2>
+<p>
+  This neural network is a simple classifier. 
+  It takes 5x5 pixel images as input, and outputs the digit that each image represents.
+  All 25 pixels of the image are fed into the neural network as input nodes.
+  The output is a 10 node layer, where each node represents a digit from 0 to 9.
+
+  Nodes with stronger activations appear lighter in color, 
+  therefore the output node with the brightest color is the digit that the neural network thinks the image represents.
+  
+  As the neural network trains, the accuracy of the network increases.
+</p>
