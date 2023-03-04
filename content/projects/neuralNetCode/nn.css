@@ -138,7 +138,38 @@ body.dark .trainingImage img{
   align-items: center;
 }
 
-.gaCol.col_1{
+.gaCol.col_1 .node{
+  pointer-events: all;
+}
+
+.gaCol.col_1:hover{
+  animation: wiggle 0.3s ease-in-out;
+  animation-iteration-count: 2;
+  pointer-events: all;
+}
+/* wiggle animation */
+@keyframes wiggle {
+  0% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-0.2rem);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(0.2rem);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.gaCol.col_1.flex{
+  align-items: start;
+}
+
+.gaCol.col_1.grid{
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
@@ -202,7 +233,7 @@ div #circle{
   pointer-events: none;
   opacity: 0.0;
   transition: opacity 0.1s ease-in-out;
-  z-index: 1;
+  z-index: 100;
   font-size: small;
   padding: 0.2rem;
   color: black;

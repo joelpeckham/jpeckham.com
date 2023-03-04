@@ -426,4 +426,11 @@ function mouseOutPath(e) {
   circle.classList.remove('activeCircle');
 }
 
+const firstCol = document.querySelector('.gaCol.col_1');
+firstCol.addEventListener('mouseup', (e) => {
+  firstCol.classList.toggle('grid');
+  firstCol.classList.toggle('flex');
+  resizeSvgViewBox();
+});
+
 resetApp();
