@@ -431,6 +431,9 @@ firstCol.addEventListener('mouseup', (e) => {
   firstCol.classList.toggle('grid');
   firstCol.classList.toggle('flex');
   resizeSvgViewBox();
+  setTimeout(() => {
+    resizeSvgViewBox();
+  }, 100);
 });
 
 resetApp();
