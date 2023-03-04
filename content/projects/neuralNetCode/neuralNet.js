@@ -176,8 +176,9 @@ function resizeSvgViewBox() {
   const svgWidth = svgContainer.clientWidth;
   const svgHeight = svgContainer.clientHeight;
   svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
-  // redrawEdges();
+  redrawEdges();
 }
+
 function redrawEdges() {
   // Start by finding the positions of all the nodes relative to the top left of the graph area
   const graphArea = document.querySelector("#graphArea");
@@ -212,7 +213,8 @@ function redrawEdges() {
   svg.innerHTML = "";
   // Now, draw the edges
   function drawEdges(nodePositions1, nodePositions2, nodeSize, weightLayer) {
-    const edgeWeights = weightLayer === "hidden" ? myNN.wih : myNN.who;
+    let nn = myNN;
+    const edgeWeights = weightLayer === "hidden" ? nn.wih : nn.who;
     const minWeight = Math.min(...edgeWeights._data.flat());
     const maxWeight = Math.max(...edgeWeights._data.flat());
 
@@ -254,6 +256,9 @@ function redrawEdges() {
         );
         curve.setAttribute("stroke-width", `${normalizedEdgeWeight * 2}`);
         curve.setAttribute("fill", "none");
+        curve.addEventListener("mouseover", mouseOverPath);
+        curve.addEventListener("mouseout", mouseOutPath);
+        curve.setAttribute("weight", edgeWeight);
         svg.appendChild(curve);
       }
     }
@@ -263,6 +268,7 @@ function redrawEdges() {
     .getBoundingClientRect().width;
   drawEdges(inputNodePositions, hiddenNodePositions, nodeWidth, "hidden");
   drawEdges(hiddenNodePositions, outputNodePositions, nodeWidth, "output");
+
 }
 window.addEventListener("resize", resizeSvgViewBox);
 resizeSvgViewBox();
@@ -390,8 +396,8 @@ function updateHiddenLayer() {
     node.classList.add("node");
     nodeDomContainer.appendChild(node);
   }
-  resizeSvgViewBox();
   resetApp();
+  resizeSvgViewBox();
 }
 
 const hiddenNodesInput = document.querySelector("#hiddenNodes");
@@ -399,5 +405,25 @@ hiddenNodesInput.addEventListener("change", updateHiddenLayer);
 
 const resetButton = document.querySelector("#resetButton");
 resetButton.addEventListener("click", resetApp);
+
+let circle = document.getElementById('circle');
+let circleContainer = document.getElementById('gaWrapper');
+const onMouseMove = (e) =>{
+  circleContainerX = circleContainer.getBoundingClientRect().x;
+  circleContainerY = circleContainer.getBoundingClientRect().y;
+  circle.style.left = e.clientX - circleContainerX  + 'px';
+  circle.style.top = e.clientY - circleContainerY - 20 + 'px';
+}
+document.addEventListener('mousemove', onMouseMove);
+
+function mouseOverPath(e) {
+  circle.classList.add('activeCircle');
+  const path = e.target;
+  let pathWeight = parseFloat(path.getAttribute('weight'));
+  circle.innerText = `${pathWeight.toLocaleString('en-US', {minimumFractionDigits: 4, maximumFractionDigits: 4})}`;
+}
+function mouseOutPath(e) {
+  circle.classList.remove('activeCircle');
+}
 
 resetApp();

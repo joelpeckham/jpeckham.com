@@ -3,11 +3,11 @@ Title: Neural Net Visualizer
 Description: An interactive tool to visualize the training of neural networks.
 ---
 
-<p style="display: none;">
-  An interactive tool to visualize the training of neural networks. 
-  This neural network is a simple classifier. 
-  It takes 5x5 pixel images as input, and outputs the digit that each image represents.
-  All 25 pixels of the image are fed into the neural network as input nodes.
+<p style="display: none">
+  An interactive tool to visualize the training of neural networks. This neural
+  network is a simple classifier. It takes 5x5 pixel images as input, and
+  outputs the digit that each image represents. All 25 pixels of the image are
+  fed into the neural network as input nodes.
 </p>
 
 <script
@@ -40,7 +40,7 @@ Description: An interactive tool to visualize the training of neural networks.
         name="stepSize"
         min="1"
         max="1000"
-        value="50"
+        value="500"
         step="10"
       />
     </label>
@@ -125,12 +125,13 @@ Description: An interactive tool to visualize the training of neural networks.
 <div class="divider"></div>
 
 <div id="gaWrapper">
+  <div id="circle"></div>
   <div id="graphAreaContainer">
     <div id="svgContainer">
       <svg width="100%" height="100%" id="edgesSvg" viewbox="0,0,100,100"></svg>
     </div>
     <div id="graphArea">
-      <div class="colWrapper">
+      <div class="col1Wrapper">
         <div class="gaCol col_1">
           <div class="node inputNode"></div>
           <div class="node inputNode"></div>
@@ -168,16 +169,77 @@ Description: An interactive tool to visualize the training of neural networks.
         <div class="node hiddenNode"></div>
       </div>
       <div class="gaCol col_3">
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
-        <div class="node outputNode"></div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite0.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite1.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite2.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite3.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite4.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite5.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite6.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite7.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite8.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        <div class="outputPair">
+          <img
+            src="../neuralNetCode/images/sprite9.png"
+            alt="5x5 Pixel Image of the Numeral 0"
+          />
+          <div class="node outputNode"></div>
+        </div>
+        
       </div>
     </div>
   </div>
@@ -187,13 +249,12 @@ Description: An interactive tool to visualize the training of neural networks.
 
 <h2>About</h2>
 <p>
-  This neural network is a simple classifier. 
-  It takes 5x5 pixel images as input, and outputs the digit that each image represents.
-  All 25 pixels of the image are fed into the neural network as input nodes.
-  The output is a 10 node layer, where each node represents a digit from 0 to 9.
-
-  Nodes with stronger activations appear lighter in color, 
-  therefore the output node with the brightest color is the digit that the neural network thinks the image represents.
-  
-  As the neural network trains, the accuracy of the network increases.
+  This neural network is a simple classifier. It takes 5x5 pixel images as
+  input, and outputs the digit that each image represents. All 25 pixels of the
+  image are fed into the neural network as input nodes. The output is a 10 node
+  layer, where each node represents a digit from 0 to 9. Nodes with stronger
+  activations appear lighter in color, therefore the output node with the
+  brightest color is the digit that the neural network thinks the image
+  represents. As the neural network trains, the accuracy of the network
+  increases.
 </p>
