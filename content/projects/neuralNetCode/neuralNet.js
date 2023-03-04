@@ -433,7 +433,7 @@ firstCol.addEventListener('mouseup', (e) => {
   resizeSvgViewBox();
   setTimeout(() => {
     resizeSvgViewBox();
-  }, 100);
+  }, 20);
 });
 
 resetApp();
