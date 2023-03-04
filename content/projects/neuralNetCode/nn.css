@@ -134,7 +134,7 @@ body.dark .trainingImage img{
   justify-content: center;
   gap:5px;
   height: 100%;
-  width: 100%;
+  /* width: 100%; */
   align-items: center;
 }
 
@@ -153,7 +153,7 @@ body.dark .trainingImage img{
     transform: translateY(0);
   }
   25% {
-    transform: translateY(-0.2rem);
+    transform: translateY(-0.3rem);
   }
   50% {
     transform: translateY(0);
