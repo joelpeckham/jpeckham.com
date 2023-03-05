@@ -317,7 +317,8 @@ function updateGraph(current = "sentinel") {
     node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
   }
   // Update the hidden nodes
-  myNN.predict(trainingData[currentInputSelected]);
+  const prediction = myNN.predict(currentInputData)._data.map((x) => x[0]);
+  const predictedLabel = prediction.indexOf(Math.max(...prediction));
   if (myNN.cache.h_out) {
     const hiddenNodeValues = myNN.cache.h_out._data;
     for (let i = 0; i < hiddenNodes.length; i++) {
@@ -331,7 +332,7 @@ function updateGraph(current = "sentinel") {
     }
   }
   // Update the output nodes
-  const prediction = myNN.predict(currentInputData)._data.map((x) => x[0]);
+  // const prediction = myNN.predict(currentInputData)._data.map((x) => x[0]);
   for (let i = 0; i < outputNodes.length; i++) {
     const node = outputNodes[i];
     const nodeValues = prediction[i];
@@ -340,6 +341,11 @@ function updateGraph(current = "sentinel") {
     node.style.backgroundColor = `rgba(${nodeColor}, ${nodeColor}, ${nodeColor}, 1)`;
     const inverseNodeColor = 255 - nodeColor;
     node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
+    if (i === predictedLabel) {
+      node.classList.add("predicted");
+    } else {
+      node.classList.remove("predicted");
+    }
   }
 }
 

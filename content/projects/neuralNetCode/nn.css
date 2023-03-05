@@ -263,10 +263,35 @@ div #circle{
   margin:0px;
 }
 
+.node.predicted{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.node.predicted::before{
+  content: "*";
+  text-align: center;
+  aspect-ratio: 1/1;
+  width: 0.6rem;
+  height: 0.6rem;
+  font-size: 0.4rem;
+  color: black;
+  background: black;
+  padding: 0.1rem;
+  border-radius: 50%;
+  z-index: 100;
+  border: 1px solid white;
+}
+
 @media screen and (max-width: 500px) {
   .node{
     height:1rem;
     width: 1rem; 
+  }
+  .node.predicted::before{
+    width: 0.3rem;
+    height: 0.3rem;
+    font-size: 0.1rem;
   }
   .gaCol{
     gap:3px;
@@ -279,3 +304,4 @@ div #circle{
     height: 0.5rem;
   }
 }
+
