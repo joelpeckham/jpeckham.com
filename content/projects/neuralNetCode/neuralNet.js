@@ -217,7 +217,7 @@ function redrawEdges() {
     const edgeWeights = weightLayer === "hidden" ? nn.wih : nn.who;
     const minWeight = Math.min(...edgeWeights._data.flat());
     const maxWeight = Math.max(...edgeWeights._data.flat());
-
+    console.log(minWeight, maxWeight);
     for (let i = 0; i < nodePositions1.length; i++) {
       const node1 = nodePositions1[i];
       for (let j = 0; j < nodePositions2.length; j++) {
@@ -246,15 +246,27 @@ function redrawEdges() {
             node2.top
           }`;
         }
-        const normalizedEdgeWeight = Math.abs(
-          (edgeWeight - minWeight) / (maxWeight - minWeight)
-        );
+
+        const normalizedEdgeWeight =
+          (edgeWeight - minWeight) / (maxWeight - minWeight);
+        function blendColorValue(a, b, t) {
+          return (1 - t) * a + t * b;
+        }
+        let hue = 20;
+        let hue2 = -20;
+        let saturation = 75;
+        let lightness = 55;
+        let mixPercent =
+          (Math.pow((normalizedEdgeWeight - 0.5) * 2, 5) + 1) / 2;
+        let mixedHue = blendColorValue(hue, hue2, mixPercent);
+        let scaleFactor = Math.abs(normalizedEdgeWeight-0.5)*2;
         curve.setAttribute("d", curvePath);
         curve.setAttribute(
           "stroke",
-          `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
-        );
-        curve.setAttribute("stroke-width", `${normalizedEdgeWeight * 2}`);
+          `hsla(${mixedHue},${saturation*scaleFactor}%,${lightness}%,${scaleFactor+0.1})`
+          );
+        // `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
+        curve.setAttribute("stroke-width", `${(Math.pow(scaleFactor,2) * 3)+0.3}`);
         curve.setAttribute("fill", "none");
         curve.addEventListener("mouseover", mouseOverPath);
         curve.addEventListener("mouseout", mouseOutPath);
@@ -268,7 +280,6 @@ function redrawEdges() {
     .getBoundingClientRect().width;
   drawEdges(inputNodePositions, hiddenNodePositions, nodeWidth, "hidden");
   drawEdges(hiddenNodePositions, outputNodePositions, nodeWidth, "output");
-
 }
 window.addEventListener("resize", resizeSvgViewBox);
 resizeSvgViewBox();
@@ -406,30 +417,33 @@ hiddenNodesInput.addEventListener("change", updateHiddenLayer);
 const resetButton = document.querySelector("#resetButton");
 resetButton.addEventListener("click", resetApp);
 
-let circle = document.getElementById('circle');
-let circleContainer = document.getElementById('gaWrapper');
-const onMouseMove = (e) =>{
+let circle = document.getElementById("circle");
+let circleContainer = document.getElementById("gaWrapper");
+const onMouseMove = (e) => {
   circleContainerX = circleContainer.getBoundingClientRect().x;
   circleContainerY = circleContainer.getBoundingClientRect().y;
-  circle.style.left = e.clientX - circleContainerX  + 'px';
-  circle.style.top = e.clientY - circleContainerY - 20 + 'px';
-}
-document.addEventListener('mousemove', onMouseMove);
+  circle.style.left = e.clientX - circleContainerX + "px";
+  circle.style.top = e.clientY - circleContainerY - 20 + "px";
+};
+document.addEventListener("mousemove", onMouseMove);
 
 function mouseOverPath(e) {
-  circle.classList.add('activeCircle');
+  circle.classList.add("activeCircle");
   const path = e.target;
-  let pathWeight = parseFloat(path.getAttribute('weight'));
-  circle.innerText = `${pathWeight.toLocaleString('en-US', {minimumFractionDigits: 4, maximumFractionDigits: 4})}`;
+  let pathWeight = parseFloat(path.getAttribute("weight"));
+  circle.innerText = `${pathWeight.toLocaleString("en-US", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })}`;
 }
 function mouseOutPath(e) {
-  circle.classList.remove('activeCircle');
+  circle.classList.remove("activeCircle");
 }
 
-const firstCol = document.querySelector('.gaCol.col_1');
-firstCol.addEventListener('mouseup', (e) => {
-  firstCol.classList.toggle('grid');
-  firstCol.classList.toggle('flex');
+const firstCol = document.querySelector(".gaCol.col_1");
+firstCol.addEventListener("mouseup", (e) => {
+  firstCol.classList.toggle("grid");
+  firstCol.classList.toggle("flex");
   resizeSvgViewBox();
   setTimeout(() => {
     resizeSvgViewBox();
