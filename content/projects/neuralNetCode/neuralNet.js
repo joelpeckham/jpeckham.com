@@ -252,8 +252,8 @@ function redrawEdges() {
         function blendColorValue(a, b, t) {
           return (1 - t) * a + t * b;
         }
-        let hue = 20;
-        let hue2 = -20;
+        let hue = 195;
+        let hue2 = 250;
         let saturation = 75;
         let lightness = 55;
         let mixPercent =
@@ -263,7 +263,7 @@ function redrawEdges() {
         curve.setAttribute("d", curvePath);
         curve.setAttribute(
           "stroke",
-          `hsla(${mixedHue},${saturation*scaleFactor}%,${lightness}%,${scaleFactor+0.1})`
+          `hsla(${mixedHue},${saturation*Math.pow(scaleFactor,2)}%,${lightness}%,${scaleFactor+0.1})`
           );
         // `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
         curve.setAttribute("stroke-width", `${(Math.pow(scaleFactor,2) * 3)+0.3}`);
@@ -369,7 +369,7 @@ const trainingImages = document.querySelectorAll(".trainingImage");
 
 for (let i = 0; i < trainingImages.length; i++) {
   const image = trainingImages[i];
-  image.addEventListener("mouseover", function () {
+  image.addEventListener("click", function () {
     const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
 
     updateGraph(i);
@@ -391,6 +391,15 @@ function calculateAccuracy() {
 
 function updateStats() {
   const accuracy = calculateAccuracy();
+  const errList = myNN.cache.loss;
+  console.log(errList);
+  if (errList.length > 0){
+    let loss = errList[errList.length -1];
+    document.querySelector("#lossText").innerText = `${loss.toLocaleString('en-US', {maximumFractionDigits: 5})}`;
+  }
+  else{
+    document.querySelector("#lossText").innerText = `N/A`;
+  }
   document.querySelector("#accuracy").innerText = `${accuracy}`;
   document.querySelector(
     "#trainingIterations"
