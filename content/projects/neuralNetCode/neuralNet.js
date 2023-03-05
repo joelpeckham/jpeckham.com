@@ -217,7 +217,6 @@ function redrawEdges() {
     const edgeWeights = weightLayer === "hidden" ? nn.wih : nn.who;
     const minWeight = Math.min(...edgeWeights._data.flat());
     const maxWeight = Math.max(...edgeWeights._data.flat());
-    console.log(minWeight, maxWeight);
     for (let i = 0; i < nodePositions1.length; i++) {
       const node1 = nodePositions1[i];
       for (let j = 0; j < nodePositions2.length; j++) {
@@ -305,7 +304,7 @@ function updateGraph(current = "sentinel") {
   const outputNodes = document.querySelectorAll(".outputNode");
   const currentInputData =
     current === "sentinel"
-      ? trainingData[currentTrainingIteration % trainingData.length]
+      ? trainingData[currentInputSelected % trainingData.length]
       : trainingData[current];
   // Update the input nodes
   for (let i = 0; i < inputNodes.length; i++) {
@@ -318,6 +317,7 @@ function updateGraph(current = "sentinel") {
     node.style.borderColor = `rgba(${inverseNodeColor}, ${inverseNodeColor}, ${inverseNodeColor}, 1)`;
   }
   // Update the hidden nodes
+  myNN.predict(trainingData[currentInputSelected]);
   if (myNN.cache.h_out) {
     const hiddenNodeValues = myNN.cache.h_out._data;
     for (let i = 0; i < hiddenNodes.length; i++) {
@@ -371,7 +371,14 @@ for (let i = 0; i < trainingImages.length; i++) {
   const image = trainingImages[i];
   image.addEventListener("click", function () {
     const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
-
+    currentInputSelected = i;
+    let img = image.querySelector("img");
+    img.classList.add("selected");
+    for (let j = 0; j < trainingImages.length; j++) {
+      if (j !== i) {
+        trainingImages[j].querySelector("img").classList.remove("selected");
+      }
+    }
     updateGraph(i);
     // redrawEdges();
   });
@@ -392,7 +399,6 @@ function calculateAccuracy() {
 function updateStats() {
   const accuracy = calculateAccuracy();
   const errList = myNN.cache.loss;
-  console.log(errList);
   if (errList.length > 0){
     let loss = errList[errList.length -1];
     document.querySelector("#lossText").innerText = `${loss.toLocaleString('en-US', {maximumFractionDigits: 5})}`;
@@ -458,5 +464,7 @@ firstCol.addEventListener("mouseup", (e) => {
     resizeSvgViewBox();
   }, 20);
 });
+
+var currentInputSelected = 0;
 
 resetApp();

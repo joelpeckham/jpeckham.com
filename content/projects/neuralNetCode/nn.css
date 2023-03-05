@@ -84,6 +84,8 @@ input:focus, select:focus{
   margin:0px;
   cursor: pointer;
   opacity: 0.7;
+  transition:all 0.2s ease-in-out;
+  padding:0.2rem;
 }
 .trainingImage{
   height:100%;
@@ -91,6 +93,12 @@ input:focus, select:focus{
 }
 .trainingImage img:hover{
   opacity: 1;
+  padding:0rem;
+}
+
+.trainingImage img.selected{
+  opacity: 1;
+  padding:0rem;
 }
 
 
@@ -264,7 +272,7 @@ div #circle{
     gap:3px;
   }
   #svgContainer{
-    opacity: 0.8;
+    opacity: 1;
   }
   .outputPair img{
     width: 0.5rem;
