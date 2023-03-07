@@ -151,28 +151,26 @@ body.dark .outputPair img{
 .gaCol.col_1 .node{
   pointer-events: all;
 }
-
-.gaCol.col_1:hover{
-  animation: wiggle 0.3s ease-in-out;
-  animation-iteration-count: 2;
-  pointer-events: all;
+.gaCol.col_1{
+  transition: all 0.2s ease-in-out;
 }
+
 /* wiggle animation */
 @keyframes wiggle {
   0% {
-    transform: translateY(0);
+    transform: scale(1);
   }
   25% {
-    transform: translateY(-0.3rem);
+    transform: scale(0.98);
   }
   50% {
-    transform: translateY(0);
+    transform: scale(1);
   }
   75% {
-    transform: translateY(0.2rem);
+    transform: scale(1.02);
   }
   100% {
-    transform: translateY(0);
+    transform: scale(1);
   }
 }
 .gaCol.col_1.flex{
@@ -185,6 +183,10 @@ body.dark .outputPair img{
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
   height: fit-content;
   width: fit-content;
+}
+.gaCol.col_1.grid:hover{
+  opacity: 0.95;
+  pointer-events: all;
 }
 .node{
   height:2rem;

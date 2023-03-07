@@ -258,14 +258,19 @@ function redrawEdges() {
         let mixPercent =
           (Math.pow((normalizedEdgeWeight - 0.5) * 2, 5) + 1) / 2;
         let mixedHue = blendColorValue(hue, hue2, mixPercent);
-        let scaleFactor = Math.abs(normalizedEdgeWeight-0.5)*2;
+        let scaleFactor = Math.abs(normalizedEdgeWeight - 0.5) * 2;
         curve.setAttribute("d", curvePath);
         curve.setAttribute(
           "stroke",
-          `hsla(${mixedHue},${saturation*Math.pow(scaleFactor,2)}%,${lightness}%,${scaleFactor+0.1})`
-          );
+          `hsla(${mixedHue},${
+            saturation * Math.pow(scaleFactor, 2)
+          }%,${lightness}%,${scaleFactor + 0.1})`
+        );
         // `rgba(0,0,0,${(normalizedEdgeWeight + 0.2) * 0.7})`
-        curve.setAttribute("stroke-width", `${(Math.pow(scaleFactor,2) * 3)+0.3}`);
+        curve.setAttribute(
+          "stroke-width",
+          `${Math.pow(scaleFactor, 2) * 3 + 0.3}`
+        );
         curve.setAttribute("fill", "none");
         curve.addEventListener("mouseover", mouseOverPath);
         curve.addEventListener("mouseout", mouseOutPath);
@@ -405,17 +410,24 @@ function calculateAccuracy() {
 function updateStats() {
   const accuracy = calculateAccuracy();
   const errList = myNN.cache.loss;
-  if (errList.length > 0){
-    let loss = errList[errList.length -1];
-    document.querySelector("#lossText").innerText = `${loss.toLocaleString('en-US', {maximumFractionDigits: 5})}`;
-  }
-  else{
+  if (errList.length > 0) {
+    let loss = errList[errList.length - 1];
+    document.querySelector("#lossText").innerText = `${loss.toLocaleString(
+      "en-US",
+      { maximumFractionDigits: 5 }
+    )}`;
+  } else {
     document.querySelector("#lossText").innerText = `N/A`;
   }
   document.querySelector("#accuracy").innerText = `${accuracy}`;
   document.querySelector(
     "#trainingIterations"
   ).innerText = `${currentTrainingIteration}`;
+  let dataAndLabels = getDataAndLabels();
+  myChart.data.labels = dataAndLabels[1];
+  myChart.data.datasets[0].data = dataAndLabels[0];
+  // console.log(myNN.cache.loss);
+  myChart.update();
 }
 
 function updateHiddenLayer() {
@@ -472,5 +484,59 @@ firstCol.addEventListener("mouseup", (e) => {
 });
 
 var currentInputSelected = 0;
+
+function getDataAndLabels(size=100){
+  let rawData = myNN.cache.loss;
+  let rawLabels = [...Array(myNN.cache.loss.length).keys()];
+  if( rawData.length < size){
+    return [rawData, rawLabels];
+  }
+  let first = rawData[0];
+  let step = Math.floor(rawData.length / size);
+  let data = [first];
+  let labels = [0];
+  function movingAverage(arr, n) {
+    let ret = [];
+    for (let i = 0; i < arr.length - n + 1; i++) {
+      ret.push(arr.slice(i, i + n).reduce((a, b) => a + b) / n);
+    }
+    return ret;
+  }
+  let avgData = movingAverage(rawData, 10);
+  for(let i = 1; i < size; i++){
+    let dp = avgData[i * step];
+    data.push(dp);
+    labels.push(i * step);
+  }
+  data.push(avgData[avgData.length - 1]);
+  labels.push(avgData.length - 1);
+  return [data, labels];
+}
+
+const ctx = document.getElementById("myChart");
+let dataAndLabels = getDataAndLabels();
+const data = {
+  labels: dataAndLabels[1],
+  datasets: [
+    {
+      label: "Loss by Iteration",
+      data: dataAndLabels[0],
+      fill: false,
+      borderColor: "hsl(195,75%,55%)",
+      tension: 0.1,
+      pointRadius: 0,
+    },
+  ],
+};
+
+let myChart = new Chart(ctx, {
+  type: "line",
+  data: data,
+  options: {
+    bezierCurve: false,
+    responsive: true,
+  },
+});
+
 
 resetApp();
