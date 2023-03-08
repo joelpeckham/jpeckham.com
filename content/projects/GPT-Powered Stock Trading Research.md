@@ -2,6 +2,7 @@
 title: "GPT-Powered Stock Trading Research"
 description: "A research project to see if a transformer model can be used as an all-in-one news-based trading bot."
 ShowBreadCrumbs: true
+Date: 2023-01-05
 ---
 
 [Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf).

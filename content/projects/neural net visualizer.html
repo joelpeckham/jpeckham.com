@@ -1,7 +1,8 @@
 ---
-Title: Neural Net Visualizer
+Title: Neural Network Visualizer
 Description: An interactive tool to visualize the training of neural networks.
 Draft: false
+Date: 2023-03-05
 ---
 
 <p style="display: none">
@@ -24,7 +25,7 @@ Draft: false
 <div id="controls">
   <div class="controlGroup">
     <label for="hiddenNodes"
-      >Neurons:
+      >Hidden Neurons:
       <input
         type="number"
         id="hiddenNodes"
@@ -34,7 +35,7 @@ Draft: false
         value="6"
       /> </label
     ><label for="stepSize"
-      >Step Size:
+      >Iterations:
       <input
         type="number"
         id="stepSize"
@@ -48,7 +49,7 @@ Draft: false
   </div>
   <div class="controlGroup">
     <button type="button" id="resetButton">Reset ↺</button>
-    <button type="button" id="trainButton">Training Step →</button>
+    <button type="button" id="trainButton">Train →</button>
   </div>
 </div>
 
@@ -235,7 +236,6 @@ Draft: false
           />
           <div class="node outputNode"></div>
         </div>
-        
       </div>
     </div>
   </div>
@@ -243,25 +243,230 @@ Draft: false
 <div class="divider"></div>
 <p id="statsText">
   Iterations: <span id="trainingIterations">0</span> | Accuracy:
-  <span id="accuracy">0</span>%
-  | Loss: <span id="lossText">N/A</span>
+  <span id="accuracy">0</span>% | Loss: <span id="lossText">N/A</span>
 </p>
 <div class="divider"></div>
-<div>
+<div class="chart-container">
   <canvas id="myChart"></canvas>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="../neuralNetCode/neuralNet.js"></script>
 <div class="divider"></div>
-<h2>About</h2>
+<h2>Things to Play With</h2>
+<p>When you first load the page, the network weights are randomly initialized and no training has been done. 
+  Go ahead and push train! The network will run as many training iterations as are specified in the iterations input.
+</p>
+<p>As you train, keep an eye on the loss and the accuracy. Notice what happens as you complete more training iterations.</p>
+<p>You can also adjust the number of hidden neurons. Increase or decrease this number and train again. What happens?</p>
+<p>Want to see how the network responds to a specific input? You can click the large input numbers at the top of the network to change which input is being fed into the visualizer!</p>
+<h2>The Neural Network Explained</h2>
+<h3>The Task</h3>
 <p>
-  This neural network is a simple classifier. It takes 5x5 pixel images as
-  input, and outputs the digit that each image represents. All 25 pixels of the
-  image are fed into the neural network as input nodes. The output is a 10 node
-  layer, where each node represents a digit from 0 to 9. Nodes with stronger
-  activations appear lighter in color, therefore the output node with the
-  brightest color is the digit that the neural network thinks the image
-  represents. As the neural network trains, the accuracy of the network
-  increases.
+  Our neural network is tasked with recognizing the number in a 5x5 pixel image.
+  When we feed the network with an image of the numeral 0, we want the network
+  to correctly classify the image as a 0.
+</p>
+<h4>Input Format</h4>
+<p>
+  The input to the network is a 25-dimensional vector (just a list of 25
+  numbers). Each element of the vector represents a pixel in the image. The
+  value of each element is either 0 or 1, where 0 represents a white pixel and 1
+  represents a black pixel. For example the image representing 0 would look like
+  the following vector:
+  <br />
+  <center>
+    <code>
+      [ 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1,
+      0 ]
+    </code>
+  </center>
+  <br />
+  Can you see how the first five numbers of the vector represent the top row of
+  the image?
+</p>
+<h4>Output Format</h4>
+<p>
+  The output of the network is a 10-dimensional vector. Each element of the
+  vector represents the probability that the image represents a particular
+  number. Consider this output vector:
+  <center>
+    <code>[ 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.7, 0.1, 0.9, 1.0 ]</code>
+  </center>
+  <br />
+  Looking at the second to last element of the vector, we can see that the
+  network is 90% confident that the image represents the number 8. But, because
+  the last element of the vector is 1.0, the network is most confident that the
+  image represents the number 9.
+</p>
+<h3>Network Architecture</h3>
+<h4>Layers</h4>
+<p>
+  The network is made up of three layers: the input layer, the hidden layer, and
+  the output layer. Many neural networks have multiple hidden layers, but we
+  only need one for this network.
+</p>
+<ul>
+  <li>
+    The <strong>input layer</strong> is where the network receives its input.
+  </li>
+  <li>
+    The <strong>hidden layer</strong> is where the network does most of its
+    work.
+  </li>
+  <li>
+    The <strong>output layer</strong> is where the network makes its prediction.
+  </li>
+</ul>
+<h4>Neurons</h4>
+<p>
+  Each layer is made up of neurons. With every iteration, the activation of each
+  neuron is calculated and passed to the neurons in the next layer. (More on
+  iterations later.) The activation is a number that represents how much the
+  node is contributing to the network's prediction. Activations are based on the
+  weights of the node's connections to the nodes in the previous layer. We'll
+  talk more about weights next. There are lots of different activation
+  functions, but we will use the sigmoid function for this network. The sigmoid
+  function takes a number and squashes it between 0 and 1.
+  <br />
+  <center><code>sigmoid(x) = 1 / (1 + e<sup>-x</sup>)</code></center>
+  <br />
+  In the visualizer above, the activation of each neuron is represented by the
+  color of the node. The brighter the node, the stronger the activation.
+</p>
+<div id="exampleNodes">
+  <div class="exampleNodeRow">
+    <p>Weak activation:</p>
+    <div
+      class="node hiddenNode"
+      style="
+        background-color: rgb(28, 28, 28);
+        border-color: rgb(227, 227, 227);
+      "
+    ></div>
+  </div>
+  <div class="exampleNodeRow">
+    <p>Strong activation:</p>
+    <div
+      class="node hiddenNode"
+      style="background-color: rgb(248, 248, 248); border-color: rgb(7, 7, 7)"
+    ></div>
+  </div>
+  <div class="exampleNodeRow">
+    <p>Somewhere in the middle:</p>
+    <div
+      class="node hiddenNode"
+      style="
+        background-color: rgb(65, 65, 65);
+        border-color: rgb(190, 190, 190);
+      "
+    ></div>
+  </div>
+</div>
+<h4>Weights</h4>
+<p>
+  Each neuron is conntected to the neurons in the previous layer by a weight.
+  Each weight is a number that represents how much the neuron in the previous
+  layer contributes to the current neuron's activation. Weights are initialized
+  randomly when the network is created (or when you push the reset button).
+  <br />
+  In the visualizer above, the weights are represented by lines connecting all
+  the neurons. The thicker the and more colorful the line, the stronger the
+  weight.
+</p>
+<h3>Training the Network</h3>
+<p>
+  Training is a step-by step prcocess where each step is called
+  <strong>iteration</strong>. Each iteration has two parts, the forward pass and
+  the backward pass. The forward pass is where the network makes a prediction
+  and the backward pass is where the network adjusts its weights to improve the
+  prediction.
+</p>
+<h4>The Forward Pass</h4>
+<p>
+  In the forward pass, the network makes a prediction for a given input. The
+  prediction is made by passing the input through the network. Here's what
+  happens in order:
+</p>
+<ol>
+  <li>
+    The image input is loaded as the activations of the input layer neurons.
+  </li>
+  <li>
+    The activation of each hidden layer neuron is calculated by:
+    <ol>
+      <li>
+        Multiplying every input neuron's activation with the weight of its
+        connection to the hidden neuron.
+      </li>
+      <li>Adding all the weighted sums together.</li>
+      <li>Passing the sum through the sigmoid function.</li>
+    </ol>
+  </li>
+  <li>
+    The activation of each output layer neuron is just like the hidden layer
+    neurons, except the output layer neurons use the hidden layer neurons as
+    their inputs.
+  </li>
+  <li>
+    The network's prediction is the index of the output neuron with the highest
+    activation.
+  </li>
+</ol>
+<h4>The Backward Pass</h4>
+<p>
+  In the backward pass, the network adjusts its weights to improve its
+  prediction. This process is called backward propagation. In the backward
+  propagation step, the error at the output layer is used to calculate the
+  gradients of the error with respect to each weight in the network. These
+  gradients are then used to update the weights in the network, typically using
+  an optimization algorithm such as stochastic gradient descent (SGD). The
+  process of backpropagation is repeated iteratively until the error is
+  minimized to an acceptable level. This process of training a neural network
+  using backpropagation is called supervised learning, as the network is being
+  trained using labeled data.
+</p>
+<h4>A note on Loss</h4>
+<p>
+  When we do backpropagation, we give the network a target output. The target
+  output is the correct answer for the input. The loss is the difference between
+  the target output and the network's prediction. For example, let's feed the
+  network our image of 0.
+  <br />
+  <center>
+    <code
+      >[ 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1,
+      0 ]</code
+    >
+  </center>
+</p>
+<p>
+  Now that the feed forward pass is done, we get this output of the network:
+  <br />
+  <center>
+    <code> [ 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.7, 0.1, 0.9, 1.0 ] </code>
+  </center>
+</p>
+<p>
+  Oof, that's not good. The network predicted that the image was a 9, but it's
+  actually a 0. Now let's give the network the correct answer:
+  <br />
+  <center>
+    <code> [ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 ] </code>
+  </center>
+</p>
+<p>
+  Now that we have the target output, we can calculate the absolute difference between
+  the target output and the network's prediction.
+  <br />
+  <center>
+    <code>
+      abs(sum([ 0.5, -0.2, -0.3, -0.4, -0.1, -0.2, -0.7, -0.1, -0.9, -1.0 ])) = 3.4
+    </code>
+  </center>
+</p>
+<p>
+  Because the network made a bad prediction, our loss is pretty high. Because
+  loss is a measure of how bad the network's prediction was, the smaller the
+  better.
 </p>

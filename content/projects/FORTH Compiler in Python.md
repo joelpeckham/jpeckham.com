@@ -1,6 +1,7 @@
 ---
 Title: FORTH interpreter in 130* lines of Python
 Description: An interactive FORTH compiler and interpreter written in Python.
+Date: 2023-02-01
 ---
 
 ![A screenshot of the FORTH interpreter](../images/pyforthBanner.webp)

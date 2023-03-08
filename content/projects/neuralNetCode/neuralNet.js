@@ -185,9 +185,9 @@ function redrawEdges() {
   const graphAreaRect = graphArea.getBoundingClientRect();
   const graphAreaTop = graphAreaRect.top;
   const graphAreaLeft = graphAreaRect.left;
-  const inputNodes = document.querySelectorAll(".inputNode");
-  const hiddenNodes = document.querySelectorAll(".hiddenNode");
-  const outputNodes = document.querySelectorAll(".outputNode");
+  const inputNodes = document.querySelectorAll("#graphArea .inputNode");
+  const hiddenNodes = document.querySelectorAll("#graphArea .hiddenNode");
+  const outputNodes = document.querySelectorAll("#graphArea .outputNode");
   // Get the positions each node and store them in an array
   function getNodePositions(nodeList) {
     const nodePositions = [];
@@ -304,9 +304,9 @@ function runTrainingIteration(display = true) {
 
 function updateGraph(current = "sentinel") {
   // Update the graph
-  const inputNodes = document.querySelectorAll(".inputNode");
-  const hiddenNodes = document.querySelectorAll(".hiddenNode");
-  const outputNodes = document.querySelectorAll(".outputNode");
+  const inputNodes = document.querySelectorAll("#graphArea .inputNode");
+  const hiddenNodes = document.querySelectorAll("#graphArea .hiddenNode");
+  const outputNodes = document.querySelectorAll("#graphArea .outputNode");
   const currentInputData =
     current === "sentinel"
       ? trainingData[currentInputSelected % trainingData.length]
@@ -485,10 +485,10 @@ firstCol.addEventListener("mouseup", (e) => {
 
 var currentInputSelected = 0;
 
-function getDataAndLabels(size=100){
+function getDataAndLabels(size = 100) {
   let rawData = myNN.cache.loss;
   let rawLabels = [...Array(myNN.cache.loss.length).keys()];
-  if( rawData.length < size){
+  if (rawData.length < size) {
     return [rawData, rawLabels];
   }
   let first = rawData[0];
@@ -503,8 +503,12 @@ function getDataAndLabels(size=100){
     return ret;
   }
   let avgData = movingAverage(rawData, 10);
-  for(let i = 1; i < size; i++){
+  for (let i = 1; i < size; i++) {
     let dp = avgData[i * step];
+    // const blendSize = size / 10;
+    // if(i < blendSize){
+    //   dp = (dp * i + rawData[i - 1] * (blendSize - i)) / blendSize;
+    // }
     data.push(dp);
     labels.push(i * step);
   }
@@ -519,7 +523,7 @@ const data = {
   labels: dataAndLabels[1],
   datasets: [
     {
-      label: "Loss by Iteration",
+      label: "Loss over Iterations",
       data: dataAndLabels[0],
       fill: false,
       borderColor: "hsl(195,75%,55%)",
@@ -532,11 +536,31 @@ const data = {
 let myChart = new Chart(ctx, {
   type: "line",
   data: data,
+  responsive: true,
   options: {
     bezierCurve: false,
     responsive: true,
+    plugins: {
+      legend: {
+        display: false
+      }
+    },
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: "Loss",
+        },
+      },
+      x: {
+        title: {
+          display: true,
+          text: "Iteration",
+        },
+      },
+    },
   },
 });
-
 
 resetApp();

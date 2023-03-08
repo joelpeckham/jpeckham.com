@@ -137,7 +137,7 @@ body.dark .outputPair img{
   position: relative;
 }
 
-  
+
 .gaCol{
   display: flex;
   flex-direction: column;
@@ -184,8 +184,8 @@ body.dark .outputPair img{
   height: fit-content;
   width: fit-content;
 }
-.gaCol.col_1.grid:hover{
-  opacity: 0.95;
+.gaCol.col_1:hover{
+  opacity: 0.85;
   pointer-events: all;
 }
 .node{
@@ -224,11 +224,11 @@ body.dark .outputPair img{
   margin:0;
 }
 
-path{
+#svgContainer path{
   pointer-events:stroke;
 }
 
-path:hover{
+#svgContainer path:hover{
   stroke-width: 0.3rem;
 }
 
@@ -307,3 +307,30 @@ div #circle{
   }
 }
 
+#exampleNodes{
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.exampleNodeRow{
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.2rem 0rem;
+}
+.exampleNodeRow p{
+  margin:0;
+  padding:0;
+  font-size: small;
+  text-align: end;
+}
+
+.chart-container {
+  position: relative;
+  margin: auto;
+  height: 20vh;
+  width: 100%;
+}
