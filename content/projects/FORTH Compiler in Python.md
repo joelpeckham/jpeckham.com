@@ -4,6 +4,8 @@ Description: An interactive FORTH compiler and interpreter written in Python.
 Date: 2023-02-01
 ---
 
+<div style="display: none;"><p>FORTH is a simple stack-based language. It is a great language to learn about compilers and interpreters. This article will show you how to write a FORTH compiler and interpreter in 130* lines of Python. </p></div>
+
 ![A screenshot of the FORTH interpreter](../images/pyforthBanner.webp)
 [Get all the code on Github](https://github.com/joelpeckham/pyforth)
 

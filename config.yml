@@ -108,3 +108,9 @@ markup:
     # guessSyntax: true
     # lineNos: true
     # style: monokai
+
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true

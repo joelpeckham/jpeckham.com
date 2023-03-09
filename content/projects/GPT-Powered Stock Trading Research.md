@@ -5,6 +5,8 @@ ShowBreadCrumbs: true
 Date: 2023-01-05
 ---
 
+<div style="display: none;"><p>In mid 2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if the model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company. </p></div>
+
 [Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf).
 ![newspaper](../images/NewspaperTransparent.webp)
 
@@ -16,7 +18,7 @@ Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), 
 
 ![Timeline](../images/transformerTimeline.svg)
 <!-- add image with img tag -->
-<img src="../images/transformerTimeline.svg" alt="Timeline" width="100vw"/>
+<!-- <img src="../images/transformerTimeline.svg" alt="Timeline" width="100vw"/> -->
 
 ## My Research Project
 
