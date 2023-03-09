@@ -64,7 +64,8 @@ input, select{
   color:var(--primary);
   border: solid 1px var(--border);
   padding: 0.3rem 0.5rem;
-
+  min-width: 0px;
+  max-width: 5rem;
 }
 input:focus, select:focus{
   outline: revert;

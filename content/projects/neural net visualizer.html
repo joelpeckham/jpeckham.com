@@ -254,12 +254,24 @@ Date: 2023-03-05
 <script src="../neuralNetCode/neuralNet.js"></script>
 <div class="divider"></div>
 <h2>Things to Play With</h2>
-<p>When you first load the page, the network weights are randomly initialized and no training has been done. 
-  Go ahead and push train! The network will run as many training iterations as are specified in the iterations input.
+<p>
+  When you first load the page, the network weights are randomly initialized and
+  no training has been done. Go ahead and push train! The network will run as
+  many training iterations as are specified in the iterations input.
 </p>
-<p>As you train, keep an eye on the loss and the accuracy. Notice what happens as you complete more training iterations.</p>
-<p>You can also adjust the number of hidden neurons. Increase or decrease this number and train again. What happens?</p>
-<p>Want to see how the network responds to a specific input? You can click the large input numbers at the top of the network to change which input is being fed into the visualizer!</p>
+<p>
+  As you train, keep an eye on the loss and the accuracy. Notice what happens as
+  you complete more training iterations.
+</p>
+<p>
+  You can also adjust the number of hidden neurons. Increase or decrease this
+  number and train again. What happens?
+</p>
+<p>
+  Want to see how the network responds to a specific input? You can click the
+  large input numbers at the top of the network to change which input is being
+  fed into the visualizer!
+</p>
 <h2>The Neural Network Explained</h2>
 <h3>The Task</h3>
 <p>
@@ -456,12 +468,13 @@ Date: 2023-03-05
   </center>
 </p>
 <p>
-  Now that we have the target output, we can calculate the absolute difference between
-  the target output and the network's prediction.
+  Now that we have the target output, we can calculate the absolute difference
+  between the target output and the network's prediction.
   <br />
   <center>
     <code>
-      abs(sum([ 0.5, -0.2, -0.3, -0.4, -0.1, -0.2, -0.7, -0.1, -0.9, -1.0 ])) = 3.4
+      abs(sum([ 0.5, -0.2, -0.3, -0.4, -0.1, -0.2, -0.7, -0.1, -0.9, -1.0 ])) =
+      3.4
     </code>
   </center>
 </p>
@@ -469,4 +482,13 @@ Date: 2023-03-05
   Because the network made a bad prediction, our loss is pretty high. Because
   loss is a measure of how bad the network's prediction was, the smaller the
   better.
+</p>
+<h3>A Note on Overfitting</h3>
+<p>
+  Overfitting is when the network learns the training data too well. This
+  results in the network not being able to generalize well to new data. Our
+  network is prone to overfitting because it trains on the same 10 images over
+  and over again. This means that the network will learn the patterns in the
+  the training data very well, but could totally break if you slighly changed the
+  way a given number input image was formed.
 </p>
