@@ -15,17 +15,17 @@ FORTH is a simple stack-based language. It is a great language to learn about co
 
 ### Some disclaimers
 
-* Firstly, this is not a perfect, standards compliant FORTH. It's just a fun little project to learn about compilers and interpreters. 
+* Firstly, this is not a perfect, standards-compliant FORTH. It's just a fun little project to learn about compilers and interpreters. 
 * Secondly, this is more of a rough guide and less of a tutorial. I'm not going to go into a lot of detail about how things work. I'm just going to show you how to get things working. If you want to learn more about compilers and interpreters, I recommend [Crafting Interpreters](https://craftinginterpreters.com/).
-* Finally, it's really it's around 480 lines total, but since most of that is defining primitives which could be done in runtime, it's not really relevant. It's just nice to have some starting points to work from :)
+* Finally, it's actually around 480 lines total, but since most of that is defining primitives which could be done in runtime, it's not *really* relevant. It's just nice to have some starting points to work from :)
 
 ## A language in two parts
 
-Our FORTH implementation will have two main states, a compile state and an interpret state. In the compile state, we will be collecting words to be executed later. In the interpret state, we will be executing the words we have collected.
+Our FORTH implementation will have two main stages, a compile stage and an interpret stage. In the compile stage, we will be collecting words to be executed later. In the interpret stage, we will be executing the words we have collected.
 
 To get started let's make a file called `state.py`. This file will contain two dataclasses to represent the two states of our FORTH implementation.
 
-First we need to import some things from the `dataclasses` module.
+First, we need to import some things from the `dataclasses` module.
 ```python
 from dataclasses import dataclass, field
 ```
@@ -74,7 +74,7 @@ def isInt(lexeme:str) -> bool:
         return True
 ```
 
-These two small funtions will help us by splitting our code into small pieces called tokens and by checking if a given lexeme is an integer.
+These two small functions will help us by splitting our code into small pieces called tokens and by checking if a given lexeme is an integer.
 
 ## Getting primitive
 
@@ -89,12 +89,12 @@ from getch import getch
 ```
 Getch is a bit special. It's a library that allows us to get a single character from the user without having to press enter. It's not a standard library, so you'll have to install it with `pip install getch`.  
 
-Next we'll define a dictionary to hold all of our primitives. We'll call it `Primitives`.
+Next, we'll define a dictionary to hold all of our primitives. We'll call it `Primitives`.
 ```python
 Primitives : Dict[str, Dict[str,function]] = {} #The main export of this file.
 ```
 
-Now, we'll define a couple decorators. These will allow us to define primitives in a more concise way. The first decorator is called `primitive()`. It will take a function, strip intended lexeme from docstring, and add it to the `Primitives` dictionary. The rest of the logic helps us to tag which lexemes are compile only and which are interpret only, and which are both. 
+Now, we'll define a couple of decorators. These will allow us to define primitives more concisely. The first decorator is called `primitive()`. It will take a function, strip the intended lexeme from docstring, and add it to the `Primitives` dictionary. The rest of the logic helps us to tag which lexemes are compile only and which are interpret only, and which are both. 
 
 ```python
 def primitive(func) -> None:
@@ -482,7 +482,7 @@ def I(state:InterpretState) -> None:
 
 ## Interpreter
 
-The interpreter itself is very small. It's just a loop that runs until the end of the program is reached. Then, token by token, it looks each token in the dictionary of primitives and calls the function associated with it. If the token is not in the dictionary, it is assumed to be a number and is pushed onto the data stack.
+The interpreter itself is very small. It's just a loop that runs until the end of the program is reached. Then, token by token, it looks at each token in the dictionary of primitives and calls the function associated with it. If the token is not in the dictionary, it is assumed to be a number and is pushed onto the data stack.
 
 There's more going on here to deal with variables and calling "functions", but again, this isn't a tutorial.
 
@@ -565,5 +565,5 @@ else:
 
 Make sure you've added the correct python install path to the shebang at the top, then run with `./pyforth.py` and you should be good to go!
 
-Source code is available on [GitHub](https://github.com/joelpeckham/pyforth).
+The source code is available on [GitHub](https://github.com/joelpeckham/pyforth).
 
