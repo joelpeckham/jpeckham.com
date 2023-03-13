@@ -4,25 +4,43 @@ ShowBreadCrumbs: false
 ---
 
 <style>
-    #profilePic {
-        width: 200px;
-        height: 200px;
-        border-radius: 6%;
-        display: inline-block;
-    }
+  #profilePic {
+    width: 200px;
+    height: 200px;
+    border-radius: 6%;
+    display: inline-block;
+  }
 </style>
 
 <div id="introPara">
-    <img id="profilePic" src="/joel_peckham_laramie_software_developer_small.webp" alt="Portrait of Joel Peckham, a software developer based in Laramie, Wyoming.">
+  <img
+    id="profilePic"
+    src="/joel_peckham_laramie_software_developer_small.webp"
+    alt="Portrait of Joel Peckham, a software developer based in Laramie, Wyoming."
+  />
 
-<p>
+  <p>
     I'm a software developer and (previously) a graphic designer. I'm currently
-    located in Laramie, Wyoming and loving life! I graduated with a B.S. in Computer Science
-    from Southern Adventist Univeristy in May, 2022. When I'm not coding, I'm probably
-    probably outside hiking, rock climbing or skiing. Professionally, I'm looking for a
-    full-time position as a software developer. I'm very interested in AI and machine learning, 
-    but I'm also open to other opportunities.
+    located in Laramie, Wyoming and loving life! I graduated with a B.S. in
+    Computer Science from Southern Adventist Univeristy in May, 2022. When I'm
+    not coding, I'm probably probably outside hiking, rock climbing or skiing.
+    Professionally, I'm looking for a full-time position as a software
+    developer. I'm very interested in AI and machine learning, but I'm also open
+    to other opportunities.
+  </p>
+  <h2>Resume</h2>
 
-</p>
-
+  <div id="example1"></div>
+  <script src="./../pdfobject.min.js"></script>
+  <script>
+    PDFObject.embed("/Joel_Peckham_Resume_2023.pdf", "#example1");
+  </script>
+  <style>
+    .pdfobject-container {
+      height: 80vh;
+    }
+    .pdfobject-container .pdfobject{
+        border-radius: var(--radius);
+    }
+  </style>
 </div>
