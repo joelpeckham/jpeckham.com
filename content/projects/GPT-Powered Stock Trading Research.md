@@ -12,7 +12,7 @@ Date: 2023-01-05
 
 ## Background
 
-Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAi’s GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAi was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working a breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
+Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAi’s GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAi was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working at breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
 
 ### Timeline
 
@@ -24,13 +24,13 @@ Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), 
 
 ### Concept
 
-In mid 2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if the model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company. 
+In mid-2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if a model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company. 
 
 Input: News article about a company  ⮕  Output: Buy/Sell/Neutral signal
 
 ### Data gathering
 
-For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intented to test with. I scraped and labelled 140,000 news articles from the below web sources:
+For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intended to test with. I scraped and labeled 140,000 news articles from the below web sources:
 ![Data Sources](../images/domainCounts.jpg)
 
 To avoid rate limiting, I created a custom web scraper to use and manage a pool of rotating proxies. I also used a custom rate limiter to ensure that I was not making too many requests to any given domain. Running the scraper from an OracleVM, I was able to scrape around 40 articles per minute and complete all 140,000 articles in around 2.5 days.
@@ -245,11 +245,11 @@ class Scraper:
         print(f"\nFinished scraping. {len(self._finishedUrls)} urls scraped. {successfulScrapes} successful scrapes.")
 ```
 
-I then spit my dataset into a training set with 90,000 articiles and into validation/testing sets with 10,000/40,000 articles respectively.
+I then split my dataset into a training set with 90,000 articles and into validation/testing sets with 10,000/40,000 articles respectively.
 
 ## Training
 
-Because the model weights are over 60GB, specilized computing was required for this training task. Training was done with a Google TPU-v3 generously donated by Google's [TPU Research Cloud](https://sites.research.google/trc/about/). I trained my model using the following hyperparameters:
+Because the model weights are over 60GB, specialized computing was required for this training task. The training was done with a Google TPU-v3 generously donated by Google's [TPU Research Cloud](https://sites.research.google/trc/about/). I trained my model using the following hyperparameters:
 ```<json>
 {
   "layers": 28,
@@ -281,7 +281,7 @@ Because the model weights are over 60GB, specilized computing was required for t
 }
 ```
 ### Training Loss
-I was encouraged by the seeing a meaningful decrease in training loss, however now I believe this was due to overfitting to the training set. 
+At first, I was encouraged by seeing a meaningful decrease in training loss, however, now I believe this was due to overfitting to the training set. 
 ![Training Loss](../images/trainLoss.png)
 
 ## Results
@@ -303,8 +303,8 @@ correct guesses of stock price movement direction.
 In my testing, GPT-J performs no better than random when predicting the direction of price movement based on a news story. Furthermore, fine-tuning the model does not improve prediction accuracy. 
 
 I believe these results are due to the following factors:
-- The model (except for a small amout of fine tuning) is not trained on financial data.
+- The model (except for a small amount of fine-tuning) is not trained on financial data.
 - The data was not cleaned well enough to remove noise.
 - Text data is not a good representation of financial data. In other words, the model doesn't care about the actual numbers, only how well they "sound" in the context of the article.
-- The articles may also not have enough infomation to predict price movement anyway. News is often considered a lagging indicator of price movement, and the articles I scraped were often published after the relevant price movement had already occured.
+- The articles may also not have enough information to predict price movement anyway. News is often considered a lagging indicator of price movement, and the articles I scraped were often published after the relevant price movement had already occurred.
 
