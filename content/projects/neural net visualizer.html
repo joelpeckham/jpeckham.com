@@ -284,7 +284,7 @@ Date: 2023-03-05
   The input to the network is a 25-dimensional vector (just a list of 25
   numbers). Each element of the vector represents a pixel in the image. The
   value of each element is either 0 or 1, where 0 represents a white pixel and 1
-  represents a black pixel. For example the image representing 0 would look like
+  represents a black pixel. For example, the image representing 0 would look like
   the following vector:
   <br />
   <center>
@@ -334,7 +334,7 @@ Date: 2023-03-05
 <p>
   Each layer is made up of neurons. With every iteration, the activation of each
   neuron is calculated and passed to the neurons in the next layer. (More on
-  iterations later.) The activation is a number that represents how much the
+  iterations later.) An activation is a number that represents how much the
   node is contributing to the network's prediction. Activations are based on the
   weights of the node's connections to the nodes in the previous layer. We'll
   talk more about weights next. There are lots of different activation
@@ -377,26 +377,26 @@ Date: 2023-03-05
 </div>
 <h4>Weights</h4>
 <p>
-  Each neuron is conntected to the neurons in the previous layer by a weight.
+  Each neuron is connected to the neurons in the previous layer by a weight.
   Each weight is a number that represents how much the neuron in the previous
   layer contributes to the current neuron's activation. Weights are initialized
   randomly when the network is created (or when you push the reset button).
   <br />
   In the visualizer above, the weights are represented by lines connecting all
-  the neurons. The thicker the and more colorful the line, the stronger the
+  the neurons. The thicker and more colorful the line, the stronger the
   weight.
 </p>
 <h3>Training the Network</h3>
 <p>
-  Training is a step-by step prcocess where each step is called
-  <strong>iteration</strong>. Each iteration has two parts, the forward pass and
+  Training is a step-by-step process where each step is called
+  an <strong>iteration</strong>. Eacsh iteration has two parts, the forward pass and
   the backward pass. The forward pass is where the network makes a prediction
   and the backward pass is where the network adjusts its weights to improve the
   prediction.
 </p>
 <h4>The Forward Pass</h4>
 <p>
-  In the forward pass, the network makes a prediction for a given input. The
+  In the forward pass, the network predicts a given input. The
   prediction is made by passing the input through the network. Here's what
   happens in order:
 </p>
@@ -453,7 +453,7 @@ Date: 2023-03-05
   </center>
 </p>
 <p>
-  Now that the feed forward pass is done, we get this output of the network:
+  Now that the feed-forward pass is done, we get this output of the network:
   <br />
   <center>
     <code> [ 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.7, 0.1, 0.9, 1.0 ] </code>
@@ -488,7 +488,7 @@ Date: 2023-03-05
   Overfitting is when the network learns the training data too well. This
   results in the network not being able to generalize well to new data. Our
   network is prone to overfitting because it trains on the same 10 images over
-  and over again. This means that the network will learn the patterns in the
-  the training data very well, but could totally break if you slighly changed the
+  and over again. This means that the network will learn the patterns in
+  the training data very well, but could entirely break if you slightly changed the
   way a given number input image was formed.
 </p>
