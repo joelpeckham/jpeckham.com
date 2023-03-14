@@ -94,10 +94,15 @@ menu:
       name: About me
       url: /about/
       weight: 20
+    - identifier: My Design Portfolio
+      name: My Graphic Design
+      url: https://jpeckham.com/designPortfolio/
+      weight: 30
     - identifier: My Github
       name: Github
       url: https://github.com/joelpeckham
-      weight: 30
+      weight: 40
+    
 # Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
 pygmentsUseClasses: true
 markup:
