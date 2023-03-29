@@ -7,7 +7,7 @@ Date: 2023-03-29
 
 ## Short Video
 <div style="width:100%; aspect-ratio:16/9;">
-<iframe width="100%" height="100%" src="https://www.youtube-nocookie.com/embed/vlsRRafjw10" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe width="100%" height="100%" style="border-radius: var(--radius);" src="https://www.youtube-nocookie.com/embed/vlsRRafjw10" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
 
 ## Summary & Mockups
@@ -33,7 +33,7 @@ Here's a rough mockup. In retrospect, I think the header should be a bit taller.
 
 ![Arc No Sidebar](./../arcScreenshots/arcNoSidebar.webp)
 
-### Some cheeky self-promotion
+## Some cheeky self-promotion
 
 Hello! I'd love to work for The Browser Company! I've already submitted a job application and would love to hear back from you. I'm keen on any position, even if probationary or part-time. In the meantime, you're on my personal website, so why not look around?
 
