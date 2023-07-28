@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://kit.fontawesome.com/01aee294d4.js"
+      crossorigin="anonymous"
+    ></script>
+    <link rel="stylesheet" href="style.css" />
+    <title>Lander Photos</title>
+  </head>
+  <body>
+    <main>
+      <div class="header">
+        <h2>Lander Photos</h2>
+        <button type="button" id = "downloadButton" class="btn btn-outline-dark m-3">
+          <div class="d-flex justify-content-center align-items-center">
+            Download All
+            <i class="fa-regular fa-circle-down p-1" id = "downloadIcon"></i>
+            <div
+              class="spinner-border spinner-border-sm m-1 hidden"
+              role="status"
+              id="spinner"
+            ></div>
+          </div>
+        </button>
+      </div>
+      <div class="mycontainer"></div>
+    </main>
+    <script src="items.js"></script>
+    <script src="app.js"></script>
+    <script src="jszip.min.js"></script>
+    <script src="FileSaver.min.js"></script>
+    <script>
+        function toggleSpinner() {
+            let spinner = document.getElementById("spinner");
+            spinner.classList.toggle("hidden");
+            let icon = document.getElementById("downloadIcon");
+            icon.classList.toggle("hidden");
+        }
+      async function fetchImages() {
+        let imageData = Array();
+        let images = document.querySelectorAll("img");
+        images.forEach((image) => {
+          imageData.push(
+            fetch(image.src).then((response) => {
+              return response.blob();
+            })
+          );
+        });
+        // Wait for all images to be fetched
+        await Promise.all(imageData);
+        return imageData;
+      }
+      async function downloadZip() {
+        let zip = new JSZip();
+        let imageData = await fetchImages();
+
+        for (let i = 0; i < imageData.length; i++) {
+          console.log(imageData[i]);
+          zip.file(`${i}.jpg`, imageData[i]);
+        }
+        await zip.generateAsync({ type: "blob" }).then(function (content) {
+          saveAs(content, "lander.zip");
+        });
+        return "Done!";
+
+      }
+
+      let downloadButton = document.getElementById("downloadButton");
+        downloadButton.addEventListener("click", () => {
+            toggleSpinner();
+            downloadZip().then(() => {
+            toggleSpinner();
+            });
+        });
+    </script>
+  </body>
+</html>
