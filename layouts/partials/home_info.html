@@ -77,7 +77,7 @@
         </p>
       </div>
       <footer class="entry-footer">
-        {{ partial "social_icons.html" site.Params.socialIcons }}
+        {{ partial "social_icons.html" (dict "align" site.Params.homeInfoParams.AlignSocialIconsTo) }}
       </footer>
     </div>
   </div>

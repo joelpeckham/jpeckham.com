@@ -1,12 +1,18 @@
 baseURL: "https://jpeckham.com/"
 title: Joel Peckham
-paginate: 5
+pagination:
+  pagerSize: 5
 theme: PaperMod
 
 enableRobotsTXT: true
 buildDrafts: false
 buildFuture: false
 buildExpired: false
+
+security:
+  allowContent:
+    - "^text/markdown$"
+    - "^text/html$"
 
 minify:
   disableXML: true
@@ -113,9 +119,6 @@ markup:
     # guessSyntax: true
     # lineNos: true
     # style: monokai
-
-
-markup:
   goldmark:
     renderer:
       unsafe: true
