@@ -39,7 +39,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // Preserve the standalone static micro-apps at their original URLs.
     return [
-      { source: "/date", destination: "/date/index.html" },
       { source: "/raidviz", destination: "/raidviz/index.html" },
       { source: "/lander", destination: "/lander/index.html" },
     ];
