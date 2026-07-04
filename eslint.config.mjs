@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party and generated code:
+    "Peckham Bauhaus Design System/**",
+    "public/interactive/vendor/**",
+    "public/lander/jszip.min.js",
+    "public/lander/FileSaver.min.js",
   ]),
 ]);
 

@@ -227,3 +227,19 @@ h4 {
   animation-duration: 350ms;
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+
+/*
+ * The cover background and its pieces (eyebrow, headline lines, icon) are the
+ * same content at two sizes, so the default old/new cross-fade just makes
+ * them look blurry mid-flight. Show only the new snapshot and stretch it to
+ * the animating group box so everything scales smoothly instead of fading.
+ */
+::view-transition-old(*.cover-piece) {
+  display: none;
+}
+
+::view-transition-new(*.cover-piece) {
+  width: 100%;
+  height: 100%;
+  animation: none;
+}

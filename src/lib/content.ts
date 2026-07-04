@@ -40,7 +40,7 @@ export const projects: ContentItem[] = [
     tags: ["Next.js", "Full Stack", "Product"],
     art: {
       bg: "yellow",
-      headline: ["SCHED", "ULE"],
+      headline: ["CLASS", "PLANNER"],
       icon: "calendar",
       variant: "band",
     },

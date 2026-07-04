@@ -189,6 +189,10 @@ export type CoverArtProps = {
  * Wraps a single DOM child in a named ViewTransition when a transition key is
  * present. On the OG route (no key) it renders the child untouched so satori
  * never sees a ViewTransition.
+ *
+ * `share="cover-piece"` tags the shared-element morph with a
+ * view-transition-class; globals.css uses it to scale the snapshots with the
+ * group instead of the default cross-fade, which looks blurry on text.
  */
 function Piece({
   tkey,
@@ -200,7 +204,11 @@ function Piece({
   children: ReactNode;
 }) {
   if (!tkey) return <>{children}</>;
-  return <ViewTransition name={`${tkey}-${id}`}>{children}</ViewTransition>;
+  return (
+    <ViewTransition name={`${tkey}-${id}`} share="cover-piece">
+      {children}
+    </ViewTransition>
+  );
 }
 
 export function CoverArt({

@@ -100,9 +100,6 @@ const inputnodes = 25;
 var hiddennodes = 6;
 const outputnodes = 10;
 const learningrate = 0.2;
-const threshold = 0.5;
-let iter = 0;
-const iterations = 2000;
 
 const trainingData = [
   [0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0],
@@ -324,7 +321,6 @@ const trainingImages = document.querySelectorAll(".trainingImage");
 for (let i = 0; i < trainingImages.length; i++) {
   const image = trainingImages[i];
   image.addEventListener("click", function () {
-    const prediction = myNN.predict(trainingData[i])._data.map((x) => x[0]);
     currentInputSelected = i;
     let img = image.querySelector("img");
     img.classList.add("selected");
@@ -409,12 +405,12 @@ function mouseOverPath(ev) {
     maximumFractionDigits: 4,
   })}`;
 }
-function mouseOutPath(ev) {
+function mouseOutPath() {
   circle.classList.remove("activeCircle");
 }
 
 const firstCol = document.querySelector(".gaCol.col_1");
-firstCol.addEventListener("mouseup", (ev) => {
+firstCol.addEventListener("mouseup", () => {
   firstCol.classList.toggle("grid");
   firstCol.classList.toggle("flex");
   resizeSvgViewBox();

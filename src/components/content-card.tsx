@@ -1,5 +1,5 @@
 import { ViewTransition } from "react";
-import Link from "next/link";
+import { ScrollToTopLink } from "@/components/scroll-to-top";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import {
@@ -23,9 +23,9 @@ export function ContentCard({
   const marker = String(index ?? 1).padStart(2, "0");
 
   return (
-    <Link href={item.href} className="group block">
+    <ScrollToTopLink href={item.href} className="group block">
       <Card accent={accent} interactive className="flex h-full flex-col">
-        <ViewTransition name={`cover-${item.slug}`}>
+        <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
           <div
             className="aspect-video overflow-hidden border-b-2 border-ink"
             style={{ containerType: "inline-size" }}
@@ -81,6 +81,6 @@ export function ContentCard({
           </div>
         </div>
       </Card>
-    </Link>
+    </ScrollToTopLink>
   );
 }

@@ -293,7 +293,7 @@ $("clearDataButton").addEventListener("click", () => {
 $("writeDataButton").addEventListener("click", () => {
   driveBay.write(textarea.value);
 });
-$("writeDataTextArea").addEventListener("input", (e) => {
+$("writeDataTextArea").addEventListener("input", () => {
   textarea.value = textarea.value.replaceAll(" ", "_");
 });
 textarea.addEventListener("keydown", (e) => {

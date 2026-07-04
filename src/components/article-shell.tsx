@@ -9,6 +9,7 @@ import {
   webFontMono,
 } from "@/components/cover-art";
 import { allContent, formatDate, type ContentItem } from "@/lib/content";
+import { ScrollToTopOnMount } from "@/components/scroll-to-top";
 
 function itemForSlug(slug: string): ContentItem {
   const item = allContent.find((c) => c.slug === slug);
@@ -58,7 +59,8 @@ export function ArticleShell({
 
   return (
     <>
-      <ViewTransition name={`cover-${item.slug}`}>
+      <ScrollToTopOnMount />
+      <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
         <div
           className="h-[42vh] max-h-[520px] min-h-[280px] w-full overflow-hidden border-b-2 border-ink"
           style={{ containerType: "size" }}
