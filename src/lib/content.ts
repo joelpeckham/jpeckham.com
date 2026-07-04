@@ -68,7 +68,19 @@ export const projects: ContentItem[] = [
   },
 ];
 
-export const posts: ContentItem[] = [];
+export const posts: ContentItem[] = [
+  {
+    slug: "no-bullshit-qr",
+    href: "/posts/no-bullshit-qr/",
+    title: "No Bullshit QR Codes",
+    description:
+      "Paywalled QR generators broke a friend's printed posters, so I built a free one that never holds your links hostage — with real SVG and PNG export.",
+    date: "2025-12-02",
+    cover: "/posts/images/no-bullshit-qr.webp",
+    kind: "post",
+    tags: ["Next.js", "Product", "Rant"],
+  },
+];
 
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),

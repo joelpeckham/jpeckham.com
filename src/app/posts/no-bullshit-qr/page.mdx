@@ -1,0 +1,44 @@
+![The No Bullshit QR Code Generator: a URL field, a generated QR code, and SVG and PNG download buttons](/posts/images/no-bullshit-qr.webp)
+
+[Try it at qr.jpeckham.com](https://qr.jpeckham.com/) · [Get the code on GitHub](https://github.com/joelpeckham/qr)
+
+## A friend's posters stopped working
+
+A friend of mine works for a small not-for-profit co-op here in town. She'd designed a run of posters, sent them to the printer, and put them up around the community — the usual, with a QR code in the corner so people could scan their way to the co-op's page.
+
+A week later the codes were dead. Every scan landed on a "this link has expired" page demanding payment. She hadn't changed anything. The QR generator she'd used had a week-long free trial, and once it lapsed, the site simply stopped redirecting the shortened URLs it had baked into her codes. The posters were already printed and hung. The only way to make them work again was to pay up.
+
+That's not a bug. That's the business model.
+
+## Why this is a scam
+
+Here's the thing that made me angry once I understood it. A QR code is just an image that encodes some text — usually a URL. Generating one costs essentially nothing; it's a bit of math that turns a string into a grid of black and white squares. There is no ongoing service to pay for.
+
+So how do you charge rent for something free? You make it *not* encode the destination directly. Instead of putting the co-op's real URL into the code, these services quietly route it through a short link that *they* own — something like `theirdomain.com/x7Fq2`. Now the printed code points at their server forever, and they control whether that redirect keeps working. Miss a payment and they flip a switch, and every poster, sticker, and business card you printed goes dark.
+
+URL redirection is one of the cheapest services on the internet to run. Dressing it up, hiding it inside a QR code, and then holding printed material hostage over it feels genuinely scammy — especially when the only thing they built on top is an image generator.
+
+## The other annoyances
+
+While I was at it, two smaller frustrations were worth fixing:
+
+- **Sign-up walls.** So many generators make you create an account before you can download the thing you already made. For a five-second task, that's absurd.
+- **Bad exports.** Plenty of sites only hand you a small, fixed-size PNG. If you're sending a poster to a printer you want a crisp **SVG**, and if you want a raster you want to pick the **size** — not fight a 200×200 JPEG.
+
+## What I built
+
+So I built [qr.jpeckham.com](https://qr.jpeckham.com/): a no-bullshit QR code generator.
+
+- **Paste a URL, get a QR code instantly.** No account, no trial, no email.
+- **Shortening is optional — and it never breaks your code.** If you turn it on, it shortens via the [Spoo.me](https://spoo.me/) API. If shortening is unavailable for any reason, the QR just encodes your full, normalized URL instead. There's no scenario where the code points at a link I can turn off. Worst case, it points straight at your destination, the way a QR code should.
+- **Real exports.** Download as **SVG** for print, or as **PNG** at whatever size you want, with an optional transparent background.
+
+The whole point is that a printed QR code should keep working forever, because it encodes *your* destination — not a lease on someone else's redirect.
+
+## How it works
+
+It's a small [Next.js](https://nextjs.org/) app deployed on [Vercel](https://vercel.com/). QR generation happens client-side with `qrcode.react`, so the code is drawn right in your browser the moment you type a URL. The only backend is a single `/api/shorten` route that normalizes the URL, optionally calls Spoo.me, and falls back to the long URL if anything goes wrong. It's rate-limited and size-capped, and it works fine with no API key at all — it just skips shortening. The whole thing is open source on [GitHub](https://github.com/joelpeckham/qr).
+
+## The takeaway
+
+Your printed QR codes should never depend on someone else's subscription. If a generator routes your code through a link it controls, the code is only as permanent as your relationship with that company. Encode the real destination, keep an SVG, and never let a lapsed trial take down a wall full of posters again.
