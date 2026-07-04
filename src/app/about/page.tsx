@@ -78,7 +78,7 @@ export default function AboutPage() {
               hospice pharmacy solution on the market. When I&apos;m not coding,
               I&apos;m outside — hiking, climbing, or skiing.
             </p>
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-8 hidden flex-wrap gap-2 md:flex">
               {stack.map((t) => (
                 <Tag
                   key={t}
@@ -118,6 +118,28 @@ export default function AboutPage() {
               +1 (307) 631-1986
             </ArrowLink>
             <span className="text-xs text-grey">(Text message preferred.)</span>
+          </li>
+          <li className="flex flex-wrap items-baseline gap-x-3">
+            <span className="text-meta uppercase tracking-[0.18em] text-grey">
+              GitHub
+            </span>
+            <ArrowLink
+              href="https://github.com/joelpeckham"
+              external
+            >
+              github.com/joelpeckham
+            </ArrowLink>
+          </li>
+          <li className="flex flex-wrap items-baseline gap-x-3">
+            <span className="text-meta uppercase tracking-[0.18em] text-grey">
+              LinkedIn
+            </span>
+            <ArrowLink
+              href="https://www.linkedin.com/in/joelpeckham/"
+              external
+            >
+              linkedin.com/in/joelpeckham
+            </ArrowLink>
           </li>
         </ul>
       </section>

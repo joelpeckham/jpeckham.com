@@ -85,7 +85,7 @@ export function AboutPortrait() {
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-[340px] self-center">
+    <div className="relative mx-auto mb-8 w-full max-w-[340px] self-center md:mb-0">
       <Shape
         type="circle"
         color="var(--red)"
