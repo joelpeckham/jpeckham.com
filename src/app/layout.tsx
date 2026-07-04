@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Jost, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import "highlight.js/styles/an-old-hope.css";
 import { SiteHeader } from "@/components/site-header";
@@ -79,6 +80,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <SiteFooter />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
