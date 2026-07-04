@@ -16,12 +16,12 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/designportfolio/",
-        destination: "/designPortfolio.pdf",
+        destination: "/design/",
         permanent: true,
       },
       {
         source: "/designPortfolio/",
-        destination: "/designPortfolio.pdf",
+        destination: "/design/",
         permanent: true,
       },
       {
