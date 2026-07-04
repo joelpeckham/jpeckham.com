@@ -339,8 +339,7 @@ export function CoverArt({
       <div
         style={{
           ...root,
-          flexDirection: "column",
-          justifyContent: "center",
+          alignItems: "stretch",
           padding: u(70),
           paddingBottom: u(150),
         }}
@@ -356,36 +355,51 @@ export function CoverArt({
             background: p.a1,
           }}
         />
+        {/* Text column: grows to fill the space left of the reserved icon
+            column so the headline can never run under the icon. */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            flexGrow: 1,
+            minWidth: 0,
+          }}
+        >
+          {eyebrow ? (
+            <Piece tkey={transitionKey} id="eyebrow">
+              <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>
+                {eyebrow}
+              </div>
+            </Piece>
+          ) : null}
+          <div
+            style={{
+              ...headlineStyle,
+              fontSize: u(150),
+              color: art.bg === "yellow" ? "#141210" : p.fg,
+            }}
+          >
+            {art.headline.map(renderLine)}
+          </div>
+        </div>
+        {/* Icon column: fixed width, vertically centered, out of the text's way. */}
         <Piece tkey={transitionKey} id="icon">
           <div
             style={{
-              position: "absolute",
-              top: u(56),
-              right: u(64),
               display: "flex",
-              width: u(190),
-              height: u(190),
+              flexShrink: 0,
+              width: u(210),
+              marginLeft: u(48),
+              alignItems: "center",
+              justifyContent: "flex-end",
             }}
           >
-            <Icon name={art.icon} color={p.fg} accent={p.a2} />
+            <div style={{ display: "flex", width: u(190), height: u(190) }}>
+              <Icon name={art.icon} color={p.fg} accent={p.a2} />
+            </div>
           </div>
         </Piece>
-        {eyebrow ? (
-          <Piece tkey={transitionKey} id="eyebrow">
-            <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>
-              {eyebrow}
-            </div>
-          </Piece>
-        ) : null}
-        <div
-          style={{
-            ...headlineStyle,
-            fontSize: u(180),
-            color: art.bg === "yellow" ? "#141210" : p.fg,
-          }}
-        >
-          {art.headline.map(renderLine)}
-        </div>
       </div>
     );
   }
