@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/resume/",
-        destination: "/Joel_Peckham_Resume_2023.pdf",
+        destination: "/Joel_Peckham_Resume.pdf",
         permanent: true,
       },
       {

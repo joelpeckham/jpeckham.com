@@ -5,22 +5,23 @@ import { Shape } from "@/components/ui/shape";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ResumePreview } from "@/components/resume-preview";
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Joel Peckham is a software developer and former graphic designer based in Laramie, Wyoming.",
+    "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
   alternates: { canonical: "/about/" },
 };
 
 const stack = [
-  "Python",
-  "PyTorch",
+  "PHP",
+  "Laravel",
+  "Livewire",
   "TypeScript",
   "React",
   "Next.js",
-  "Machine Learning",
-  "NLP",
+  "Tailwind CSS",
   "Postgres",
 ];
 
@@ -40,10 +41,10 @@ export default function AboutPage() {
               I&apos;m Joel — a software developer and former graphic designer
               based in Laramie, Wyoming. I graduated with a B.S. in Computer
               Science from Southern Adventist University in 2022. I work
-              end-to-end and care as much about the seams as the surface. I&apos;m
-              especially interested in AI and machine learning, and I&apos;m
-              currently looking for a full-time software role. When I&apos;m not
-              coding, I&apos;m outside — hiking, climbing, or skiing.
+              end-to-end and care as much about the seams as the surface. For the
+              last three years I&apos;ve been at BetterRx, building the best
+              hospice pharmacy solution on the market. When I&apos;m not coding,
+              I&apos;m outside — hiking, climbing, or skiing.
             </p>
             <div className="mt-8 flex flex-wrap gap-2">
               {stack.map((t) => (
@@ -113,28 +114,13 @@ export default function AboutPage() {
         <div className="mb-6 flex items-center justify-between gap-4">
           <SectionHeading index="05" eyebrow="Curriculum vitae" title="Resume" />
           <a
-            href="/Joel_Peckham_Resume_2023.pdf"
+            href="/Joel_Peckham_Resume.pdf"
             className={cn(buttonVariants({ variant: "ink", size: "sm" }))}
           >
             Download PDF →
           </a>
         </div>
-        <object
-          data="/Joel_Peckham_Resume_2023.pdf"
-          type="application/pdf"
-          className="h-[80vh] w-full border-2 border-ink shadow-hard"
-          aria-label="Joel Peckham's resume"
-        >
-          <p className="p-6 text-ink">
-            Your browser can&apos;t display embedded PDFs.{" "}
-            <a
-              href="/Joel_Peckham_Resume_2023.pdf"
-              className="font-medium text-red underline decoration-2 underline-offset-2"
-            >
-              Download the resume instead.
-            </a>
-          </p>
-        </object>
+        <ResumePreview />
       </section>
     </>
   );
