@@ -66,11 +66,11 @@ export default function AboutPage() {
               className="pointer-events-none absolute -right-6 -top-6"
             />
             <Image
-              src="/joel_peckham_laramie_software_developer_small.webp"
-              alt="Portrait of Joel Peckham, a software developer based in Laramie, Wyoming."
+              src="/snowboard_joel.webp"
+              alt="Joel Peckham snowboarding in the mountains near Laramie, Wyoming."
               width={320}
-              height={320}
-              className="relative w-full border-2 border-paper object-cover shadow-[7px_7px_0_var(--red)]"
+              height={400}
+              className="relative aspect-4/5 w-full border-2 border-paper object-cover shadow-[7px_7px_0_var(--red)]"
             />
           </div>
         </div>
