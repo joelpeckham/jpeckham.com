@@ -47,9 +47,10 @@ export default function Home() {
           <h1 className="mb-6 mt-3 max-w-[900px] font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]">
             I build
             <br />
-            things that
-            <br />
-            <span className="text-red">ship.</span>
+            things <br />{" "}
+            <span className="whitespace-nowrap">
+              that <span className="text-red">ship.</span>
+            </span>
           </h1>
           <p className="max-w-[520px] text-lg leading-normal">
             Joel Peckham — Full-stack and AI developer. I build tools, train

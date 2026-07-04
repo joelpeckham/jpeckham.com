@@ -56,16 +56,25 @@ export default function AboutPage() {
           <div>
             <span className="label text-yellow">03 · About</span>
             <h1 className="mb-6 mt-3 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
-              A developer who
+              I make software
               <br />
-              sweats the seams.
+              that helps people.
             </h1>
             <p className="max-w-[560px] text-lg leading-normal">
               I&apos;m Joel — a software developer and former graphic designer
               based in Laramie, Wyoming. I graduated with a B.S. in Computer
               Science from Southern Adventist University in 2022. I work
               end-to-end and care as much about the seams as the surface. For the
-              last three years I&apos;ve been at BetterRx, building the best
+              last three years I&apos;ve been at{" "}
+              <a
+                href="https://www.betterrx.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
+              >
+                BetterRx
+              </a>
+              , building the best
               hospice pharmacy solution on the market. When I&apos;m not coding,
               I&apos;m outside — hiking, climbing, or skiing.
             </p>
