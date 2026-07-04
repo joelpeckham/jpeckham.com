@@ -100,7 +100,7 @@ export function ArticleShell({
       </ViewTransition>
 
       <article className="mx-auto max-w-[760px] px-5 py-12 sm:px-8">
-        <nav className="mb-10">
+        <nav className="mb-10" aria-label="Breadcrumb">
           <Link
             href={sectionHref}
             className="group inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors hover:border-ink"

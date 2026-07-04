@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     "public/interactive/vendor/**",
     "public/lander/jszip.min.js",
     "public/lander/FileSaver.min.js",
+    "public/**",
   ]),
 ]);
 

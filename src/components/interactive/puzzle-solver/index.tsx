@@ -14,7 +14,6 @@ import {
   manhattanDistance,
   move,
   randomPuzzle,
-  solve,
   type Algorithm,
   type Heuristic,
   type Puzzle,
@@ -51,6 +50,18 @@ export function PuzzleSolver() {
   const [playing, setPlaying] = useState(false);
 
   const dealtRef = useRef(false);
+  const solvingRef = useRef(false);
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL("./solve.worker.ts", import.meta.url),
+    );
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+  }, []);
 
   const shuffle = useCallback(() => {
     const next = randomPuzzle();
@@ -93,14 +104,21 @@ export function PuzzleSolver() {
   }, []);
 
   const runSolve = useCallback(() => {
-    if (puzzle === GOAL || solving) return;
+    if (puzzle === GOAL || solvingRef.current) return;
+    const worker = workerRef.current;
+    if (!worker) return;
+
     setPlaying(false);
+    solvingRef.current = true;
     setSolving(true);
-    // Defer so the "solving" busy state paints before the (synchronous) search
-    // runs — A* with the Hamming heuristic can take a beat on hard puzzles.
-    setTimeout(() => {
-      const result = solve(puzzle, algorithm, heuristic);
+
+    const onMessage = (event: MessageEvent<SearchResult | null>) => {
+      worker.removeEventListener("message", onMessage);
+      worker.removeEventListener("error", onError);
+      solvingRef.current = false;
       setSolving(false);
+
+      const result = event.data;
       if (!result) return;
       setSolution(result.path);
       setStep(0);
@@ -117,8 +135,19 @@ export function PuzzleSolver() {
             ALGORITHMS.find((a) => a.id === algorithm)?.optimal ?? false,
         },
       ]);
-    }, 20);
-  }, [puzzle, algorithm, heuristic, solving]);
+    };
+
+    const onError = () => {
+      worker.removeEventListener("message", onMessage);
+      worker.removeEventListener("error", onError);
+      solvingRef.current = false;
+      setSolving(false);
+    };
+
+    worker.addEventListener("message", onMessage);
+    worker.addEventListener("error", onError);
+    worker.postMessage({ puzzle, algorithm, heuristic });
+  }, [puzzle, algorithm, heuristic]);
 
   const goToStep = useCallback(
     (i: number) => {

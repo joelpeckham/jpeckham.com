@@ -1,15 +1,19 @@
-import { allContent, type ContentItem } from "@/lib/content";
+import type { ContentItem } from "@/lib/content";
 import { siteName, siteUrl } from "@/lib/site";
 
 type JsonLdProps = {
   data: Record<string, unknown>;
 };
 
+function serializeJsonLd(data: Record<string, unknown>): string {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
 export function JsonLd({ data }: JsonLdProps) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
 }
@@ -20,6 +24,7 @@ export function personJsonLd() {
     "@type": "Person",
     name: siteName,
     url: siteUrl,
+    image: `${siteUrl}/snowboard_joel.webp`,
     email: "mail@jpeckham.com",
     jobTitle: "Software Developer",
     sameAs: [
@@ -36,6 +41,7 @@ export function articleJsonLd(item: ContentItem) {
     headline: item.title,
     description: item.description,
     datePublished: item.date,
+    image: `${siteUrl}/og/${item.slug}/`,
     author: {
       "@type": "Person",
       name: siteName,
@@ -59,6 +65,3 @@ export function websiteJsonLd() {
   };
 }
 
-export function allArticlesJsonLd() {
-  return allContent.map((item) => articleJsonLd(item));
-}

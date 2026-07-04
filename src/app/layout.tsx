@@ -5,7 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { siteName, siteUrl } from "@/lib/site";
+import { defaultOgImage, siteName, siteUrl } from "@/lib/site";
 
 const jost = Jost({
   variable: "--font-jost",
@@ -43,12 +43,14 @@ export const metadata: Metadata = {
     description:
       "Backend and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
     siteName,
+    images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "Joel Peckham — Software & AI Developer",
     description:
       "Backend and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
+    images: [defaultOgImage],
   },
   icons: {
     icon: "/favicon/favicon.ico",

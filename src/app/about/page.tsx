@@ -14,6 +14,27 @@ export const metadata: Metadata = {
   description:
     "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
   alternates: { canonical: "/about/" },
+  openGraph: {
+    url: "/about/",
+    title: "About",
+    description:
+      "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
+    images: [
+      {
+        url: "/snowboard_joel.webp",
+        width: 960,
+        height: 1200,
+        alt: "Joel Peckham snowboarding",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About",
+    description:
+      "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
+    images: ["/snowboard_joel.webp"],
+  },
 };
 
 const stack = [

@@ -8,6 +8,18 @@ export const metadata: Metadata = {
   description:
     "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
   alternates: { canonical: "/projects/" },
+  openGraph: {
+    url: "/projects/",
+    title: "Projects",
+    description:
+      "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Projects",
+    description:
+      "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+  },
 };
 
 export default function ProjectsPage() {

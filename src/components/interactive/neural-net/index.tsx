@@ -97,6 +97,14 @@ export function NeuralNet() {
   // immutable `view` snapshot so weight changes reliably trigger re-renders.
   const [net, setNet] = useState<NeuralNetwork>(createInitialNetwork);
   const iterRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const [view, setView] = useState<ViewModel>(() =>
     computeView(net, trainingData[0].bits),
@@ -136,8 +144,9 @@ export function NeuralNet() {
     (n: number) => {
       setLearningRate(n);
       net.updateLearningRate(n);
+      setView(computeView(net, inputFor(selected, drawn)));
     },
-    [net],
+    [net, inputFor, selected, drawn],
   );
 
   const runSteps = useCallback(
@@ -147,6 +156,7 @@ export function NeuralNet() {
         net.train(trainingData[idx].bits, targets[idx]);
         iterRef.current++;
       }
+      if (!mountedRef.current) return;
       setIterations(iterRef.current);
       setView(computeView(net, inputFor(selected, drawn)));
     },
@@ -332,6 +342,7 @@ export function NeuralNet() {
             type="button"
             onClick={selectDraw}
             aria-pressed={selected === "draw"}
+            aria-label="Draw your own digit for the network to classify"
             className={cn(
               "border-2 border-ink px-3 py-2 font-mono text-xs uppercase tracking-[0.1em] transition-transform",
               selected === "draw"

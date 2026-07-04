@@ -62,8 +62,6 @@ export class NeuralNetwork {
   // Sum-of-squared-error loss recorded once per training step.
   readonly lossHistory: number[] = [];
 
-  private last: ForwardResult | null = null;
-
   constructor(
     inputNodes: number,
     hiddenNodes: number,
@@ -102,7 +100,6 @@ export class NeuralNetwork {
     }
 
     const result: ForwardResult = { input, hidden, output };
-    this.last = result;
     return result;
   }
 
@@ -119,12 +116,10 @@ export class NeuralNetwork {
     const { hidden, output } = this.forward(input);
 
     // Output-layer error and its gradient through the sigmoid.
-    const outputError = new Array<number>(this.outputNodes);
     const outputDelta = new Array<number>(this.outputNodes);
     let loss = 0;
     for (let k = 0; k < this.outputNodes; k++) {
       const err = target[k] - output[k];
-      outputError[k] = err;
       loss += err * err;
       outputDelta[k] = err * output[k] * (1 - output[k]);
     }
@@ -172,9 +167,5 @@ export class NeuralNetwork {
       if (best === sample.label) correct++;
     }
     return (correct / samples.length) * 100;
-  }
-
-  get lastForward(): ForwardResult | null {
-    return this.last;
   }
 }

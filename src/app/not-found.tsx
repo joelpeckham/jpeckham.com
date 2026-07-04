@@ -26,8 +26,13 @@ export default function NotFound() {
         className="pointer-events-none absolute -z-10 bottom-[14%] right-[6%] hidden md:block"
       />
 
-      <p className="label text-grey">Error 404</p>
-      <p className="my-2 font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em] text-red">
+      <p className="label text-grey" aria-hidden="true">
+        Error 404
+      </p>
+      <p
+        className="my-2 font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em] text-red"
+        aria-hidden="true"
+      >
         404
       </p>
       <h1 className="font-display text-h2 font-black uppercase tracking-[-0.02em]">

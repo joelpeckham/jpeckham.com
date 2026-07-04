@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 const RED = "#e1352a";
 const INK = "#141210";
 const GRID = "#cfc7b5";
@@ -42,7 +44,7 @@ function downsample(
 }
 
 export function LossChart({ history }: { history: number[] }) {
-  const points = downsample(history);
+  const points = useMemo(() => downsample(history), [history]);
 
   const hasData = points.length > 1;
   const maxX = hasData ? points[points.length - 1].x : 1;

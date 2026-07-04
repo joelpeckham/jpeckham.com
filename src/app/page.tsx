@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ContentCard } from "@/components/content-card";
@@ -7,7 +8,14 @@ import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { allContent } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
+  twitter: { card: "summary_large_image" },
+};
+
 export default function Home() {
+  const projects = allContent.filter((item) => item.kind === "project");
   return (
     <>
       <JsonLd data={websiteJsonLd()} />
@@ -49,7 +57,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              href="/projects"
+              href="/projects/"
               className={cn(buttonVariants({ variant: "ink", size: "lg" }))}
             >
               View work →
@@ -72,7 +80,7 @@ export default function Home() {
           accent="blue"
         />
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
-          {allContent.map((item, i) => (
+          {projects.map((item, i) => (
             <ContentCard key={item.slug} item={item} index={i + 1} />
           ))}
         </div>

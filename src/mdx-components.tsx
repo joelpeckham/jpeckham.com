@@ -34,8 +34,12 @@ function MdxLink({
     );
   }
 
+  if (!href) {
+    return <span {...props}>{children}</span>;
+  }
+
   return (
-    <Link href={href ?? "#"} {...props}>
+    <Link href={href} {...props}>
       {children}
     </Link>
   );
