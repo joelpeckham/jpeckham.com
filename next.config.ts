@@ -29,6 +29,11 @@ const nextConfig: NextConfig = {
         destination: "/feed.xml",
         permanent: true,
       },
+      {
+        source: "/posts/no-bullshit-qr/",
+        destination: "/projects/no-bullshit-qr/",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {

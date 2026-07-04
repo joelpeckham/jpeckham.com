@@ -1,5 +1,11 @@
 import { ViewTransition, type CSSProperties, type ReactNode } from "react";
-import type { CoverArtSpec, CoverBg, CoverIcon } from "@/lib/content";
+import type {
+  CornerMark,
+  CornerMarkColor,
+  CoverArtSpec,
+  CoverBg,
+  CoverIcon,
+} from "@/lib/content";
 
 /**
  * Maps a coordinate in the 1200-wide design space to a CSS length.
@@ -261,7 +267,7 @@ export function CoverArt({
   if (art.variant === "split") {
     return (
       <div style={{ ...root, alignItems: "center", padding: u(70) }}>
-        <CornerBlocks u={u} a1={p.a1} a2={p.a2} />
+        <CornerBlocks u={u} palette={p} corners={art.corners} />
         <Piece tkey={transitionKey} id="icon">
           <div
             style={{
@@ -386,38 +392,95 @@ export function CoverArt({
   );
 }
 
+const defaultCorners = {
+  square: { color: "a1" as const, top: 40, right: 40 },
+  circle: { color: "a2" as const, bottom: 40, right: 120 },
+};
+
+function cornerColor(
+  palette: Palette,
+  color: CornerMarkColor = "a1",
+): string {
+  switch (color) {
+    case "a1":
+      return palette.a1;
+    case "a2":
+      return palette.a2;
+    case "fg":
+      return palette.fg;
+  }
+}
+
+function cornerPosition(
+  u: Unit,
+  mark: CornerMark,
+): Pick<CSSProperties, "top" | "right" | "bottom" | "left"> {
+  return {
+    ...(mark.top !== undefined ? { top: u(mark.top) } : {}),
+    ...(mark.right !== undefined ? { right: u(mark.right) } : {}),
+    ...(mark.bottom !== undefined ? { bottom: u(mark.bottom) } : {}),
+    ...(mark.left !== undefined ? { left: u(mark.left) } : {}),
+  };
+}
+
+function resolveCornerMark(
+  defaults: CornerMark & { color: CornerMarkColor },
+  override?: CornerMark,
+): CornerMark & { color: CornerMarkColor } {
+  if (!override) return defaults;
+
+  const hasCustomPosition =
+    override.top !== undefined ||
+    override.right !== undefined ||
+    override.bottom !== undefined ||
+    override.left !== undefined;
+
+  if (!hasCustomPosition) {
+    return { ...defaults, ...override };
+  }
+
+  return {
+    color: override.color ?? defaults.color,
+    top: override.top,
+    right: override.right,
+    bottom: override.bottom,
+    left: override.left,
+  };
+}
+
 function CornerBlocks({
   u,
-  a1,
-  a2,
+  palette,
+  corners,
 }: {
   u: Unit;
-  a1: string;
-  a2: string;
+  palette: Palette;
+  corners?: CoverArtSpec["corners"];
 }) {
+  const square = resolveCornerMark(defaultCorners.square, corners?.square);
+  const circle = resolveCornerMark(defaultCorners.circle, corners?.circle);
+
   return (
     <>
       <div
         style={{
           position: "absolute",
-          top: u(40),
-          right: u(40),
           display: "flex",
           width: u(64),
           height: u(64),
-          background: a1,
+          background: cornerColor(palette, square.color),
+          ...cornerPosition(u, square),
         }}
       />
       <div
         style={{
           position: "absolute",
-          bottom: u(40),
-          right: u(120),
           display: "flex",
           width: u(64),
           height: u(64),
           borderRadius: u(64),
-          background: a2,
+          background: cornerColor(palette, circle.color),
+          ...cornerPosition(u, circle),
         }}
       />
     </>

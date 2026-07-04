@@ -8,12 +8,27 @@ export type CoverIcon =
   | "newspaper";
 export type CoverVariant = "split" | "stamp" | "band";
 
+export type CornerMarkColor = "a1" | "a2" | "fg";
+
+export type CornerMark = {
+  color?: CornerMarkColor;
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+};
+
 export type CoverArtSpec = {
   bg: CoverBg;
   headline: string[];
   icon: CoverIcon;
   variant: CoverVariant;
   label?: string;
+  /** Optional overrides for the split layout's corner square and circle. */
+  corners?: {
+    square?: CornerMark;
+    circle?: CornerMark;
+  };
 };
 
 export type ContentItem = {
@@ -93,6 +108,10 @@ export const projects: ContentItem[] = [
       headline: ["FORTH"],
       icon: "stack",
       variant: "split",
+      corners: {
+        square: { color: "a2", bottom: 40, left: 40 },
+        circle: { color: "a1", top: 48, left: 128 },
+      },
     },
   },
   {
@@ -111,17 +130,14 @@ export const projects: ContentItem[] = [
       variant: "band",
     },
   },
-];
-
-export const posts: ContentItem[] = [
   {
     slug: "no-bullshit-qr",
-    href: "/posts/no-bullshit-qr/",
+    href: "/projects/no-bullshit-qr/",
     title: "No Bullshit QR Codes",
     description:
       "Paywalled QR generators broke a friend's printed posters, so I built a free one that never holds your links hostage — with real SVG and PNG export.",
     date: "2025-12-02",
-    kind: "post",
+    kind: "project",
     tags: ["Next.js", "Product", "Rant"],
     art: {
       bg: "red",
@@ -131,6 +147,8 @@ export const posts: ContentItem[] = [
     },
   },
 ];
+
+export const posts: ContentItem[] = [];
 
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),
