@@ -18,9 +18,9 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-5 sm:gap-4 sm:px-8">
         <Link
           href="/"
-          className="inline-flex shrink-0 items-center gap-[0.6em] whitespace-nowrap font-display text-h4 font-black uppercase tracking-[-0.02em]"
+          className="group inline-flex shrink-0 items-center gap-[0.6em] whitespace-nowrap font-display text-h4 font-black uppercase tracking-[-0.02em]"
         >
-          <span className="size-4 rounded-full border-2 border-ink bg-red" />
+          <span className="size-4 rounded-[50%] border-2 border-ink bg-red transition-[border-radius,rotate] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:rotate-90 [@media(hover:hover)]:group-hover:rounded-none" />
           <span>
             <span className="hidden sm:inline">Joel </span>Peckham
           </span>
@@ -39,10 +39,10 @@ export function SiteHeader() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "whitespace-nowrap border-b-2 pb-0.5 font-mono text-xs font-medium uppercase tracking-[0.06em] transition-colors sm:text-sm",
+                  "relative whitespace-nowrap pb-1 font-mono text-xs font-medium uppercase tracking-[0.06em] transition-colors after:absolute after:-bottom-px after:left-0 after:h-[2px] after:w-0 after:transition-[width] after:duration-200 after:ease-[cubic-bezier(0.2,0.8,0.2,1)] sm:text-sm",
                   active
-                    ? "border-red text-red"
-                    : "border-transparent text-ink hover:border-ink",
+                    ? "text-red after:w-full after:bg-red"
+                    : "text-ink after:bg-ink [@media(hover:hover)]:hover:after:w-full",
                 )}
               >
                 {link.label}

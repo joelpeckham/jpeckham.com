@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { ContentCard } from "@/components/content-card";
+import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
 import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { allContent } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
-import { cn } from "@/lib/utils";
+import { cn, cssVars } from "@/lib/utils";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -22,40 +23,70 @@ export default function Home() {
       <JsonLd data={websiteJsonLd()} />
       <JsonLd data={personJsonLd()} />
       <section className="relative overflow-hidden border-b-[3px] border-ink bg-paper">
-        <Shape
-          type="circle"
-          color="var(--blue)"
-          className="pointer-events-none absolute -right-10 -top-10 [--shape-size:150px] sm:-right-16 sm:-top-16 sm:[--shape-size:260px]"
-        />
-        <Shape
-          type="half"
-          color="var(--yellow)"
-          className="pointer-events-none absolute -bottom-12 -right-6 border-ink [--shape-size:130px] sm:-bottom-16 sm:right-16 sm:[--shape-size:180px] md:-bottom-20 md:right-48 md:[--shape-size:220px]"
-        />
-        <Shape
-          type="triangle"
-          color="var(--red)"
-          size={96}
-          className="pointer-events-none absolute right-16 top-1/2 hidden -translate-y-1/2 rotate-[18deg] lg:block"
-        />
+        <span
+          className="absolute -right-10 -top-10 [--shape-size:150px] hero-enter sm:-right-16 sm:-top-16 sm:[--shape-size:260px]"
+          style={cssVars({ "--enter-delay": "150ms" })}
+        >
+          <span
+            className="block size-(--shape-size) animate-drift rounded-[50%] bg-blue transition-[border-radius,rotate] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:hover:rotate-90 [@media(hover:hover)]:hover:rounded-none"
+            style={cssVars({ "--drift-dur": "9s", "--drift-delay": "800ms" })}
+          />
+        </span>
+        <span
+          className="pointer-events-none absolute -bottom-12 -right-6 [--shape-size:130px] hero-enter sm:-bottom-16 sm:right-16 sm:[--shape-size:180px] md:-bottom-20 md:right-48 md:[--shape-size:220px]"
+          style={cssVars({ "--enter-delay": "250ms" })}
+        >
+          <Shape
+            type="half"
+            color="var(--yellow)"
+            className="border-ink animate-drift"
+            style={cssVars({ "--drift-dur": "10s", "--drift-delay": "1000ms" })}
+          />
+        </span>
+        <span className="absolute right-16 top-1/2 hidden -translate-y-1/2 rotate-[18deg] lg:block">
+          <span
+            className="block hero-enter"
+            style={cssVars({ "--enter-delay": "350ms" })}
+          >
+            <span
+              className="hero-triangle block size-24 animate-drift bg-red"
+              style={cssVars({ "--drift-dur": "11s", "--drift-delay": "900ms" })}
+            />
+          </span>
+        </span>
 
-        <div className="relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
-          <span className="label text-grey">
+        <div className="pointer-events-none relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
+          <span className="label enter text-grey">
             Joel Peckham · Full-stack · AI · Laramie, WY
           </span>
-          <h1 className="mb-6 mt-3 max-w-[900px] font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]">
+          <h1
+            className="mb-6 mt-3 max-w-[900px] enter font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]"
+            style={cssVars({ "--enter-delay": "80ms" })}
+          >
             I build
             <br />
             things <br />{" "}
             <span className="whitespace-nowrap">
-              that <span className="text-red">ship.</span>
+              that{" "}
+              <span
+                className="inline-block hero-enter text-red"
+                style={cssVars({ "--enter-delay": "360ms" })}
+              >
+                ship.
+              </span>
             </span>
           </h1>
-          <p className="max-w-[520px] text-lg leading-normal">
+          <p
+            className="max-w-[520px] enter text-lg leading-normal"
+            style={cssVars({ "--enter-delay": "200ms" })}
+          >
             Joel Peckham — Full-stack and AI developer. I build tools, train
             models, and turn algorithms into things you can click on.
           </p>
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div
+            className="pointer-events-auto mt-8 flex flex-wrap gap-4 enter"
+            style={cssVars({ "--enter-delay": "300ms" })}
+          >
             <Link
               href="/projects/"
               className={cn(buttonVariants({ variant: "ink", size: "lg" }))}
@@ -73,15 +104,23 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-24">
-        <SectionHeading
-          index="01"
-          eyebrow="Selected work"
-          title="Latest work"
-          accent="blue"
-        />
+        <Reveal>
+          <SectionHeading
+            index="01"
+            eyebrow="Selected work"
+            title="Latest work"
+            accent="blue"
+          />
+        </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {projects.map((item, i) => (
-            <ContentCard key={item.slug} item={item} index={i + 1} />
+            <Reveal
+              key={item.slug}
+              delay={Math.min(i, 5) * 60}
+              className="h-full"
+            >
+              <ContentCard item={item} index={i + 1} />
+            </Reveal>
           ))}
         </div>
       </section>

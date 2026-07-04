@@ -29,21 +29,23 @@ export function ContentCard({
   const marker = String(index ?? 1).padStart(2, "0");
 
   return (
-    <ScrollToTopLink href={item.href} className="group block">
+    <ScrollToTopLink href={item.href} className="group block h-full">
       <Card accent={accent} interactive className="flex h-full flex-col">
         <ViewTransition name={coverTransitionKey(item.slug)} share="cover-piece">
           <div
             className="aspect-video overflow-hidden border-b-2 border-ink"
             style={{ containerType: "inline-size" }}
           >
-            <CoverArt
-              art={item.art}
-              u={webUnit}
-              label={contentSectionLabel(item.kind)}
-              fontDisplay={webFontDisplay}
-              fontMono={webFontMono}
-              transitionKey={coverTransitionKey(item.slug)}
-            />
+            <div className="h-full w-full transition-[scale] duration-420 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:scale-[1.05]">
+              <CoverArt
+                art={item.art}
+                u={webUnit}
+                label={contentSectionLabel(item.kind)}
+                fontDisplay={webFontDisplay}
+                fontMono={webFontMono}
+                transitionKey={coverTransitionKey(item.slug)}
+              />
+            </div>
           </div>
         </ViewTransition>
 

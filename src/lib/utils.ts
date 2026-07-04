@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
@@ -36,4 +37,14 @@ const twMerge = extendTailwindMerge({
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Type-safe escape hatch for setting CSS custom properties (e.g. `--enter-delay`)
+ * via the inline `style` prop, which `CSSProperties` doesn't type by default.
+ */
+export function cssVars(
+  vars: Record<`--${string}`, string | number>,
+): CSSProperties {
+  return vars as CSSProperties;
 }

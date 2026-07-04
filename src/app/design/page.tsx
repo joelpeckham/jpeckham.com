@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { Reveal } from "@/components/reveal";
 
 const description =
   "An older graphic design portfolio from Joel Peckham, a software engineer and former designer. He no longer takes on design work, but still likes to show this off.";
@@ -63,16 +64,17 @@ export default function DesignPage() {
       <section className="mx-auto max-w-[960px] px-5 py-16 sm:px-8">
         <div className="flex flex-col gap-8 sm:gap-12">
           {pages.map((page) => (
-            <img
-              key={page}
-              src={`/design-portfolio/page-${page}.svg`}
-              alt={`Design portfolio, page ${page}`}
-              width={612}
-              height={792}
-              loading={page === 1 ? "eager" : "lazy"}
-              decoding="async"
-              className="h-auto w-full border-2 border-ink shadow-hard"
-            />
+            <Reveal key={page}>
+              <img
+                src={`/design-portfolio/page-${page}.svg`}
+                alt={`Design portfolio, page ${page}`}
+                width={612}
+                height={792}
+                loading={page === 1 ? "eager" : "lazy"}
+                decoding="async"
+                className="h-auto w-full border-2 border-ink shadow-hard"
+              />
+            </Reveal>
           ))}
         </div>
       </section>

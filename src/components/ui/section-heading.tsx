@@ -36,7 +36,7 @@ export function SectionHeading({
       <h2 className="m-0 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
         {title}
       </h2>
-      <div className="mt-4 h-1 bg-ink" />
+      <div data-rule className="mt-4 h-1 bg-ink" />
     </div>
   );
 }

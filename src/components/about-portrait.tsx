@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Shape } from "@/components/ui/shape";
+import { cssVars } from "@/lib/utils";
 
 /*
  * Triangle mask for the about-page portrait.
@@ -18,6 +18,11 @@ const TRIANGLE = {
 
 // Rotation in degrees, applied around the triangle's centroid (positive = clockwise).
 const ROTATION = -30;
+
+// Extra rotation added to the mask on hover (positive = clockwise). Only the
+// clip region rotates — the photo pixels stay put — so it reads as the triangle
+// frame turning, not the subject moving.
+const HOVER_ROTATION = 10;
 
 // Uniform scale about the centroid (1 = unchanged, >1 grows, <1 shrinks).
 const SCALE = 1.0;
@@ -43,86 +48,85 @@ function toSurface(fraction: number) {
 }
 
 /**
- * Builds the polygon `points` string, rotating and scaling the triangle around
- * its centroid. Vertices are lifted into an aspect-corrected (visually square)
- * space before the transform, then mapped back to box fractions, so ROTATION is
- * a true on-screen angle rather than a skewed one. Finally each point is remapped
- * into the bled surface's fraction space so it lines up with the enlarged photos.
+ * Computes the triangle's three vertices at a given rotation, in the bled
+ * surface's fraction space. Vertices are lifted into an aspect-corrected
+ * (visually square) space before the transform, then mapped back to box
+ * fractions, so the angle is a true on-screen angle rather than a skewed one.
+ * Finally each point is remapped into the bled surface's fraction space so it
+ * lines up with the enlarged photos.
  */
-function trianglePoints() {
+function triangleVertices(rotationDeg: number) {
   const v = [TRIANGLE.apex, TRIANGLE.left, TRIANGLE.right].map((p) => ({
     x: p.x,
     y: p.y * ASPECT,
   }));
   const cx = (v[0].x + v[1].x + v[2].x) / 3;
   const cy = (v[0].y + v[1].y + v[2].y) / 3;
-  const r = (ROTATION * Math.PI) / 180;
+  const r = (rotationDeg * Math.PI) / 180;
   const cos = Math.cos(r);
   const sin = Math.sin(r);
-  return v
-    .map(({ x, y }) => {
-      const dx = (x - cx) * SCALE;
-      const dy = (y - cy) * SCALE;
-      const rx = cx + dx * cos - dy * sin;
-      const ry = cy + dx * sin + dy * cos;
-      return `${toSurface(rx).toFixed(4)},${toSurface(ry / ASPECT).toFixed(4)}`;
-    })
-    .join(" ");
+  return v.map(({ x, y }) => {
+    const dx = (x - cx) * SCALE;
+    const dy = (y - cy) * SCALE;
+    const rx = cx + dx * cos - dy * sin;
+    const ry = cy + dx * sin + dy * cos;
+    return { x: toSurface(rx), y: toSurface(ry / ASPECT) };
+  });
+}
+
+type Vertex = { x: number; y: number };
+
+// CSS `polygon()` format (percentages) for the animatable clip-path. Base and
+// hover polygons keep the same point count/order so the browser interpolates
+// them for a smooth mask rotation.
+function toCssPolygon(pts: Vertex[]) {
+  return `polygon(${pts
+    .map((p) => `${(p.x * 100).toFixed(2)}% ${(p.y * 100).toFixed(2)}%`)
+    .join(", ")})`;
 }
 
 export function AboutPortrait() {
-  const points = trianglePoints();
+  // The two CSS polygons the shadow and photo morph between on hover. Only the
+  // clip region rotates, so the pixels never move.
+  const basePts = triangleVertices(ROTATION);
+  const hoverPts = triangleVertices(ROTATION + HOVER_ROTATION);
+  const clipBase = toCssPolygon(basePts);
+  const clipHover = toCssPolygon(hoverPts);
 
-  // Pop rectangle: the band in which the cutout may escape the triangle. It runs
-  // from the very top of the photo surface (so a head lifted into the bleed zone
-  // by the zoom isn't clipped) down to POP_TOP_HEIGHT of the box.
-  const surfaceScale = 1 / (1 + 2 * BLEED);
-  const popRect = {
-    x: toSurface(0),
-    y: 0,
-    width: surfaceScale,
-    height: toSurface(POP_TOP_HEIGHT),
-  };
+  // Static top band (in bled-surface fractions) where the head may escape the
+  // triangle. Expressed as an inset() so the cutout's head layer stays put while
+  // its body layer rotates with the triangle. Left/right insets are symmetric
+  // because toSurface() centers the box in the bled surface.
+  const bandInset = `inset(0 ${((1 - toSurface(1)) * 100).toFixed(2)}% ${(
+    (1 - toSurface(POP_TOP_HEIGHT)) *
+    100
+  ).toFixed(2)}% ${(toSurface(0) * 100).toFixed(2)}%)`;
 
   return (
-    <div className="relative mx-auto mb-8 w-full max-w-[340px] self-center md:mb-0">
-      <Shape
-        type="circle"
-        color="var(--red)"
-        size={140}
-        className="pointer-events-none absolute -right-6 -top-6"
+    <div className="group relative mx-auto mb-8 w-full max-w-[340px] self-center md:mb-0">
+      <span
+        aria-hidden="true"
+        className="absolute -right-6 -top-6 block size-[140px] rounded-[50%] bg-red transition-[border-radius,rotate] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:hover:rotate-90 [@media(hover:hover)]:hover:rounded-none"
       />
       <div className="relative aspect-4/5 w-full">
-        <svg aria-hidden="true" className="absolute h-0 w-0">
-          <defs>
-            <clipPath
-              id="hero-triangle-clip"
-              clipPathUnits="objectBoundingBox"
-            >
-              <polygon points={points} />
-            </clipPath>
-            {/* Triangle plus the top of the box, so only the upper body escapes */}
-            <clipPath id="hero-pop-clip" clipPathUnits="objectBoundingBox">
-              <polygon points={points} />
-              <rect
-                x={popRect.x}
-                y={popRect.y}
-                width={popRect.width}
-                height={popRect.height}
-              />
-            </clipPath>
-          </defs>
-        </svg>
         {/*
           Enlarged photo surface: extends BLEED beyond the box on every side so a
           scaled-up triangle still has photo underneath. Clip coordinates are
           remapped into this surface via toSurface().
         */}
-        <div className="absolute" style={{ inset: `-${BLEED * 100}%` }}>
-          {/* Hard offset shadow for the triangle, echoing the card shadows */}
+        <div
+          className="absolute"
+          style={{
+            inset: `-${BLEED * 100}%`,
+            ...cssVars({ "--clip-base": clipBase, "--clip-hover": clipHover }),
+          }}
+        >
+          {/* Hard offset shadow for the triangle, echoing the card shadows. The
+              mask rotates on hover by morphing the clip-path polygon; the pixels
+              never move. */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 translate-x-[10px] translate-y-[10px] bg-red [clip-path:url(#hero-triangle-clip)]"
+            className="absolute inset-0 translate-x-[10px] translate-y-[10px] bg-red [clip-path:var(--clip-base)] transition-[clip-path] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:[clip-path:var(--clip-hover)]"
           />
           {/* Full photo, masked to the triangle */}
           <Image
@@ -131,16 +135,31 @@ export function AboutPortrait() {
             fill
             priority
             sizes="(min-width: 768px) 340px, 90vw"
-            className="object-cover [clip-path:url(#hero-triangle-clip)]"
+            className="object-cover [clip-path:var(--clip-base)] transition-[clip-path] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:[clip-path:var(--clip-hover)]"
           />
-          {/* Foreground cutout: upper body pops out, feet stay inside the triangle */}
+          {/* Foreground cutout, body layer: clipped to the same rotating triangle
+              as the photo so the snowboard and feet clip cleanly during the mask
+              rotation. */}
           <Image
             src="/snowboard_cutout.webp"
             alt="Joel Peckham snowboarding in the mountains near Laramie, Wyoming."
             fill
             priority
             sizes="(min-width: 768px) 340px, 90vw"
-            className="object-cover [clip-path:url(#hero-pop-clip)]"
+            className="object-cover [clip-path:var(--clip-base)] transition-[clip-path] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:[clip-path:var(--clip-hover)]"
+          />
+          {/* Foreground cutout, head layer: clipped to the static top band so the
+              upper body keeps popping out above the triangle and never gets cut
+              by the rotation. Same image, so it unions seamlessly with the body
+              layer. */}
+          <Image
+            src="/snowboard_cutout.webp"
+            alt=""
+            fill
+            priority
+            sizes="(min-width: 768px) 340px, 90vw"
+            className="object-cover"
+            style={{ clipPath: bandInset }}
           />
         </div>
       </div>

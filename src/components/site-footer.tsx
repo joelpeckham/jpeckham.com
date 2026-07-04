@@ -15,8 +15,8 @@ export function SiteFooter() {
   return (
     <footer className="mt-24 border-t-[3px] border-red bg-ink text-paper">
       <div className="mx-auto flex max-w-[1240px] flex-col items-start justify-between gap-6 px-5 py-12 sm:flex-row sm:items-center sm:px-8">
-        <span className="inline-flex items-center gap-[0.6em] font-display text-h4 font-black uppercase tracking-[-0.02em]">
-          <span className="size-4 rounded-full border-2 border-paper bg-yellow" />
+        <span className="group inline-flex items-center gap-[0.6em] font-display text-h4 font-black uppercase tracking-[-0.02em]">
+          <span className="size-4 rounded-[50%] border-2 border-paper bg-yellow transition-[border-radius,rotate] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:rotate-90 [@media(hover:hover)]:group-hover:rounded-none" />
           Joel Peckham
         </span>
 
@@ -27,7 +27,7 @@ export function SiteFooter() {
               href={link.href}
               target={link.external ? "_blank" : undefined}
               rel={link.external ? "noopener noreferrer" : undefined}
-              className="border-b-2 border-transparent pb-0.5 transition-colors hover:border-paper"
+              className="relative pb-0.5 after:absolute after:-bottom-px after:left-0 after:h-[2px] after:w-0 after:bg-paper after:transition-[width] after:duration-200 after:ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:hover:after:w-full"
             >
               {link.label}
             </Link>

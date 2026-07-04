@@ -5,6 +5,7 @@ import { AboutPortrait } from "@/components/about-portrait";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "@/components/resume-preview";
+import { Reveal } from "@/components/reveal";
 import { ArrowLink } from "@/components/ui/arrow-link";
 import { JsonLd, profilePageJsonLd } from "@/lib/json-ld";
 
@@ -94,7 +95,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8">
+      <Reveal as="section" className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8">
         <SectionHeading
           index="04"
           eyebrow="Say hello"
@@ -142,9 +143,9 @@ export default function AboutPage() {
             </ArrowLink>
           </li>
         </ul>
-      </section>
+      </Reveal>
 
-      <section className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
+      <Reveal as="section" className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
         <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <SectionHeading index="05" eyebrow="Curriculum vitae" title="Resume" />
           <a
@@ -158,7 +159,7 @@ export default function AboutPage() {
           </a>
         </div>
         <ResumePreview />
-      </section>
+      </Reveal>
     </>
   );
 }
