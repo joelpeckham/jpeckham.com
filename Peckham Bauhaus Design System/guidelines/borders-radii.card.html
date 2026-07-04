@@ -1,0 +1,18 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Borders & Radii" subtitle="Heavy ink rules, sharp corners" -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:22px;background:var(--paper);font-family:var(--font-mono);}
+  .row{display:flex;gap:18px;align-items:center;}
+  .box{width:110px;height:80px;background:var(--white);display:flex;align-items:flex-end;padding:6px;font-size:10px;color:var(--grey);}
+</style></head>
+<body>
+  <div class="row">
+    <div class="box" style="border:2px solid var(--ink)">--border-1 · 2px</div>
+    <div class="box" style="border:4px solid var(--ink)">--border-bold · 4px</div>
+    <div class="box" style="border:2px solid var(--ink);border-radius:0">--radius-0</div>
+    <div class="box" style="border:2px solid var(--ink);border-radius:999px;justify-content:center;align-items:center">--radius-pill</div>
+    <div class="box" style="border:2px solid var(--ink);border-radius:50%;width:80px;justify-content:center;align-items:center">--radius-full</div>
+  </div>
+</body></html>

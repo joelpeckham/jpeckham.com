@@ -1,0 +1,227 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ---------------------------------------------------------------------------
+   Peckham Bauhaus Design System — tokens
+   Bauhaus primaries on warm paper with near-black ink. Single theme, flat
+   color, heavy ink rules, sharp corners, hard offset shadows.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* Base palette */
+  --red: #e1352a;
+  --blue: #1f45d8;
+  --yellow: #f7c000;
+  --ink: #141210;
+  --paper: #f1ebdd;
+  --white: #ffffff;
+
+  /* Extended */
+  --red-deep: #b4261d;
+  --blue-deep: #16309b;
+  --yellow-hi: #ffd52e;
+  --paper-2: #e7dfcc;
+  --grey: #8c8578;
+  --grey-line: #cfc7b5;
+
+  /* Semantic — surfaces */
+  --bg-page: var(--paper);
+  --bg-surface: var(--white);
+  --bg-panel: var(--paper-2);
+  --bg-ink: var(--ink);
+
+  /* Semantic — text */
+  --text-primary: var(--ink);
+  --text-inverse: var(--paper);
+  --text-muted: var(--grey);
+
+  /* Semantic — accents */
+  --accent: var(--red);
+  --accent-2: var(--blue);
+  --accent-3: var(--yellow);
+
+  /* Semantic — lines & borders */
+  --border-ink: var(--ink);
+  --border-line: var(--grey-line);
+
+  /* Line heights */
+  --lh-tight: 0.92;
+  --lh-snug: 1.05;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-snap: cubic-bezier(0.5, 0, 0.1, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 420ms;
+}
+
+@theme inline {
+  /* Colors → background, text, and border utilities */
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-white: var(--white);
+  --color-red: var(--red);
+  --color-red-deep: var(--red-deep);
+  --color-blue: var(--blue);
+  --color-blue-deep: var(--blue-deep);
+  --color-yellow: var(--yellow);
+  --color-yellow-hi: var(--yellow-hi);
+  --color-grey: var(--grey);
+  --color-grey-line: var(--grey-line);
+
+  /* Fonts (wired to next/font variables from layout.tsx) */
+  --font-display: var(--font-jost), "Futura", "Century Gothic", system-ui,
+    sans-serif;
+  --font-sans: var(--font-jost), "Futura", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo,
+    monospace;
+
+  /* Display / graphic-text scale (fluid) → text-* utilities */
+  --text-mega: clamp(4rem, 14vw, 12rem);
+  --text-mega--line-height: 0.92;
+  --text-hero: clamp(3rem, 9vw, 7rem);
+  --text-hero--line-height: 0.92;
+  --text-h1: clamp(2.25rem, 5vw, 4rem);
+  --text-h1--line-height: 1.05;
+  --text-h2: clamp(1.75rem, 3.4vw, 2.75rem);
+  --text-h2--line-height: 1.05;
+  --text-h3: clamp(1.35rem, 2.2vw, 1.85rem);
+  --text-h3--line-height: 1.05;
+  --text-h4: 1.25rem;
+  --text-lg: 1.25rem;
+  --text-body: 1.0625rem;
+  --text-sm: 0.9375rem;
+  --text-xs: 0.8125rem;
+  --text-meta: 0.75rem;
+
+  /* Tracking */
+  --tracking-tight: -0.02em;
+  --tracking-label: 0.18em;
+  --tracking-wide: 0.3em;
+
+  /* Hard offset shadows (no blur) */
+  --shadow-hard: 4px 4px 0 var(--ink);
+  --shadow-hard-lg: 7px 7px 0 var(--ink);
+  --shadow-hard-red: 6px 6px 0 var(--red);
+  --shadow-hard-blue: 6px 6px 0 var(--blue);
+  --shadow-hard-yellow: 6px 6px 0 var(--yellow);
+
+  /* Radii — sharp by default */
+  --radius-none: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Base element defaults
+--------------------------------------------------------------------------- */
+
+* {
+  border-color: var(--ink);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-jost), "Futura", system-ui, sans-serif;
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-jost), "Futura", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Mono eyebrow / label utility */
+.label {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------------
+   Article prose — ink on paper, red links, sharp ink-bordered blocks
+--------------------------------------------------------------------------- */
+
+.prose {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-links: var(--red);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--grey);
+  --tw-prose-bullets: var(--ink);
+  --tw-prose-hr: var(--ink);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-quote-borders: var(--red);
+  --tw-prose-captions: var(--grey);
+  --tw-prose-code: var(--ink);
+  --tw-prose-th-borders: var(--ink);
+  --tw-prose-td-borders: var(--grey-line);
+}
+
+.prose :where(h1, h2, h3, h4) {
+  font-family: var(--font-jost), "Futura", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.prose :where(a) {
+  font-weight: 500;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.prose :where(blockquote) {
+  border-left-width: 4px;
+  font-style: normal;
+}
+
+.prose :where(pre) {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: var(--shadow-hard);
+  font-size: 0.85em;
+}
+
+.prose :where(code):not(pre code) {
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  padding: 0.1em 0.4em;
+  border-radius: 0;
+  font-weight: 500;
+  font-size: 0.85em;
+}
+
+.prose :where(code):not(pre code)::before,
+.prose :where(code):not(pre code)::after {
+  content: "";
+}
+
+.prose :where(img) {
+  border-radius: 0;
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-hard);
+}

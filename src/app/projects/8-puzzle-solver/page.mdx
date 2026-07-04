@@ -1,0 +1,147 @@
+import { PuzzleSolver } from "@/components/interactive/puzzle-solver";
+
+<PuzzleSolver />
+
+## About
+
+I first wrote an 8 puzzle solver some years ago in my university Artificial Intelligence class. That version was a terminal program written in Python. The purpose of that project was to learn about – and then characterize the performance of – different search algorithms and heuristic functions. Feel free to [get the code on GitHub.](https://github.com/joelpeckham/8puzzle)
+
+Above is a web port of my Python project. Enjoy solving puzzles and exploring the performance characteristics of different search algorithms! If you're interested in the details of the algorithms, keep reading.
+
+## Search algorithms
+
+The search algorithms used in this project are:
+
+- Breadth First Search
+- Greedy Best First Search
+- A\* Search
+
+**Breadth First Search** is a simple search algorithm that explores the search space in a breadth-first manner. This means that it will explore all the nodes at a given depth before moving on to the next depth. In this case, each node represents some state of the puzzle. This algorithm is guaranteed to find the shortest path to the goal state, but it is also the slowest of the three algorithms.
+
+```python
+def breadth_first_search(startPuzzle, solutionPuzzle = "12345678-"):
+    queue = Q.Queue()
+    queue.put([startPuzzle])
+    visitedPuzzles = set([startPuzzle])
+    while not queue.empty():
+        path = queue.get()
+        currentPuzzle = path[-1]
+        if currentPuzzle == solutionPuzzle:
+            return path
+        for child in getPuzzleChildren(currentPuzzle):
+            if child not in visitedPuzzles:
+                visitedPuzzles.add(child)
+                queue.put(path + [child])
+    return None
+```
+
+**Greedy Best First Search** is a search algorithm that explores the search space in a manner that prioritizes the nodes that are closest to the goal state using some heuristic function. The heuristic function makes a guess which child node is most likely to lead to the goal state. This algorithm is faster than Breadth First Search, but it is not guaranteed to find the shortest path to the goal state.
+
+```python
+def best_first_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678-"):
+    queue = Q.PriorityQueue()
+    queue.put((heuristicFunction(startPuzzle), [startPuzzle]))
+    visitedPuzzles = set([startPuzzle])
+    while not queue.empty():
+        _, path = queue.get()
+        currentPuzzle = path[-1]
+        if currentPuzzle == solutionPuzzle:
+            return path
+        for child in getPuzzleChildren(currentPuzzle):
+            if child not in visitedPuzzles:
+                visitedPuzzles.add(child)
+                queue.put((heuristicFunction(child), path + [child]))
+    return None
+```
+
+**A\* Search** combines the best of Breadth First Search and Greedy Best First Search. As it explores, it keeps track of the cost of the path to each node. This cost is the sum of the cost of the path to the parent node and the cost of the action that led to the child node. Keeping track of this cost allows A\* Search to find the shortest path to the goal state while still exploring the search space with a heuristic to help. This algorithm is often slower than Greedy Best First Search, but it is guaranteed to find the shortest path to the goal state.
+
+```python
+def a_star_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678-"):
+    queue = Q.PriorityQueue()
+    start_g = 0
+    start_f = heuristicFunction(startPuzzle) + start_g
+    visitedPuzzles = set(startPuzzle)
+    queue.put((start_f, (start_g, [startPuzzle])))
+    while not queue.empty():
+        node = queue.get()
+        _, current_node = node
+        current_g, current_puzzle_path = current_node
+        current_puzzle = current_puzzle_path[-1]
+        if current_puzzle == solutionPuzzle:
+            return current_puzzle_path
+        for child in getPuzzleChildren(current_puzzle):
+            if child not in visitedPuzzles:
+                visitedPuzzles.add(child)
+                child_g = current_g + 1
+                child_f = heuristicFunction(child) + child_g
+                queue.put((child_f, (child_g, current_puzzle_path + [child])))
+    return None
+```
+
+## Heuristic functions
+
+The heuristic functions used in this project are:
+
+- Manhattan Distance
+- Hamming Distance
+
+**Manhattan Distance** estimates the cost of the cheapest path from the current state to the goal state. It does this by summing the distances of each tile from its goal position. The distance of a tile is the sum of the horizontal and vertical distances between the tile and its goal position.
+
+```python
+def manhattanDistance(puzzle):
+    distance = 0
+    for i, val in enumerate(list(puzzle)):
+        if val == "-":
+            continue
+        targetIndex = int(val) - 1
+        targetCoordinates = (targetIndex // 3, targetIndex % 3)
+        distance += abs(targetCoordinates[0] - (i // 3)) + abs(targetCoordinates[1] - (i % 3))
+    return distance
+```
+
+**Hamming Distance** is slightly different. It estimates the cost of the cheapest path from the current state to the goal state by counting the number of tiles that are not in their goal position regardless of their distance from their goal position.
+
+```python
+def hammingDistance(puzzle):
+    target = "12345678-"
+    return sum([1 for i, val in enumerate(list(puzzle)) if val != target[i]])
+```
+
+### A note on admissibility.
+
+Both of these heuristic functions are admissible. Admissible means that the heuristic function will never overestimate the cost of the cheapest path from the current state to the goal state. This is important because if a heuristic function is not admissible, then the search algorithm may not find the shortest path to the goal state.
+
+## Performance Testing
+
+Using my old Python program [here on GitHub,](https://github.com/joelpeckham/8puzzle) I ran performance tests on over **500** randomly generated puzzles. I ran every solver and heuristic pair three times per puzzle and averaged the results before recording them. The results are shown below.
+
+### Data
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│        Solver analysis from 500 puzzles with 3 identical trials per algorithm sorted by speedup.        │
+├──────────────────────┬────────────────────┬─────────────┬───────────┬───────────┬─────────────┬─────────┤
+│ Solver               │ Heuristic          │ Avg. Length │ Avg. Time │ Std. Dev. │ % Std. Dev. │ Speedup │
+├──────────────────────┼────────────────────┼─────────────┼───────────┼───────────┼─────────────┼─────────┤
+│ Best First Search    │ Manhattan Distance │ 63.748      │ 0.00605   │ 0.00336   │ 55.6        │ 149.9   │
+│ Best First Search    │ Misplaced Tiles    │ 129.024     │ 0.01179   │ 0.00916   │ 77.7        │ 76.9    │
+│ A* Search            │ Manhattan Distance │ 23.16       │ 0.03935   │ 0.05039   │ 128.1       │ 23.0    │
+│ A* Search            │ Misplaced Tiles    │ 23.16       │ 0.28869   │ 0.34775   │ 120.5       │ 3.1     │
+│ Breadth First Search │ None               │ 23.16       │ 0.9063    │ 1.16472   │ 128.5       │ 1.0     │
+└──────────────────────┴────────────────────┴─────────────┴───────────┴───────────┴─────────────┴─────────┘
+```
+
+### Analysis
+
+```text
+┌─────────────────────────────────────────────────┬───────────────────────────────────────────┐
+│ Category                                        │ Category Winner                           │
+├─────────────────────────────────────────────────┼───────────────────────────────────────────┤
+│ Fastest Solver (Averaging over heuristics used) │ Best First Search                         │
+│ Fastest Heuristic (Averaging over solvers used) │ Manhattan Distance                        │
+│ Most Consistent (Min. % Std. Dev.)              │ Best First Search with Manhattan Distance │
+│ Fastest Overall Search                          │ Best First Search with Manhattan Distance │
+│ Fastest Optimal Search                          │ A* Search with Manhattan Distance         │
+└─────────────────────────────────────────────────┴───────────────────────────────────────────┘
+```

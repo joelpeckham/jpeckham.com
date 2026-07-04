@@ -1,0 +1,108 @@
+import { NeuralNet } from "@/components/interactive/neural-net";
+
+<NeuralNet />
+
+## Things to Play With
+
+When you first load the page, the network weights are randomly initialized and no training has been done. Go ahead and push train! The network will run as many training iterations as are specified in the iterations input.
+
+As you train, keep an eye on the loss and the accuracy. Notice what happens as you complete more training iterations.
+
+You can also adjust the number of hidden neurons. Increase or decrease this number and train again. What happens?
+
+Want to see how the network responds to a specific input? You can click the large input numbers at the top of the network to change which input is being fed into the visualizer!
+
+## The Neural Network Explained
+
+### The Task
+
+Our neural network is tasked with recognizing the number in a 5x5 pixel image. When we feed the network with an image of the numeral 0, we want the network to correctly classify the image as a 0.
+
+#### Input Format
+
+The input to the network is a 25-dimensional vector (just a list of 25 numbers). Each element of the vector represents a pixel in the image. The value of each element is either 0 or 1, where 0 represents a white pixel and 1 represents a black pixel. For example, the image representing 0 would look like the following vector:
+
+`[ 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0 ]`
+
+Can you see how the first five numbers of the vector represent the top row of the image?
+
+#### Output Format
+
+The output of the network is a 10-dimensional vector. Each element of the vector represents the probability that the image represents a particular number. Consider this output vector:
+
+`[ 0.5, 0.2, 0.3, 0.4, 0.1, 0.2, 0.7, 0.1, 0.9, 1.0 ]`
+
+Looking at the second to last element of the vector, we can see that the network is 90% confident that the image represents the number 8. But, because the last element of the vector is 1.0, the network is most confident that the image represents the number 9.
+
+### Network Architecture
+
+#### Layers
+
+The network is made up of three layers: the input layer, the hidden layer, and the output layer. Many neural networks have multiple hidden layers, but we only need one for this network.
+
+- The **input layer** is where the network receives its input.
+- The **hidden layer** is where the network does most of its work.
+- The **output layer** is where the network makes its prediction.
+
+#### Neurons
+
+Each layer is made up of neurons. With every iteration, the activation of each neuron is calculated and passed to the neurons in the next layer. An activation is a number that represents how much the node is contributing to the network's prediction. Activations are based on the weights of the node's connections to the nodes in the previous layer. There are lots of different activation functions, but we will use the sigmoid function for this network. The sigmoid function takes a number and squashes it between 0 and 1.
+
+`sigmoid(x) = 1 / (1 + e^(-x))`
+
+In the visualizer above, the activation of each neuron is represented by the color of the node. The brighter the node, the stronger the activation.
+
+<div className="not-prose legacy-app" id="exampleNodes">
+  <div className="exampleNodeRow">
+    <p>Weak activation:</p>
+    <div
+      className="node hiddenNode"
+      style={{ backgroundColor: "rgb(28, 28, 28)", borderColor: "rgb(227, 227, 227)" }}
+    ></div>
+  </div>
+  <div className="exampleNodeRow">
+    <p>Strong activation:</p>
+    <div
+      className="node hiddenNode"
+      style={{ backgroundColor: "rgb(248, 248, 248)", borderColor: "rgb(7, 7, 7)" }}
+    ></div>
+  </div>
+  <div className="exampleNodeRow">
+    <p>Somewhere in the middle:</p>
+    <div
+      className="node hiddenNode"
+      style={{ backgroundColor: "rgb(65, 65, 65)", borderColor: "rgb(190, 190, 190)" }}
+    ></div>
+  </div>
+</div>
+
+#### Weights
+
+Each neuron is connected to the neurons in the previous layer by a weight. Each weight is a number that represents how much the neuron in the previous layer contributes to the current neuron's activation. Weights are initialized randomly when the network is created (or when you push the reset button).
+
+In the visualizer above, the weights are represented by lines connecting all the neurons. The thicker and more colorful the line, the stronger the weight.
+
+### Training the Network
+
+Training is a step-by-step process where each step is called an **iteration**. Each iteration has two parts, the forward pass and the backward pass. The forward pass is where the network makes a prediction and the backward pass is where the network adjusts its weights to improve the prediction.
+
+#### The Forward Pass
+
+In the forward pass, the network predicts a given input. The prediction is made by passing the input through the network. Here's what happens in order:
+
+1. The image input is loaded as the activations of the input layer neurons.
+2. The activation of each hidden layer neuron is calculated by multiplying every input neuron's activation with the weight of its connection to the hidden neuron, adding all the weighted sums together, and passing the sum through the sigmoid function.
+3. The activation of each output layer neuron is just like the hidden layer neurons, except the output layer neurons use the hidden layer neurons as their inputs.
+4. The network's prediction is the index of the output neuron with the highest activation.
+
+#### The Backward Pass
+
+In the backward pass, the network adjusts its weights to improve its prediction. This process is called backward propagation. In the backward propagation step, the error at the output layer is used to calculate the gradients of the error with respect to each weight in the network. These gradients are then used to update the weights in the network, typically using an optimization algorithm such as stochastic gradient descent (SGD). The process of backpropagation is repeated iteratively until the error is minimized to an acceptable level.
+
+#### A note on Loss
+
+When we do backpropagation, we give the network a target output. The target output is the correct answer for the input. The loss is the difference between the target output and the network's prediction. Because loss is a measure of how bad the network's prediction was, the smaller the better.
+
+### A Note on Overfitting
+
+Overfitting is when the network learns the training data too well. This results in the network not being able to generalize well to new data. Our network is prone to overfitting because it trains on the same 10 images over and over again. This means that the network will learn the patterns in the training data very well, but could entirely break if you slightly changed the way a given number input image was formed.

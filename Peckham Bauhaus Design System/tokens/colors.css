@@ -1,0 +1,37 @@
+:root {
+  /* ---- Base palette — Bauhaus primaries ---- */
+  --red:        #E1352A;   /* primary red */
+  --blue:       #1F45D8;   /* primary blue */
+  --yellow:     #F7C000;   /* primary yellow */
+  --ink:        #141210;   /* near-black */
+  --paper:      #F1EBDD;   /* warm off-white ground */
+  --white:      #FFFFFF;
+
+  /* ---- Extended ---- */
+  --red-deep:   #B4261D;
+  --blue-deep:  #16309B;
+  --yellow-hi:  #FFD52E;
+  --paper-2:    #E7DFCC;   /* slightly deeper paper for panels */
+  --grey:       #8C8578;   /* muted warm grey */
+  --grey-line:  #CFC7B5;   /* hairline on paper */
+
+  /* ---- Semantic — surfaces ---- */
+  --bg-page:     var(--paper);
+  --bg-surface:  var(--white);
+  --bg-panel:    var(--paper-2);
+  --bg-ink:      var(--ink);
+
+  /* ---- Semantic — text ---- */
+  --text-primary: var(--ink);
+  --text-inverse: var(--paper);
+  --text-muted:   var(--grey);
+
+  /* ---- Semantic — accents ---- */
+  --accent:    var(--red);
+  --accent-2:  var(--blue);
+  --accent-3:  var(--yellow);
+
+  /* ---- Semantic — lines & borders ---- */
+  --border-ink:  var(--ink);
+  --border-line: var(--grey-line);
+}

@@ -1,0 +1,25 @@
+:root {
+  /* ---- Radii — Bauhaus is sharp; only pills & full circles curve ---- */
+  --radius-0:    0;
+  --radius-sm:   3px;
+  --radius-pill: 999px;
+  --radius-full: 50%;
+
+  /* ---- Borders — heavy ink rules are a brand signature ---- */
+  --border-hair:  1px solid var(--border-line);
+  --border-1:     2px solid var(--ink);
+  --border-2:     3px solid var(--ink);
+  --border-bold:  4px solid var(--ink);
+
+  /* ---- Hard offset shadows (no blur) — the Bauhaus "block" lift ---- */
+  --shadow-hard:    4px 4px 0 var(--ink);
+  --shadow-hard-lg: 7px 7px 0 var(--ink);
+  --shadow-color:   6px 6px 0 var(--blue);
+
+  /* ---- Motion ---- */
+  --ease-out:   cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  --ease-snap:  cubic-bezier(0.5, 0, 0.1, 1); /* @kind other */
+  --dur-fast:   120ms; /* @kind other */
+  --dur:        200ms; /* @kind other */
+  --dur-slow:   420ms; /* @kind other */
+}

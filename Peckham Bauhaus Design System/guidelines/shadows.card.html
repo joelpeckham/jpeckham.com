@@ -1,0 +1,16 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Hard Offset Shadows" subtitle="No-blur block lift" -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;padding:30px;background:var(--paper);font-family:var(--font-mono);}
+  .row{display:flex;gap:34px;align-items:center;}
+  .box{width:120px;height:74px;background:var(--white);border:2px solid var(--ink);display:flex;align-items:flex-end;padding:6px;font-size:10px;color:var(--grey);}
+</style></head>
+<body>
+  <div class="row">
+    <div class="box" style="box-shadow:var(--shadow-hard)">--shadow-hard</div>
+    <div class="box" style="box-shadow:var(--shadow-hard-lg)">--shadow-hard-lg</div>
+    <div class="box" style="box-shadow:6px 6px 0 var(--blue)">--shadow-color</div>
+  </div>
+</body></html>
