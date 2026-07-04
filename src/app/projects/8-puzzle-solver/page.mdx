@@ -2,11 +2,19 @@ import { PuzzleSolver } from "@/components/interactive/puzzle-solver";
 
 <PuzzleSolver />
 
+## Things to Play With
+
+- **Slide tiles yourself.** Click any tile next to the blank to move it. The panel tracks your move count and the current Manhattan distance to the goal.
+- **Pick an algorithm.** Switch between A\*, Greedy Best-First, and Breadth-First search, then hit **Solve** to watch it finish the board.
+- **Swap heuristics.** Toggle between Manhattan and Hamming distance to feel how a smarter estimate expands far fewer nodes. (Breadth-First ignores the heuristic entirely.)
+- **Scrub the solution.** Step forward and back, drag the slider, or press play to auto-animate the tiles along the found path.
+- **Compare runs.** Every Solve appends a row to the comparison table, so you can pit algorithms and heuristics against each other on the same board before you shuffle.
+
 ## About
 
-I first wrote an 8 puzzle solver some years ago in my university Artificial Intelligence class. That version was a terminal program written in Python. The purpose of that project was to learn about – and then characterize the performance of – different search algorithms and heuristic functions. Feel free to [get the code on GitHub.](https://github.com/joelpeckham/8puzzle)
+I first wrote an 8 puzzle solver some years ago in my university Artificial Intelligence class. That version was a terminal program written in Python, built to learn about – and then characterize the performance of – different search algorithms and heuristic functions. Feel free to [get the code on GitHub.](https://github.com/joelpeckham/8puzzle)
 
-Above is a web port of my Python project. Enjoy solving puzzles and exploring the performance characteristics of different search algorithms! If you're interested in the details of the algorithms, keep reading.
+The demo above is a from-scratch TypeScript reimplementation of that project. Enjoy solving puzzles and exploring the performance characteristics of different search algorithms! If you're interested in the details of the algorithms, keep reading.
 
 ## Search algorithms
 
@@ -118,30 +126,20 @@ Using my old Python program [here on GitHub,](https://github.com/joelpeckham/8pu
 
 ### Data
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│        Solver analysis from 500 puzzles with 3 identical trials per algorithm sorted by speedup.        │
-├──────────────────────┬────────────────────┬─────────────┬───────────┬───────────┬─────────────┬─────────┤
-│ Solver               │ Heuristic          │ Avg. Length │ Avg. Time │ Std. Dev. │ % Std. Dev. │ Speedup │
-├──────────────────────┼────────────────────┼─────────────┼───────────┼───────────┼─────────────┼─────────┤
-│ Best First Search    │ Manhattan Distance │ 63.748      │ 0.00605   │ 0.00336   │ 55.6        │ 149.9   │
-│ Best First Search    │ Misplaced Tiles    │ 129.024     │ 0.01179   │ 0.00916   │ 77.7        │ 76.9    │
-│ A* Search            │ Manhattan Distance │ 23.16       │ 0.03935   │ 0.05039   │ 128.1       │ 23.0    │
-│ A* Search            │ Misplaced Tiles    │ 23.16       │ 0.28869   │ 0.34775   │ 120.5       │ 3.1     │
-│ Breadth First Search │ None               │ 23.16       │ 0.9063    │ 1.16472   │ 128.5       │ 1.0     │
-└──────────────────────┴────────────────────┴─────────────┴───────────┴───────────┴─────────────┴─────────┘
-```
+| Solver               | Heuristic          | Avg. Length | Avg. Time | Std. Dev. | % Std. Dev. | Speedup |
+|----------------------|-------------------|-------------|-----------|-----------|-------------|---------|
+| Best First Search    | Manhattan Distance | 63.748      | 0.00605   | 0.00336   | 55.6        | 149.9   |
+| Best First Search    | Misplaced Tiles    | 129.024     | 0.01179   | 0.00916   | 77.7        | 76.9    |
+| A* Search            | Manhattan Distance | 23.16       | 0.03935   | 0.05039   | 128.1       | 23.0    |
+| A* Search            | Misplaced Tiles    | 23.16       | 0.28869   | 0.34775   | 120.5       | 3.1     |
+| Breadth First Search | None               | 23.16       | 0.9063    | 1.16472   | 128.5       | 1.0     |
 
 ### Analysis
 
-```text
-┌─────────────────────────────────────────────────┬───────────────────────────────────────────┐
-│ Category                                        │ Category Winner                           │
-├─────────────────────────────────────────────────┼───────────────────────────────────────────┤
-│ Fastest Solver (Averaging over heuristics used) │ Best First Search                         │
-│ Fastest Heuristic (Averaging over solvers used) │ Manhattan Distance                        │
-│ Most Consistent (Min. % Std. Dev.)              │ Best First Search with Manhattan Distance │
-│ Fastest Overall Search                          │ Best First Search with Manhattan Distance │
-│ Fastest Optimal Search                          │ A* Search with Manhattan Distance         │
-└─────────────────────────────────────────────────┴───────────────────────────────────────────┘
-```
+| Category                                        | Category Winner                           |
+|-------------------------------------------------|-------------------------------------------|
+| Fastest Solver (Averaging over heuristics used) | Best First Search                         |
+| Fastest Heuristic (Averaging over solvers used) | Manhattan Distance                        |
+| Most Consistent (Min. % Std. Dev.)              | Best First Search with Manhattan Distance |
+| Fastest Overall Search                          | Best First Search with Manhattan Distance |
+| Fastest Optimal Search                          | A* Search with Manhattan Distance         |
