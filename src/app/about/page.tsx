@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Tag } from "@/components/ui/tag";
-import { Shape } from "@/components/ui/shape";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { AboutPortrait } from "@/components/about-portrait";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "@/components/resume-preview";
@@ -82,21 +81,7 @@ export default function AboutPage() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[320px]">
-            <Shape
-              type="circle"
-              color="var(--red)"
-              size={140}
-              className="pointer-events-none absolute -right-6 -top-6"
-            />
-            <Image
-              src="/snowboard_joel.webp"
-              alt="Joel Peckham snowboarding in the mountains near Laramie, Wyoming."
-              width={320}
-              height={400}
-              className="relative aspect-4/5 w-full border-2 border-paper object-cover shadow-[7px_7px_0_var(--red)]"
-            />
-          </div>
+          <AboutPortrait />
         </div>
       </section>
 
