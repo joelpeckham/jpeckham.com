@@ -11,6 +11,12 @@ function itemForSlug(slug: string): ContentItem {
 
 export function articleMetadata(slug: string): Metadata {
   const item = itemForSlug(slug);
+  const ogImage = {
+    url: `/og/${item.slug}/`,
+    width: 1200,
+    height: 630,
+    alt: item.title,
+  };
   return {
     title: item.title,
     description: item.description,
@@ -20,11 +26,13 @@ export function articleMetadata(slug: string): Metadata {
       description: item.description,
       publishedTime: item.date,
       url: item.href,
+      images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: item.title,
       description: item.description,
+      images: [ogImage],
     },
     alternates: { canonical: item.href },
   };

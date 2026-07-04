@@ -1,3 +1,21 @@
+export type CoverBg = "red" | "blue" | "yellow" | "ink" | "paper";
+export type CoverIcon =
+  | "qr"
+  | "calendar"
+  | "network"
+  | "puzzle"
+  | "stack"
+  | "newspaper";
+export type CoverVariant = "split" | "stamp" | "band";
+
+export type CoverArtSpec = {
+  bg: CoverBg;
+  headline: string[];
+  icon: CoverIcon;
+  variant: CoverVariant;
+  label?: string;
+};
+
 export type ContentItem = {
   slug: string;
   href: string;
@@ -6,7 +24,7 @@ export type ContentItem = {
   date: string;
   kind: "project" | "post";
   interactive?: boolean;
-  cover?: string;
+  art: CoverArtSpec;
   tags?: string[];
 };
 
@@ -18,9 +36,14 @@ export const projects: ContentItem[] = [
     description:
       "A conflict-free class schedule planner for University of Wyoming students, built on a live copy of the UW course catalog.",
     date: "2026-06-01",
-    cover: "/projects/images/uwyoschedule.webp",
     kind: "project",
     tags: ["Next.js", "Full Stack", "Product"],
+    art: {
+      bg: "yellow",
+      headline: ["SCHED", "ULE"],
+      icon: "calendar",
+      variant: "band",
+    },
   },
   {
     slug: "neural-net-visualizer",
@@ -32,6 +55,12 @@ export const projects: ContentItem[] = [
     kind: "project",
     interactive: true,
     tags: ["Machine Learning", "Interactive", "Visualization"],
+    art: {
+      bg: "blue",
+      headline: ["NEURAL", "NET"],
+      icon: "network",
+      variant: "split",
+    },
   },
   {
     slug: "8-puzzle-solver",
@@ -43,6 +72,12 @@ export const projects: ContentItem[] = [
     kind: "project",
     interactive: true,
     tags: ["Algorithms", "Interactive", "Search"],
+    art: {
+      bg: "paper",
+      headline: ["8", "PUZZLE"],
+      icon: "puzzle",
+      variant: "stamp",
+    },
   },
   {
     slug: "forth-compiler-in-python",
@@ -52,8 +87,13 @@ export const projects: ContentItem[] = [
       "Building a compiler and interpreter for the stack-based FORTH language in a surprisingly small amount of Python.",
     date: "2023-02-01",
     kind: "project",
-    cover: "/projects/images/pyforthBanner.webp",
     tags: ["Compilers", "Python"],
+    art: {
+      bg: "ink",
+      headline: ["FORTH"],
+      icon: "stack",
+      variant: "split",
+    },
   },
   {
     slug: "gpt-powered-stock-trading-research",
@@ -62,9 +102,14 @@ export const projects: ContentItem[] = [
     description:
       "Can a large transformer model act as an all-in-one, news-based trading bot? A senior research project.",
     date: "2023-01-05",
-    cover: "/projects/images/NewspaperTransparent.webp",
     kind: "project",
     tags: ["Machine Learning", "Research", "NLP"],
+    art: {
+      bg: "paper",
+      headline: ["GPT", "TRADES"],
+      icon: "newspaper",
+      variant: "band",
+    },
   },
 ];
 
@@ -76,9 +121,14 @@ export const posts: ContentItem[] = [
     description:
       "Paywalled QR generators broke a friend's printed posters, so I built a free one that never holds your links hostage — with real SVG and PNG export.",
     date: "2025-12-02",
-    cover: "/posts/images/no-bullshit-qr.webp",
     kind: "post",
     tags: ["Next.js", "Product", "Rant"],
+    art: {
+      bg: "red",
+      headline: ["NO BS", "QR"],
+      icon: "qr",
+      variant: "stamp",
+    },
   },
 ];
 

@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
+import { CoverArt } from "@/components/cover-art";
 import { formatDate, type ContentItem } from "@/lib/content";
 
 const accents = ["red", "blue", "yellow", "ink"] as const;
+
+const cardFontDisplay = "var(--font-jost), Futura, system-ui, sans-serif";
+const cardFontMono = "var(--font-jetbrains-mono), ui-monospace, monospace";
+
+/** 1200-wide design space → container-query width units (cqw). */
+const cardUnit = (n: number) => `${(n / 1200) * 100}cqw`;
 
 export function ContentCard({
   item,
@@ -18,16 +25,18 @@ export function ContentCard({
   return (
     <Link href={item.href} className="group block">
       <Card accent={accent} interactive className="flex h-full flex-col">
-        {item.cover ? (
-          <div className="aspect-video overflow-hidden border-b-2 border-ink bg-paper-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={item.cover}
-              alt=""
-              className="size-full object-cover"
-            />
-          </div>
-        ) : null}
+        <div
+          className="aspect-video overflow-hidden border-b-2 border-ink"
+          style={{ containerType: "inline-size" }}
+        >
+          <CoverArt
+            art={item.art}
+            u={cardUnit}
+            label={item.kind === "post" ? "Writing" : "Project"}
+            fontDisplay={cardFontDisplay}
+            fontMono={cardFontMono}
+          />
+        </div>
 
         <div className="flex flex-1 flex-col p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
