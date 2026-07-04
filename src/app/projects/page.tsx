@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ContentCard } from "@/components/content-card";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { projects } from "@/lib/content";
+import { allContent } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default function ProjectsPage() {
-  const sorted = [...projects].sort(
-    (a, b) => +new Date(b.date) - +new Date(a.date),
-  );
+  const sorted = allContent.filter((item) => item.kind === "project");
 
   return (
     <div className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-24">

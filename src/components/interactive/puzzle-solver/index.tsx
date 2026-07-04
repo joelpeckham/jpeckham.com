@@ -9,6 +9,8 @@ import {
   ALGORITHMS,
   GOAL,
   HEURISTICS,
+  algorithmLabel,
+  heuristicLabel,
   manhattanDistance,
   move,
   randomPuzzle,
@@ -20,17 +22,6 @@ import {
 } from "./search";
 
 const PLAYBACK_MS = 380;
-
-const ALGO_LABEL: Record<Algorithm, string> = {
-  bfs: "Breadth-First",
-  greedy: "Greedy Best-First",
-  astar: "A*",
-};
-
-const HEUR_LABEL: Record<Heuristic, string> = {
-  manhattan: "Manhattan",
-  hamming: "Hamming",
-};
 
 type Run = {
   algorithm: Algorithm;
@@ -347,11 +338,11 @@ export function PuzzleSolver() {
                       className="border-b border-grey-line last:border-b-0"
                     >
                       <Td className="text-grey">{i + 1}</Td>
-                      <Td>{ALGO_LABEL[run.algorithm]}</Td>
+                      <Td>{algorithmLabel(run.algorithm)}</Td>
                       <Td>
                         {run.algorithm === "bfs"
                           ? "\u2014"
-                          : HEUR_LABEL[run.heuristic]}
+                          : heuristicLabel(run.heuristic)}
                       </Td>
                       <Td className="text-right tabular-nums">
                         {run.timeMs.toFixed(1)} ms

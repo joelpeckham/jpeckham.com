@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { allContent } from "@/lib/content";
-
-const siteUrl = "https://jpeckham.com";
+import { siteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = ["/", "/projects/", "/about/"].map((path) => ({

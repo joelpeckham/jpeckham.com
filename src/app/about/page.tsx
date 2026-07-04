@@ -6,6 +6,8 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "@/components/resume-preview";
+import { ArrowLink } from "@/components/ui/arrow-link";
+import { JsonLd, personJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
   title: "About",
@@ -28,6 +30,7 @@ const stack = [
 export default function AboutPage() {
   return (
     <>
+      <JsonLd data={personJsonLd()} />
       <section className="border-b-[3px] border-ink bg-ink text-paper">
         <div className="mx-auto grid max-w-[1240px] items-start gap-12 px-5 py-20 sm:px-8 md:grid-cols-[1.3fr_1fr]">
           <div>
@@ -88,23 +91,17 @@ export default function AboutPage() {
             <span className="text-meta uppercase tracking-[0.18em] text-grey">
               Email
             </span>
-            <a
-              href="mailto:mail@jpeckham.com"
-              className="border-b-2 border-transparent pb-0.5 uppercase tracking-[0.04em] transition-colors hover:border-ink"
-            >
-              mail@jpeckham.com →
-            </a>
+            <ArrowLink href="mailto:mail@jpeckham.com">
+              mail@jpeckham.com
+            </ArrowLink>
           </li>
           <li className="flex flex-wrap items-baseline gap-x-3">
             <span className="text-meta uppercase tracking-[0.18em] text-grey">
               Phone
             </span>
-            <a
-              href="tel:13076311986"
-              className="border-b-2 border-transparent pb-0.5 uppercase tracking-[0.04em] transition-colors hover:border-ink"
-            >
-              +1 (307) 631-1986 →
-            </a>
+            <ArrowLink href="tel:13076311986">
+              +1 (307) 631-1986
+            </ArrowLink>
             <span className="text-xs text-grey">(Text message preferred.)</span>
           </li>
         </ul>

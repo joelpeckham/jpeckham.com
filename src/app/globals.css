@@ -243,3 +243,15 @@ h4 {
   height: 100%;
   animation: none;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  ::view-transition-new(*.cover-piece) {
+    animation: none;
+  }
+}

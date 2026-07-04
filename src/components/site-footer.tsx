@@ -20,13 +20,13 @@ export function SiteFooter() {
           Joel Peckham
         </span>
 
-        <nav className="flex flex-wrap gap-5 font-mono text-sm uppercase tracking-[0.06em]">
+        <nav aria-label="Footer" className="flex flex-wrap gap-5 font-mono text-sm uppercase tracking-[0.06em]">
           {links.map((link) => (
             <Link
               key={link.label}
               href={link.href}
               target={link.external ? "_blank" : undefined}
-              rel={link.external ? "noreferrer" : undefined}
+              rel={link.external ? "noopener noreferrer" : undefined}
               className="border-b-2 border-transparent pb-0.5 transition-colors hover:border-paper"
             >
               {link.label}

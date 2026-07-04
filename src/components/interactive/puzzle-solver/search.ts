@@ -39,6 +39,14 @@ export const HEURISTICS: { id: Heuristic; label: string }[] = [
   { id: "hamming", label: "Hamming Distance" },
 ];
 
+export function algorithmLabel(id: Algorithm): string {
+  return ALGORITHMS.find((a) => a.id === id)?.label ?? id;
+}
+
+export function heuristicLabel(id: Heuristic): string {
+  return HEURISTICS.find((h) => h.id === id)?.label ?? id;
+}
+
 // Sum over every tile of its grid distance from where it belongs. The blank is
 // ignored so the heuristic stays admissible (never overestimates).
 export function manhattanDistance(puzzle: Puzzle): number {

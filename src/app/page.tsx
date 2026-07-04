@@ -3,12 +3,15 @@ import { buttonVariants } from "@/components/ui/button";
 import { ContentCard } from "@/components/content-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
+import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { allContent } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
     <>
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={personJsonLd()} />
       <section className="relative overflow-hidden border-b-[3px] border-ink bg-paper">
         <Shape
           type="circle"

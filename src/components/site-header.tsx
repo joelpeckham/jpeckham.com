@@ -26,7 +26,7 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-5">
+        <nav aria-label="Primary" className="flex items-center gap-5">
           {navLinks.map((link) => {
             const active =
               pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -34,6 +34,7 @@ export function SiteHeader() {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "border-b-2 pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.06em] transition-colors",
                   active

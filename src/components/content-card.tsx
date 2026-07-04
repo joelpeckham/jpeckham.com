@@ -8,7 +8,12 @@ import {
   webFontMono,
   webUnit,
 } from "@/components/cover-art";
-import { formatDate, type ContentItem } from "@/lib/content";
+import {
+  contentCtaLabel,
+  contentSectionLabel,
+  formatDate,
+  type ContentItem,
+} from "@/lib/content";
 
 const accents = ["red", "blue", "yellow", "ink"] as const;
 
@@ -33,7 +38,7 @@ export function ContentCard({
             <CoverArt
               art={item.art}
               u={webUnit}
-              label={item.kind === "post" ? "Writing" : "Project"}
+              label={contentSectionLabel(item.kind)}
               fontDisplay={webFontDisplay}
               fontMono={webFontMono}
               transitionKey={item.slug}
@@ -44,7 +49,7 @@ export function ContentCard({
         <div className="flex flex-1 flex-col p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-mono text-meta uppercase tracking-[0.18em] text-grey">
-              <span>{item.kind === "post" ? "Writing" : "Project"}</span>
+              <span>{contentSectionLabel(item.kind)}</span>
               {item.interactive ? (
                 <span className="text-red">· Interactive</span>
               ) : null}
@@ -70,7 +75,7 @@ export function ContentCard({
 
           <div className="mt-5 flex items-center justify-between">
             <span className="inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors group-hover:border-ink">
-              {item.kind === "post" ? "Read post" : "Case study"}
+              {contentCtaLabel(item.kind)}
               <span className="inline-block transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:translate-x-[5px]">
                 →
               </span>

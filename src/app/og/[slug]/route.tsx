@@ -7,7 +7,7 @@ import {
   COVER_WIDTH,
   type Unit,
 } from "@/components/cover-art";
-import { allContent } from "@/lib/content";
+import { allContent, contentSectionLabel } from "@/lib/content";
 
 export const dynamic = "force-static";
 
@@ -38,7 +38,7 @@ export async function GET(
       <CoverArt
         art={item.art}
         u={ogUnit}
-        label={item.kind === "post" ? "Writing" : "Project"}
+        label={contentSectionLabel(item.kind)}
         fontDisplay="Jost"
         fontMono="JetBrains Mono"
       />

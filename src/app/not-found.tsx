@@ -1,7 +1,14 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { buttonVariants } from "@/components/ui/button";
+import { ArrowLink } from "@/components/ui/arrow-link";
 import { Shape } from "@/components/ui/shape";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+  description: "The page you requested does not exist on jpeckham.com.",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
@@ -29,12 +36,12 @@ export default function NotFound() {
       <p className="mt-3 max-w-[420px] text-ink/80">
         The page you&apos;re looking for doesn&apos;t exist or has moved.
       </p>
-      <Link
+      <ArrowLink
         href="/"
         className={cn(buttonVariants({ variant: "ink", size: "lg" }), "mt-8")}
       >
-        Back home →
-      </Link>
+        Back home
+      </ArrowLink>
     </div>
   );
 }

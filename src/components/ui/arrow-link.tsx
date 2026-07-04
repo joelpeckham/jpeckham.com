@@ -19,7 +19,7 @@ export function ArrowLink({
   ...props
 }: ArrowLinkProps) {
   const externalProps = external
-    ? { target: "_blank", rel: "noreferrer" }
+    ? { target: "_blank", rel: "noopener noreferrer" }
     : {};
 
   return (

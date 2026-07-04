@@ -1,6 +1,5 @@
 import { allContent } from "@/lib/content";
-
-const siteUrl = "https://jpeckham.com";
+import { siteName, siteUrl } from "@/lib/site";
 
 function escapeXml(unsafe: string): string {
   return unsafe
@@ -27,7 +26,7 @@ export function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Joel Peckham</title>
+    <title>${siteName}</title>
     <link>${siteUrl}</link>
     <description>Joel Peckham's software portfolio and personal website.</description>
     <language>en-us</language>

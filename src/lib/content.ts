@@ -150,12 +150,36 @@ export const projects: ContentItem[] = [
 
 export const posts: ContentItem[] = [];
 
+export type ContentSlug =
+  | (typeof projects)[number]["slug"]
+  | (typeof posts)[number]["slug"];
+
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),
 );
 
+export function contentSectionLabel(kind: ContentItem["kind"]): string {
+  return kind === "post" ? "Writing" : "Project";
+}
+
+export function contentSectionName(kind: ContentItem["kind"]): string {
+  return kind === "post" ? "Posts" : "Projects";
+}
+
+export function contentSectionHref(kind: ContentItem["kind"]): string {
+  return kind === "post" ? "/posts/" : "/projects/";
+}
+
+export function contentCtaLabel(kind: ContentItem["kind"]): string {
+  return kind === "post" ? "Read post" : "Case study";
+}
+
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid content date: ${date}`);
+  }
+  return parsed.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",

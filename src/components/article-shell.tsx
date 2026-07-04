@@ -1,6 +1,6 @@
+import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import Link from "next/link";
-import type { Metadata } from "next";
 import { Tag } from "@/components/ui/tag";
 import {
   CoverArt,
@@ -8,16 +8,27 @@ import {
   webFontDisplay,
   webFontMono,
 } from "@/components/cover-art";
-import { allContent, formatDate, type ContentItem } from "@/lib/content";
+import {
+  allContent,
+  contentSectionHref,
+  contentSectionLabel,
+  contentSectionName,
+  formatDate,
+  type ContentItem,
+  type ContentSlug,
+} from "@/lib/content";
+import { siteName } from "@/lib/site";
+import { JsonLd, articleJsonLd } from "@/lib/json-ld";
 import { ScrollToTopOnMount } from "@/components/scroll-to-top";
+import "highlight.js/styles/an-old-hope.css";
 
-function itemForSlug(slug: string): ContentItem {
+function itemForSlug(slug: ContentSlug): ContentItem {
   const item = allContent.find((c) => c.slug === slug);
   if (!item) throw new Error(`Unknown content slug: ${slug}`);
   return item;
 }
 
-export function articleMetadata(slug: string): Metadata {
+export function articleMetadata(slug: ContentSlug): Metadata {
   const item = itemForSlug(slug);
   const ogImage = {
     url: `/og/${item.slug}/`,
@@ -28,6 +39,8 @@ export function articleMetadata(slug: string): Metadata {
   return {
     title: item.title,
     description: item.description,
+    keywords: item.tags,
+    authors: [{ name: siteName }],
     openGraph: {
       type: "article",
       title: item.title,
@@ -46,19 +59,29 @@ export function articleMetadata(slug: string): Metadata {
   };
 }
 
+export function createProjectLayout(slug: ContentSlug) {
+  return {
+    metadata: articleMetadata(slug),
+    Layout({ children }: { children: React.ReactNode }) {
+      return <ArticleShell slug={slug}>{children}</ArticleShell>;
+    },
+  };
+}
+
 export function ArticleShell({
   slug,
   children,
 }: {
-  slug: string;
+  slug: ContentSlug;
   children: React.ReactNode;
 }) {
   const item = itemForSlug(slug);
-  const section = item.kind === "post" ? "Posts" : "Projects";
-  const sectionHref = item.kind === "post" ? "/" : "/projects";
+  const section = contentSectionName(item.kind);
+  const sectionHref = contentSectionHref(item.kind);
 
   return (
     <>
+      <JsonLd data={articleJsonLd(item)} />
       <ScrollToTopOnMount />
       <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
         <div
@@ -68,7 +91,7 @@ export function ArticleShell({
           <CoverArt
             art={item.art}
             u={heroUnit}
-            label={item.kind === "post" ? "Writing" : "Project"}
+            label={contentSectionLabel(item.kind)}
             fontDisplay={webFontDisplay}
             fontMono={webFontMono}
             transitionKey={item.slug}

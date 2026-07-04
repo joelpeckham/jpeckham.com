@@ -1,12 +1,23 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Fragment } from "react";
+import Link from "next/link";
 import {
   parseResume,
   type InlineNode,
   type ResumeBlock,
   type ResumeSection,
 } from "@/lib/parse-resume-tex";
+
+function isSafeHref(href: string): boolean {
+  if (href.startsWith("mailto:") || href.startsWith("tel:")) return true;
+  try {
+    const url = new URL(href);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 function renderInline(nodes: InlineNode[], keyPrefix = "n") {
   return nodes.map((node, i) => {
@@ -27,11 +38,19 @@ function renderInline(nodes: InlineNode[], keyPrefix = "n") {
           </em>
         );
       case "link":
+        if (!isSafeHref(node.href)) {
+          return (
+            <Fragment key={key}>{renderInline(node.children, key)}</Fragment>
+          );
+        }
         return (
           <a
             key={key}
             href={node.href}
             className="text-red underline decoration-2 underline-offset-2 hover:text-red-deep"
+            {...(node.href.startsWith("http")
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
           >
             {renderInline(node.children, key)}
           </a>
@@ -126,11 +145,32 @@ function Section({ section }: { section: ResumeSection }) {
 }
 
 export async function ResumePreview() {
-  const tex = await readFile(
-    join(process.cwd(), "resume", "main.tex"),
-    "utf8",
-  );
-  const resume = parseResume(tex);
+  let resume;
+  try {
+    const tex = await readFile(
+      join(process.cwd(), "resume", "main.tex"),
+      "utf8",
+    );
+    resume = parseResume(tex);
+  } catch {
+    return (
+      <div className="border-2 border-ink bg-white p-6 shadow-hard sm:p-10">
+        <p className="text-body leading-relaxed text-ink/80">
+          Resume preview is unavailable. The resume source may not be checked
+          out — run{" "}
+          <code className="font-mono text-sm">git submodule update --init</code>{" "}
+          or{" "}
+          <Link
+            href="/Joel_Peckham_Resume.pdf"
+            className="text-red underline decoration-2 underline-offset-2 hover:text-red-deep"
+          >
+            download the PDF
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
 
   return (
     <article className="border-2 border-ink bg-white p-6 shadow-hard sm:p-10">
