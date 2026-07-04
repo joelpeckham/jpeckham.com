@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Tag } from "@/components/ui/tag";
 import {
   CoverArt,
+  coverTransitionKey,
   heroUnit,
   webFontDisplay,
   webFontMono,
@@ -84,7 +85,7 @@ export function ArticleShell({
       <JsonLd data={articleJsonLd(item)} />
       <JsonLd data={breadcrumbJsonLd(item)} />
       <ScrollToTopOnMount />
-      <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
+      <ViewTransition name={coverTransitionKey(item.slug)} share="cover-piece">
         <div
           className="h-[34vh] max-h-[520px] min-h-[220px] w-full overflow-hidden border-b-2 border-ink sm:h-[42vh] sm:min-h-[280px]"
           style={{ containerType: "size" }}
@@ -95,7 +96,7 @@ export function ArticleShell({
             label={contentSectionLabel(item.kind)}
             fontDisplay={webFontDisplay}
             fontMono={webFontMono}
-            transitionKey={item.slug}
+            transitionKey={coverTransitionKey(item.slug)}
           />
         </div>
       </ViewTransition>

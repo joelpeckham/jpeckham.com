@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/tag";
 import {
   CoverArt,
+  coverTransitionKey,
   webFontDisplay,
   webFontMono,
   webUnit,
@@ -30,7 +31,7 @@ export function ContentCard({
   return (
     <ScrollToTopLink href={item.href} className="group block">
       <Card accent={accent} interactive className="flex h-full flex-col">
-        <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
+        <ViewTransition name={coverTransitionKey(item.slug)} share="cover-piece">
           <div
             className="aspect-video overflow-hidden border-b-2 border-ink"
             style={{ containerType: "inline-size" }}
@@ -41,7 +42,7 @@ export function ContentCard({
               label={contentSectionLabel(item.kind)}
               fontDisplay={webFontDisplay}
               fontMono={webFontMono}
-              transitionKey={item.slug}
+              transitionKey={coverTransitionKey(item.slug)}
             />
           </div>
         </ViewTransition>

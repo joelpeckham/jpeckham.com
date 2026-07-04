@@ -18,6 +18,11 @@ export type Unit = (n: number) => string;
 export const COVER_WIDTH = 1200;
 export const COVER_HEIGHT = 630;
 
+/** CSS custom-identifiers cannot start with a digit; prefix slugs for ViewTransition names. */
+export function coverTransitionKey(slug: string) {
+  return `cover-${slug}`;
+}
+
 /** Web font-family strings (CSS vars) shared by cards and article heroes. */
 export const webFontDisplay = "var(--font-jost), Futura, system-ui, sans-serif";
 export const webFontMono =
