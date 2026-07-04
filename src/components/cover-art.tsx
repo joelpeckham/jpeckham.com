@@ -131,6 +131,25 @@ function Stack({ color, accent }: { color: string; accent: string }) {
   );
 }
 
+function Drive({ color, accent }: { color: string; accent: string }) {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+      <rect x="10" y="18" width="80" height="14" stroke={color} strokeWidth="6" />
+      <rect x="10" y="36" width="80" height="14" stroke={color} strokeWidth="6" />
+      <rect x="10" y="54" width="80" height="14" stroke={color} strokeWidth="6" />
+      <rect x="10" y="72" width="80" height="14" stroke={color} strokeWidth="6" />
+      <circle cx="22" cy="25" r="4" fill={accent} />
+      <circle cx="22" cy="43" r="4" fill={color} />
+      <circle cx="22" cy="61" r="4" fill={accent} />
+      <circle cx="22" cy="79" r="4" fill={color} />
+      <rect x="34" y="22" width="48" height="6" fill={color} />
+      <rect x="34" y="40" width="36" height="6" fill={accent} />
+      <rect x="34" y="58" width="44" height="6" fill={color} />
+      <rect x="34" y="76" width="28" height="6" fill={accent} />
+    </svg>
+  );
+}
+
 function Newspaper({ color, accent }: { color: string; accent: string }) {
   return (
     <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
@@ -168,6 +187,8 @@ function Icon({
       return <Stack color={color} accent={accent} />;
     case "newspaper":
       return <Newspaper color={color} accent={accent} />;
+    case "drive":
+      return <Drive color={color} accent={accent} />;
   }
 }
 

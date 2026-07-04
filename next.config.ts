@@ -34,14 +34,16 @@ const nextConfig: NextConfig = {
         destination: "/projects/no-bullshit-qr/",
         permanent: true,
       },
+      {
+        source: "/raidviz",
+        destination: "/projects/raid-visualizer/",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
-    // Preserve the standalone static micro-apps at their original URLs.
-    return [
-      { source: "/raidviz", destination: "/raidviz/index.html" },
-      { source: "/lander", destination: "/lander/index.html" },
-    ];
+    // Preserve the standalone static lander micro-app at its original URL.
+    return [{ source: "/lander", destination: "/lander/index.html" }];
   },
   async headers() {
     return [

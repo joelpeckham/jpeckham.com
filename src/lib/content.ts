@@ -5,7 +5,8 @@ export type CoverIcon =
   | "network"
   | "puzzle"
   | "stack"
-  | "newspaper";
+  | "newspaper"
+  | "drive";
 export type CoverVariant = "split" | "stamp" | "band";
 
 export type CornerMarkColor = "a1" | "a2" | "fg";
@@ -112,6 +113,23 @@ export const projects: ContentItem[] = [
         square: { color: "a2", bottom: 40, left: 40 },
         circle: { color: "a1", top: 48, left: 128 },
       },
+    },
+  },
+  {
+    slug: "raid-visualizer",
+    href: "/projects/raid-visualizer/",
+    title: "RAID Visualizer",
+    description:
+      "An interactive teaching tool for visualizing how RAID arrays stripe, mirror, and rebuild data across drives.",
+    date: "2022-10-12",
+    kind: "project",
+    interactive: true,
+    tags: ["Systems", "Interactive", "Visualization"],
+    art: {
+      bg: "red",
+      headline: ["RAID", "VIZ"],
+      icon: "drive",
+      variant: "split",
     },
   },
   {
