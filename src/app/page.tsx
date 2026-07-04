@@ -24,20 +24,18 @@ export default function Home() {
         <Shape
           type="circle"
           color="var(--blue)"
-          size={260}
-          className="pointer-events-none absolute -right-16 -top-16"
+          className="pointer-events-none absolute -right-10 -top-10 [--shape-size:150px] sm:-right-16 sm:-top-16 sm:[--shape-size:260px]"
         />
         <Shape
           type="half"
           color="var(--yellow)"
-          size={220}
-          className="pointer-events-none absolute -bottom-20 right-48 border-[3px] border-ink"
+          className="pointer-events-none absolute -bottom-12 -right-6 border-ink [--shape-size:130px] sm:-bottom-16 sm:right-16 sm:[--shape-size:180px] md:-bottom-20 md:right-48 md:[--shape-size:220px]"
         />
         <Shape
           type="triangle"
           color="var(--red)"
-          size={88}
-          className="pointer-events-none absolute left-[42%] top-10 hidden md:block"
+          size={96}
+          className="pointer-events-none absolute right-16 top-1/2 hidden -translate-y-1/2 rotate-[18deg] lg:block"
         />
 
         <div className="relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
@@ -80,7 +78,7 @@ export default function Home() {
           title="Latest work"
           accent="blue"
         />
-        <div className="mt-12 grid gap-6 sm:grid-cols-2">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {projects.map((item, i) => (
             <ContentCard key={item.slug} item={item} index={i + 1} />
           ))}

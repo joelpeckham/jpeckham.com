@@ -27,11 +27,20 @@ export const webFontMono =
 export const webUnit: Unit = (n) => `${(n / COVER_WIDTH) * 100}cqw`;
 
 /**
- * 630-tall design space → container-query height units (cqh). Used by the
- * full-bleed article hero, which spans the viewport width at a fixed banner
- * height, so the composition scales to that height instead of the width.
+ * Article hero unit. The composition is authored in a 1200x630 (~1.9:1) space,
+ * but the full-bleed banner is much taller-relative-to-width on phones. Scaling
+ * purely by height (cqh) there overflows the narrow width and clips the
+ * headline/icon. Instead we scale by whichever container dimension is limiting
+ * (a "contain" fit): positive lengths take the smaller of the width- and
+ * height-derived values, negative offsets take the larger (least-negative), so
+ * one uniform scale factor is used and nothing clips. On wide desktop banners
+ * the height term wins and it matches the original cqh behavior.
  */
-export const heroUnit: Unit = (n) => `${(n / COVER_HEIGHT) * 100}cqh`;
+export const heroUnit: Unit = (n) => {
+  const w = (n / COVER_WIDTH) * 100;
+  const h = (n / COVER_HEIGHT) * 100;
+  return n >= 0 ? `min(${w}cqw, ${h}cqh)` : `max(${w}cqw, ${h}cqh)`;
+};
 
 type Palette = { bg: string; fg: string; a1: string; a2: string };
 

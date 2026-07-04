@@ -15,10 +15,10 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b-[3px] border-ink bg-paper">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-3 px-5 sm:gap-4 sm:px-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-[0.6em] font-display text-h4 font-black uppercase tracking-[-0.02em]"
+          className="inline-flex shrink-0 items-center gap-[0.6em] whitespace-nowrap font-display text-h4 font-black uppercase tracking-[-0.02em]"
         >
           <span className="size-4 rounded-full border-2 border-ink bg-red" />
           <span>
@@ -26,7 +26,10 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav aria-label="Primary" className="flex items-center gap-5">
+        <nav
+          aria-label="Primary"
+          className="flex shrink-0 items-center gap-3 sm:gap-5"
+        >
           {navLinks.map((link) => {
             const active =
               pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -36,7 +39,7 @@ export function SiteHeader() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "border-b-2 pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.06em] transition-colors",
+                  "whitespace-nowrap border-b-2 pb-0.5 font-mono text-xs font-medium uppercase tracking-[0.06em] transition-colors sm:text-sm",
                   active
                     ? "border-red text-red"
                     : "border-transparent text-ink hover:border-ink",

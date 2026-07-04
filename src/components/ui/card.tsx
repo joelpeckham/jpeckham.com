@@ -27,7 +27,7 @@ export function Card({
       className={cn(
         "overflow-hidden border-2 border-ink bg-white shadow-hard transition-[transform,box-shadow] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
         interactive &&
-          "hover:-translate-x-[3px] hover:-translate-y-[3px] hover:shadow-hard-lg",
+          "[@media(hover:hover)]:hover:-translate-x-[3px] [@media(hover:hover)]:hover:-translate-y-[3px] [@media(hover:hover)]:hover:shadow-hard-lg",
         className,
       )}
       {...props}

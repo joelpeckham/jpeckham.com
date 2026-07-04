@@ -226,14 +226,29 @@ export function NeuralNet() {
     if (tip) tip.style.opacity = "0";
   }, []);
 
-  const moveTip = useCallback((e: React.MouseEvent) => {
+  const positionTip = useCallback((clientX: number, clientY: number) => {
     const wrap = graphWrapRef.current;
     const tip = tooltipRef.current;
     if (!wrap || !tip) return;
     const rect = wrap.getBoundingClientRect();
-    tip.style.left = `${e.clientX - rect.left}px`;
-    tip.style.top = `${e.clientY - rect.top}px`;
+    tip.style.left = `${clientX - rect.left}px`;
+    tip.style.top = `${clientY - rect.top}px`;
   }, []);
+
+  const moveTip = useCallback(
+    (e: React.MouseEvent) => positionTip(e.clientX, e.clientY),
+    [positionTip],
+  );
+
+  // Touch/click: position then show the tip so nodes are inspectable without
+  // hover. Tapping empty graph space (handled on the wrapper) hides it.
+  const showTipAt = useCallback(
+    (text: string, e: React.PointerEvent) => {
+      positionTip(e.clientX, e.clientY);
+      showTip(text);
+    },
+    [positionTip, showTip],
+  );
 
   return (
     <div className="not-prose my-8 flex flex-col gap-5">
@@ -241,7 +256,7 @@ export function NeuralNet() {
       <Card accent="blue">
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-            <label className="flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]">
+            <label className="flex w-full flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:w-auto">
               Hidden neurons: {hidden}
               <input
                 type="range"
@@ -249,12 +264,12 @@ export function NeuralNet() {
                 max={HIDDEN_MAX}
                 value={hidden}
                 onChange={(e) => changeHidden(Number(e.target.value))}
-                className="w-44 accent-[color:var(--blue)]"
+                className="w-full accent-[color:var(--blue)] sm:w-44"
                 aria-label="Number of hidden neurons"
               />
             </label>
 
-            <label className="flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]">
+            <label className="flex w-full flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:w-auto">
               Learning rate: {learningRate.toFixed(2)}
               <input
                 type="range"
@@ -263,7 +278,7 @@ export function NeuralNet() {
                 step={0.01}
                 value={learningRate}
                 onChange={(e) => changeLearningRate(Number(e.target.value))}
-                className="w-44 accent-[color:var(--red)]"
+                className="w-full accent-[color:var(--red)] sm:w-44"
                 aria-label="Learning rate"
               />
             </label>
@@ -380,7 +395,12 @@ export function NeuralNet() {
 
       {/* Graph */}
       <Card accent="red">
-        <div ref={graphWrapRef} className="relative p-2" onMouseMove={moveTip}>
+        <div
+          ref={graphWrapRef}
+          className="relative p-2"
+          onMouseMove={moveTip}
+          onPointerDown={hideTip}
+        >
           <NetworkGraph
             wih={view.wih}
             who={view.who}
@@ -390,6 +410,7 @@ export function NeuralNet() {
             predicted={view.predicted}
             showTip={showTip}
             hideTip={hideTip}
+            showTipAt={showTipAt}
           />
           <div
             ref={tooltipRef}
@@ -461,8 +482,8 @@ function DrawPad({
 }) {
   return (
     <div
-      className="grid gap-1 border-2 border-ink bg-white p-1"
-      style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)` }}
+      className="grid w-full max-w-[220px] gap-1 border-2 border-ink bg-white p-1"
+      style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
     >
       {bits.map((bit, i) => (
         <button
@@ -470,7 +491,7 @@ function DrawPad({
           type="button"
           onClick={() => onToggle(i)}
           aria-label={`Toggle pixel ${i}`}
-          className="h-8 w-8 border border-grey-line"
+          className="aspect-square w-full border border-grey-line"
           style={{ background: bit ? INK : "#ffffff" }}
         />
       ))}

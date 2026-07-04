@@ -85,7 +85,7 @@ export function ArticleShell({
       <ScrollToTopOnMount />
       <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
         <div
-          className="h-[42vh] max-h-[520px] min-h-[280px] w-full overflow-hidden border-b-2 border-ink"
+          className="h-[34vh] max-h-[520px] min-h-[220px] w-full overflow-hidden border-b-2 border-ink sm:h-[42vh] sm:min-h-[280px]"
           style={{ containerType: "size" }}
         >
           <CoverArt

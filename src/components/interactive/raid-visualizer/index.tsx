@@ -99,7 +99,7 @@ function RaidBlock({
       disabled={!occupied || block.failed}
       onClick={() => onFail(driveIndex, blockIndex)}
       className={cn(
-        "flex h-8 w-8 items-center justify-center border border-ink/25 font-mono text-[11px] transition-colors",
+        "flex h-7 w-7 items-center justify-center border border-ink/25 font-mono text-[10px] transition-colors sm:h-8 sm:w-8 sm:text-[11px]",
         blockIndex % 4 === 0 && "border-l-2 border-l-ink",
         blockIndex < 4 && "border-t-2 border-t-ink",
         block.kind === "parity" && !block.failed && "bg-yellow/35",
@@ -140,7 +140,7 @@ function DriveCard({
   );
 
   return (
-    <Card className="min-w-[168px] shrink-0 p-3">
+    <Card className="min-w-[136px] shrink-0 snap-start p-3 sm:min-w-[168px]">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className={cn("label text-[10px]", drive.failed && "text-red")}>
           Drive {driveIndex + 1}
@@ -414,7 +414,7 @@ export function RaidVisualizer() {
       </Card>
 
       <Card accent="blue">
-        <div className="flex gap-3 overflow-x-auto p-5">
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto p-5">
           {state.drives.map((drive, driveIndex) => (
             <DriveCard
               key={drive.id}

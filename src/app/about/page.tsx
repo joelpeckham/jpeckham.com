@@ -123,11 +123,14 @@ export default function AboutPage() {
       </section>
 
       <section className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <SectionHeading index="05" eyebrow="Curriculum vitae" title="Resume" />
           <a
             href="/Joel_Peckham_Resume.pdf"
-            className={cn(buttonVariants({ variant: "ink", size: "sm" }))}
+            className={cn(
+              buttonVariants({ variant: "ink", size: "sm" }),
+              "shrink-0",
+            )}
           >
             Download PDF →
           </a>

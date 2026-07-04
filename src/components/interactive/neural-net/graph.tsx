@@ -57,6 +57,12 @@ export type NetworkGraphProps = {
   predicted: number;
   showTip: (text: string) => void;
   hideTip: () => void;
+  /**
+   * Touch/click handler. Positions and shows the tip at the pointer, so the
+   * graph is inspectable on phones where there is no hover. Passed the label
+   * text plus the originating pointer event.
+   */
+  showTipAt: (text: string, e: React.PointerEvent) => void;
 };
 
 export function NetworkGraph({
@@ -68,6 +74,7 @@ export function NetworkGraph({
   predicted,
   showTip,
   hideTip,
+  showTipAt,
 }: NetworkGraphProps) {
   const hiddenCount = hidden.length;
 
@@ -112,6 +119,7 @@ export function NetworkGraph({
           inputPos.map((p, i) => {
             const w = wih[j][i];
             const s = edgeStyle(w, maxAbsIH);
+            const text = `input ${i} \u2192 hidden ${j}: ${w.toFixed(4)}`;
             return (
               <path
                 key={`ih-${j}-${i}`}
@@ -120,10 +128,12 @@ export function NetworkGraph({
                 strokeWidth={s.width}
                 strokeOpacity={s.opacity}
                 style={{ pointerEvents: "stroke" }}
-                onMouseEnter={() =>
-                  showTip(`input ${i} \u2192 hidden ${j}: ${w.toFixed(4)}`)
-                }
+                onMouseEnter={() => showTip(text)}
                 onMouseLeave={hideTip}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  showTipAt(text, e);
+                }}
               />
             );
           }),
@@ -136,6 +146,7 @@ export function NetworkGraph({
           hiddenPos.map((h, j) => {
             const w = who[k][j];
             const s = edgeStyle(w, maxAbsHO);
+            const text = `hidden ${j} \u2192 output ${k}: ${w.toFixed(4)}`;
             return (
               <path
                 key={`ho-${k}-${j}`}
@@ -144,10 +155,12 @@ export function NetworkGraph({
                 strokeWidth={s.width}
                 strokeOpacity={s.opacity}
                 style={{ pointerEvents: "stroke" }}
-                onMouseEnter={() =>
-                  showTip(`hidden ${j} \u2192 output ${k}: ${w.toFixed(4)}`)
-                }
+                onMouseEnter={() => showTip(text)}
                 onMouseLeave={hideTip}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  showTipAt(text, e);
+                }}
               />
             );
           }),
@@ -172,6 +185,10 @@ export function NetworkGraph({
               showTip(`pixel ${i}: ${input[i] ? "on (1)" : "off (0)"}`)
             }
             onMouseLeave={hideTip}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              showTipAt(`pixel ${i}: ${input[i] ? "on (1)" : "off (0)"}`, e);
+            }}
           />
         ))}
       </g>
@@ -192,6 +209,10 @@ export function NetworkGraph({
               showTip(`hidden ${j} activation: ${hidden[j].toFixed(3)}`)
             }
             onMouseLeave={hideTip}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              showTipAt(`hidden ${j} activation: ${hidden[j].toFixed(3)}`, e);
+            }}
           />
         ))}
       </g>
@@ -222,6 +243,10 @@ export function NetworkGraph({
                 showTip(`output ${k} activation: ${output[k].toFixed(3)}`)
               }
               onMouseLeave={hideTip}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                showTipAt(`output ${k} activation: ${output[k].toFixed(3)}`, e);
+              }}
             />
             <text
               x={o.x + NODE_R + 16}
