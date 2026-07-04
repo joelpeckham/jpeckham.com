@@ -12,6 +12,17 @@ export type ContentItem = {
 
 export const projects: ContentItem[] = [
   {
+    slug: "uwyo-schedule",
+    href: "/projects/uwyo-schedule/",
+    title: "uwyoschedule — UW Class Schedule Planner",
+    description:
+      "A conflict-free class schedule planner for University of Wyoming students, built on a live copy of the UW course catalog.",
+    date: "2026-06-01",
+    cover: "/projects/images/uwyoschedule.webp",
+    kind: "project",
+    tags: ["Next.js", "Full Stack", "Product"],
+  },
+  {
     slug: "neural-net-visualizer",
     href: "/projects/neural-net-visualizer/",
     title: "Neural Network Visualizer",
@@ -57,19 +68,7 @@ export const projects: ContentItem[] = [
   },
 ];
 
-export const posts: ContentItem[] = [
-  {
-    slug: "improving_arc",
-    href: "/posts/improving_arc/",
-    title: "Improving Arc",
-    description:
-      "Making the Arc window more accessible by improving the key-window focus design.",
-    date: "2023-03-29",
-    kind: "post",
-    cover: "/posts/arcScreenshots/arcFocusedWindow.webp",
-    tags: ["Design", "UX"],
-  },
-];
+export const posts: ContentItem[] = [];
 
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),
