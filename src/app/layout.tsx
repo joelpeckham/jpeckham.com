@@ -26,13 +26,14 @@ export const metadata: Metadata = {
     template: "%s — Joel Peckham",
   },
   description:
-    "Joel Peckham's software portfolio and personal website. Backend and AI developer based in Laramie, Wyoming.",
+    "Joel Peckham's software portfolio and personal website. Full-stack and AI developer based in Laramie, Wyoming.",
   keywords: [
     "Joel Peckham",
     "Software Developer",
     "Software Engineer",
     "AI Developer",
     "Portfolio",
+    "Full-stack",
   ],
   authors: [{ name: "Joel Peckham" }],
   creator: "Joel Peckham",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     title: "Joel Peckham — Software & AI Developer",
     description:
-      "Backend and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
+      "Full-stack and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
     siteName,
     images: [defaultOgImage],
   },
@@ -49,7 +50,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Joel Peckham — Software & AI Developer",
     description:
-      "Backend and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
+      "Full-stack and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
     images: [defaultOgImage],
   },
   icons: {

@@ -42,7 +42,7 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
           <span className="label text-grey">
-            Backend · AI · Laramie, WY
+            Full-stack · AI · Laramie, WY
           </span>
           <h1 className="mb-6 mt-3 max-w-[900px] font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]">
             I build
@@ -52,7 +52,7 @@ export default function Home() {
             <span className="text-red">ship.</span>
           </h1>
           <p className="max-w-[520px] text-lg leading-normal">
-            Joel Peckham — backend and AI developer. I build tools, train
+            Joel Peckham — Full-stack and AI developer. I build tools, train
             models, and turn algorithms into things you can click on.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
