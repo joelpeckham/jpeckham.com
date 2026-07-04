@@ -1,6 +1,13 @@
+import { ViewTransition } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Tag } from "@/components/ui/tag";
+import {
+  CoverArt,
+  heroUnit,
+  webFontDisplay,
+  webFontMono,
+} from "@/components/cover-art";
 import { allContent, formatDate, type ContentItem } from "@/lib/content";
 
 function itemForSlug(slug: string): ContentItem {
@@ -50,44 +57,62 @@ export function ArticleShell({
   const sectionHref = item.kind === "post" ? "/" : "/projects";
 
   return (
-    <article className="mx-auto max-w-[760px] px-5 py-12 sm:px-8">
-      <nav className="mb-10">
-        <Link
-          href={sectionHref}
-          className="group inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors hover:border-ink"
+    <>
+      <ViewTransition name={`cover-${item.slug}`}>
+        <div
+          className="h-[42vh] max-h-[520px] min-h-[280px] w-full overflow-hidden border-b-2 border-ink"
+          style={{ containerType: "size" }}
         >
-          <span className="inline-block transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:-translate-x-[5px]">
-            ←
-          </span>
-          All {section}
-        </Link>
-      </nav>
+          <CoverArt
+            art={item.art}
+            u={heroUnit}
+            label={item.kind === "post" ? "Writing" : "Project"}
+            fontDisplay={webFontDisplay}
+            fontMono={webFontMono}
+            transitionKey={item.slug}
+          />
+        </div>
+      </ViewTransition>
 
-      <header className="mb-10 border-b-4 border-ink pb-8">
-        {item.tags?.length ? (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {item.tags.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
-        ) : null}
-        <h1 className="text-balance font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
-          {item.title}
-        </h1>
-        <p className="mt-4 text-lg leading-normal text-ink/80">
-          {item.description}
-        </p>
-        <time
-          dateTime={item.date}
-          className="mt-5 block font-mono text-meta uppercase tracking-[0.18em] text-grey"
-        >
-          {formatDate(item.date)}
-        </time>
-      </header>
+      <article className="mx-auto max-w-[760px] px-5 py-12 sm:px-8">
+        <nav className="mb-10">
+          <Link
+            href={sectionHref}
+            className="group inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors hover:border-ink"
+          >
+            <span className="inline-block transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:-translate-x-[5px]">
+              ←
+            </span>
+            All {section}
+          </Link>
+        </nav>
 
-      <div className="prose prose-lg max-w-none prose-headings:scroll-mt-24 prose-pre:bg-[#1c1d21]">
-        {children}
-      </div>
-    </article>
+        <header className="mb-10 border-b-4 border-ink pb-8">
+          {item.tags?.length ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {item.tags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </div>
+          ) : null}
+          <h1 className="text-balance font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
+            {item.title}
+          </h1>
+          <p className="mt-4 text-lg leading-normal text-ink/80">
+            {item.description}
+          </p>
+          <time
+            dateTime={item.date}
+            className="mt-5 block font-mono text-meta uppercase tracking-[0.18em] text-grey"
+          >
+            {formatDate(item.date)}
+          </time>
+        </header>
+
+        <div className="prose prose-lg max-w-none prose-headings:scroll-mt-24 prose-pre:bg-[#1c1d21]">
+          {children}
+        </div>
+      </article>
+    </>
   );
 }

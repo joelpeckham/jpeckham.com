@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { ViewTransition, type CSSProperties, type ReactNode } from "react";
 import type { CoverArtSpec, CoverBg, CoverIcon } from "@/lib/content";
 
 /**
@@ -11,6 +11,21 @@ export type Unit = (n: number) => string;
 
 export const COVER_WIDTH = 1200;
 export const COVER_HEIGHT = 630;
+
+/** Web font-family strings (CSS vars) shared by cards and article heroes. */
+export const webFontDisplay = "var(--font-jost), Futura, system-ui, sans-serif";
+export const webFontMono =
+  "var(--font-jetbrains-mono), ui-monospace, monospace";
+
+/** 1200-wide design space → container-query width units (cqw). */
+export const webUnit: Unit = (n) => `${(n / COVER_WIDTH) * 100}cqw`;
+
+/**
+ * 630-tall design space → container-query height units (cqh). Used by the
+ * full-bleed article hero, which spans the viewport width at a fixed banner
+ * height, so the composition scales to that height instead of the width.
+ */
+export const heroUnit: Unit = (n) => `${(n / COVER_HEIGHT) * 100}cqh`;
 
 type Palette = { bg: string; fg: string; a1: string; a2: string };
 
@@ -161,7 +176,32 @@ export type CoverArtProps = {
   /** Font-family strings differ between web (CSS vars) and OG (loaded fonts). */
   fontDisplay?: string;
   fontMono?: string;
+  /**
+   * When set, each discrete element (eyebrow, headline lines, icon) gets a
+   * `view-transition-name` prefixed with this key so they morph independently
+   * between the card and the article hero. Omitted on the satori OG route,
+   * which cannot render React's ViewTransition.
+   */
+  transitionKey?: string;
 };
+
+/**
+ * Wraps a single DOM child in a named ViewTransition when a transition key is
+ * present. On the OG route (no key) it renders the child untouched so satori
+ * never sees a ViewTransition.
+ */
+function Piece({
+  tkey,
+  id,
+  children,
+}: {
+  tkey?: string;
+  id: string;
+  children: ReactNode;
+}) {
+  if (!tkey) return <>{children}</>;
+  return <ViewTransition name={`${tkey}-${id}`}>{children}</ViewTransition>;
+}
 
 export function CoverArt({
   art,
@@ -169,6 +209,7 @@ export function CoverArt({
   label,
   fontDisplay = '"Jost", "Futura", system-ui, sans-serif',
   fontMono = '"JetBrains Mono", ui-monospace, monospace',
+  transitionKey,
 }: CoverArtProps) {
   const p = palettes[art.bg];
   const eyebrow = (label ?? art.label ?? "").toUpperCase();
@@ -203,34 +244,41 @@ export function CoverArt({
     overflow: "hidden",
   };
 
+  const renderLine = (t: string, i: number) => (
+    <Piece key={i} tkey={transitionKey} id={`hl-${i}`}>
+      <div style={{ display: "flex" }}>{t}</div>
+    </Piece>
+  );
+
   if (art.variant === "split") {
-    const line = (t: string) => (
-      <div key={t} style={{ display: "flex" }}>
-        {t}
-      </div>
-    );
     return (
       <div style={{ ...root, alignItems: "center", padding: u(70) }}>
         <CornerBlocks u={u} a1={p.a1} a2={p.a2} />
-        <div
-          style={{
-            display: "flex",
-            width: u(300),
-            height: u(300),
-            flexShrink: 0,
-            marginRight: u(56),
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Icon name={art.icon} color={p.fg} accent={p.a1} />
-        </div>
+        <Piece tkey={transitionKey} id="icon">
+          <div
+            style={{
+              display: "flex",
+              width: u(300),
+              height: u(300),
+              flexShrink: 0,
+              marginRight: u(56),
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Icon name={art.icon} color={p.fg} accent={p.a1} />
+          </div>
+        </Piece>
         <div
           style={{ display: "flex", flexDirection: "column", gap: u(20) }}
         >
-          {eyebrow ? <div style={eyebrowStyle}>{eyebrow}</div> : null}
+          {eyebrow ? (
+            <Piece tkey={transitionKey} id="eyebrow">
+              <div style={eyebrowStyle}>{eyebrow}</div>
+            </Piece>
+          ) : null}
           <div style={{ ...headlineStyle, fontSize: u(150) }}>
-            {art.headline.map(line)}
+            {art.headline.map(renderLine)}
           </div>
         </div>
       </div>
@@ -238,11 +286,6 @@ export function CoverArt({
   }
 
   if (art.variant === "band") {
-    const line = (t: string) => (
-      <div key={t} style={{ display: "flex" }}>
-        {t}
-      </div>
-    );
     return (
       <div
         style={{
@@ -264,20 +307,26 @@ export function CoverArt({
             background: p.a1,
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            top: u(56),
-            right: u(64),
-            display: "flex",
-            width: u(190),
-            height: u(190),
-          }}
-        >
-          <Icon name={art.icon} color={p.fg} accent={p.a2} />
-        </div>
+        <Piece tkey={transitionKey} id="icon">
+          <div
+            style={{
+              position: "absolute",
+              top: u(56),
+              right: u(64),
+              display: "flex",
+              width: u(190),
+              height: u(190),
+            }}
+          >
+            <Icon name={art.icon} color={p.fg} accent={p.a2} />
+          </div>
+        </Piece>
         {eyebrow ? (
-          <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>{eyebrow}</div>
+          <Piece tkey={transitionKey} id="eyebrow">
+            <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>
+              {eyebrow}
+            </div>
+          </Piece>
         ) : null}
         <div
           style={{
@@ -286,18 +335,13 @@ export function CoverArt({
             color: art.bg === "yellow" ? "#141210" : p.fg,
           }}
         >
-          {art.headline.map(line)}
+          {art.headline.map(renderLine)}
         </div>
       </div>
     );
   }
 
   // variant === "stamp": oversized type with the icon stamped over a corner.
-  const line = (t: string) => (
-    <div key={t} style={{ display: "flex" }}>
-      {t}
-    </div>
-  );
   return (
     <div
       style={{
@@ -307,24 +351,28 @@ export function CoverArt({
         padding: u(70),
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          right: u(-40),
-          bottom: u(-40),
-          display: "flex",
-          width: u(340),
-          height: u(340),
-          opacity: 0.96,
-        }}
-      >
-        <Icon name={art.icon} color={p.a1} accent={p.a2} />
-      </div>
+      <Piece tkey={transitionKey} id="icon">
+        <div
+          style={{
+            position: "absolute",
+            right: u(-40),
+            bottom: u(-40),
+            display: "flex",
+            width: u(340),
+            height: u(340),
+            opacity: 0.96,
+          }}
+        >
+          <Icon name={art.icon} color={p.a1} accent={p.a2} />
+        </div>
+      </Piece>
       {eyebrow ? (
-        <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>{eyebrow}</div>
+        <Piece tkey={transitionKey} id="eyebrow">
+          <div style={{ ...eyebrowStyle, marginBottom: u(18) }}>{eyebrow}</div>
+        </Piece>
       ) : null}
       <div style={{ ...headlineStyle, fontSize: u(210) }}>
-        {art.headline.map(line)}
+        {art.headline.map(renderLine)}
       </div>
     </div>
   );
