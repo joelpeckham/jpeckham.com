@@ -5,8 +5,8 @@ export const siteName = "Joel Peckham";
 export const siteLastUpdated = new Date("2026-07-01");
 
 export const defaultOgImage = {
-  url: "/snowboard_joel.webp",
-  width: 960,
-  height: 1200,
-  alt: "Joel Peckham",
+  url: "/og/home/",
+  width: 1200,
+  height: 630,
+  alt: "Joel Peckham — Full-stack & AI Developer",
 };

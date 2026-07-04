@@ -5,6 +5,10 @@ type JsonLdProps = {
   data: Record<string, unknown>;
 };
 
+/** Stable identifiers so every schema block references one shared entity. */
+export const personId = `${siteUrl}/#person`;
+export const websiteId = `${siteUrl}/#website`;
+
 function serializeJsonLd(data: Record<string, unknown>): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
@@ -22,11 +26,49 @@ export function personJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "Person",
+    "@id": personId,
     name: siteName,
+    givenName: "Joel",
+    familyName: "Peckham",
     url: siteUrl,
     image: `${siteUrl}/snowboard_joel.webp`,
     email: "mail@jpeckham.com",
     jobTitle: "Software Developer",
+    description:
+      "Full-stack and AI software developer based in Laramie, Wyoming.",
+    disambiguatingDescription:
+      "Software engineer and full-stack developer in Laramie, Wyoming (not the poet Joel B. Peckham).",
+    worksFor: {
+      "@type": "Organization",
+      name: "BetterRx",
+      url: "https://www.betterrx.com/",
+    },
+    alumniOf: {
+      "@type": "CollegeOrUniversity",
+      name: "Southern Adventist University",
+      url: "https://www.southern.edu/",
+    },
+    homeLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Laramie",
+        addressRegion: "WY",
+        addressCountry: "US",
+      },
+    },
+    knowsAbout: [
+      "Software Engineering",
+      "Full-Stack Development",
+      "Artificial Intelligence",
+      "Machine Learning",
+      "TypeScript",
+      "React",
+      "Next.js",
+      "PHP",
+      "Laravel",
+      "Python",
+    ],
     sameAs: [
       "https://github.com/joelpeckham",
       "https://www.linkedin.com/in/joelpeckham/",
@@ -44,6 +86,7 @@ export function articleJsonLd(item: ContentItem) {
     image: `${siteUrl}/og/${item.slug}/`,
     author: {
       "@type": "Person",
+      "@id": personId,
       name: siteName,
       url: siteUrl,
     },
@@ -52,16 +95,50 @@ export function articleJsonLd(item: ContentItem) {
   };
 }
 
+export function breadcrumbJsonLd(item: ContentItem) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${siteUrl}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Projects",
+        item: `${siteUrl}/projects/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: item.title,
+        item: `${siteUrl}${item.href}`,
+      },
+    ],
+  };
+}
+
+export function profilePageJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: `${siteUrl}/about/`,
+    mainEntity: personJsonLd(),
+  };
+}
+
 export function websiteJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": websiteId,
     name: siteName,
     url: siteUrl,
-    author: {
-      "@type": "Person",
-      name: siteName,
-    },
+    author: { "@id": personId },
+    publisher: { "@id": personId },
   };
 }
-

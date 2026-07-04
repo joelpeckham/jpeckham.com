@@ -6,12 +6,13 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
 import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
 import { allContent } from "@/lib/content";
+import { defaultOgImage } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
-  openGraph: { url: "/" },
-  twitter: { card: "summary_large_image" },
+  openGraph: { url: "/", images: [defaultOgImage] },
+  twitter: { card: "summary_large_image", images: [defaultOgImage.url] },
 };
 
 export default function Home() {
@@ -40,7 +41,7 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-28">
           <span className="label text-grey">
-            Full-stack · AI · Laramie, WY
+            Joel Peckham · Full-stack · AI · Laramie, WY
           </span>
           <h1 className="mb-6 mt-3 max-w-[900px] font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]">
             I build

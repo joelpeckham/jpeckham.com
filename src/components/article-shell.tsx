@@ -18,7 +18,7 @@ import {
   type ContentSlug,
 } from "@/lib/content";
 import { siteName } from "@/lib/site";
-import { JsonLd, articleJsonLd } from "@/lib/json-ld";
+import { JsonLd, articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
 import { ScrollToTopOnMount } from "@/components/scroll-to-top";
 import "highlight.js/styles/an-old-hope.css";
 
@@ -82,6 +82,7 @@ export function ArticleShell({
   return (
     <>
       <JsonLd data={articleJsonLd(item)} />
+      <JsonLd data={breadcrumbJsonLd(item)} />
       <ScrollToTopOnMount />
       <ViewTransition name={`cover-${item.slug}`} share="cover-piece">
         <div

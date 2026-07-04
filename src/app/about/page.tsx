@@ -6,16 +6,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "@/components/resume-preview";
 import { ArrowLink } from "@/components/ui/arrow-link";
-import { JsonLd, personJsonLd } from "@/lib/json-ld";
+import { JsonLd, profilePageJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: { absolute: "About Joel Peckham — Software & AI Developer" },
   description:
     "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
   alternates: { canonical: "/about/" },
   openGraph: {
     url: "/about/",
-    title: "About",
+    title: "About Joel Peckham",
     description:
       "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
     images: [
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "About",
+    title: "About Joel Peckham",
     description:
       "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
     images: ["/snowboard_joel.webp"],
@@ -50,7 +50,7 @@ const stack = [
 export default function AboutPage() {
   return (
     <>
-      <JsonLd data={personJsonLd()} />
+      <JsonLd data={profilePageJsonLd()} />
       <section className="border-b-[3px] border-ink bg-ink text-paper">
         <div className="mx-auto grid max-w-[1240px] items-start gap-12 px-5 py-20 sm:px-8 md:grid-cols-[1.3fr_1fr]">
           <div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ContentCard } from "@/components/content-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { allContent } from "@/lib/content";
+import { defaultOgImage } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -13,12 +14,14 @@ export const metadata: Metadata = {
     title: "Projects",
     description:
       "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+    images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "Projects",
     description:
       "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+    images: [defaultOgImage.url],
   },
 };
 
