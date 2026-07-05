@@ -1,12 +1,29 @@
-[Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf).
+import Image from "next/image";
+
+[Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf)
+
+For my senior research project I asked a simple question: can a large language model read a news article about a company and predict whether its stock price will go up or down?
 
 ## Background
 
-Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAI's GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAI was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working at breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
+Back in the dark ages (yes, I mean before ChatGPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAI's GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAI was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working at breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
 
 ### Timeline
 
-![Timeline](/projects/images/transformerTimeline.svg)
+<figure className="not-prose my-8">
+  <div className="overflow-x-auto border-2 border-ink shadow-[var(--shadow-hard)]">
+    <img
+      src="/projects/images/transformerTimeline.svg"
+      alt="Timeline from January 2016 to January 2022 marking the publication of Attention Is All You Need, GPT-2, GPT-3, GPT-J, and the start of this research project"
+      className="block h-auto min-w-[34rem] w-full"
+      loading="lazy"
+      decoding="async"
+    />
+  </div>
+  <figcaption className="mt-3 font-mono text-meta uppercase tracking-[0.18em] text-grey">
+    {"Transformer milestones leading up to this project"}
+  </figcaption>
+</figure>
 
 ## My Research Project
 
@@ -14,13 +31,20 @@ Back in the dark ages (yes, I mean before Chat-GPT took the internet by storm), 
 
 In mid-2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if a model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company.
 
-Input: News article about a company ⮕ Output: Buy/Sell/Neutral signal
+**Input:** news article about a company → **Output:** buy, sell, or neutral signal
 
 ### Data gathering
 
 For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intended to test with. I scraped and labeled 140,000 news articles from the below web sources:
 
-![Data Sources](/projects/images/domainCounts.jpg)
+<Image
+  src="/projects/images/domainCounts.png"
+  alt="Bar chart of article counts by news domain, with Yahoo Finance and MarketWatch among the largest sources"
+  width={2800}
+  height={2000}
+  className="h-auto w-full border-2 border-ink shadow-[var(--shadow-hard)]"
+  loading="lazy"
+/>
 
 To avoid rate limiting, I created a custom web scraper to use and manage a pool of rotating proxies. I also used a custom rate limiter to ensure that I was not making too many requests to any given domain. Running the scraper from an OracleVM, I was able to scrape around 40 articles per minute and complete all 140,000 articles in around 2.5 days.
 
@@ -134,18 +158,24 @@ Because the model weights are over 60GB, specialized computing was required for 
 
 At first, I was encouraged by seeing a meaningful decrease in training loss, however, now I believe this was due to overfitting to the training set.
 
-![Training Loss](/projects/images/trainLoss.png)
+<Image
+  src="/projects/images/trainLoss.png"
+  alt="Line chart of training loss decreasing over 1,700 steps, flattening after roughly step 1,000"
+  width={2500}
+  height={1218}
+  className="h-auto w-full border-2 border-ink shadow-[var(--shadow-hard)]"
+  loading="lazy"
+/>
 
 ## Results
 
-Fine-tuned model:
-**50.58%** (N=40K) correct guesses of stock price movement direction.
+Directional accuracy on held-out articles (did the model guess up/down correctly?):
 
-Standard GPT-J model:
-**50.63%** (N=40K) correct guesses of stock price movement direction.
-
-Human testing:
-**56%** (N=120) correct guesses of stock price movement direction.
+| Model | Accuracy | Sample size |
+| --- | --- | --- |
+| Fine-tuned GPT-J | 50.58% | N=40K |
+| Standard GPT-J | 50.63% | N=40K |
+| Human baseline | 56% | N=120 |
 
 ## Conclusion
 

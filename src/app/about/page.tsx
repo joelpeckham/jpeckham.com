@@ -52,16 +52,16 @@ export default function AboutPage() {
   return (
     <>
       <JsonLd data={profilePageJsonLd()} />
-      <section className="border-b-[3px] border-ink bg-ink text-paper">
-        <div className="mx-auto grid max-w-[1240px] items-start gap-12 px-5 py-20 sm:px-8 md:grid-cols-[1.3fr_1fr]">
-          <div>
+      <section className="relative overflow-hidden border-b-[3px] border-ink bg-ink text-paper">
+        <div className="mx-auto grid max-w-[1240px] items-start gap-10 px-5 py-20 sm:gap-12 sm:px-8 sm:py-24 md:grid-cols-[1.3fr_minmax(0,1fr)] lg:py-28">
+          <div className="min-w-0">
             <span className="label text-yellow">03 · About</span>
             <h1 className="mb-6 mt-3 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
               I make software
               <br />
               that helps people.
             </h1>
-            <p className="max-w-[560px] text-lg leading-normal">
+            <p className="max-w-[560px] text-lg leading-relaxed">
               I&apos;m Joel — a software developer and former graphic designer
               based in Laramie, Wyoming. I graduated with a B.S. in Computer
               Science from Southern Adventist University in 2022. I work
@@ -79,19 +79,19 @@ export default function AboutPage() {
               hospice pharmacy solution on the market. When I&apos;m not coding,
               I&apos;m outside — hiking, climbing, or skiing.
             </p>
-            <div className="mt-8 hidden flex-wrap gap-2 md:flex">
+            <ul
+              aria-label="Tech stack"
+              className="mt-8 flex flex-wrap gap-2"
+            >
               {stack.map((t) => (
-                <Tag
-                  key={t}
-                  className="border-paper text-paper"
-                >
-                  {t}
-                </Tag>
+                <li key={t}>
+                  <Tag className="border-paper text-paper">{t}</Tag>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
-          <AboutPortrait />
+          <AboutPortrait className="min-w-0 md:justify-self-end" />
         </div>
       </section>
 

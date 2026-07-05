@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLink } from "@/components/ui/arrow-link";
 import { buttonVariants } from "@/components/ui/button";
 import { ContentCard } from "@/components/content-card";
 import { Reveal } from "@/components/reveal";
@@ -16,14 +17,20 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", images: [defaultOgImage.url] },
 };
 
+const FEATURED_PROJECT_COUNT = 6;
+
 export default function Home() {
   const projects = allContent.filter((item) => item.kind === "project");
+  const featuredProjects = projects.slice(0, FEATURED_PROJECT_COUNT);
+  const hasMoreProjects = projects.length > featuredProjects.length;
+
   return (
     <>
       <JsonLd data={websiteJsonLd()} />
       <JsonLd data={personJsonLd()} />
       <section className="relative overflow-hidden border-b-[3px] border-ink bg-paper">
         <span
+          aria-hidden="true"
           className="absolute -right-10 -top-10 [--shape-size:150px] hero-enter sm:-right-16 sm:-top-16 sm:[--shape-size:260px]"
           style={cssVars({ "--enter-delay": "150ms" })}
         >
@@ -33,6 +40,7 @@ export default function Home() {
           />
         </span>
         <span
+          aria-hidden="true"
           className="pointer-events-none absolute -bottom-12 -right-6 [--shape-size:130px] hero-enter sm:-bottom-16 sm:right-16 sm:[--shape-size:180px] md:-bottom-20 md:right-48 md:[--shape-size:220px]"
           style={cssVars({ "--enter-delay": "250ms" })}
         >
@@ -43,7 +51,10 @@ export default function Home() {
             style={cssVars({ "--drift-dur": "10s", "--drift-delay": "1000ms" })}
           />
         </span>
-        <span className="absolute right-16 top-1/2 hidden -translate-y-1/2 rotate-[18deg] lg:block">
+        <span
+          aria-hidden="true"
+          className="absolute right-16 top-1/2 hidden -translate-y-1/2 rotate-[18deg] lg:block"
+        >
           <span
             className="block hero-enter"
             style={cssVars({ "--enter-delay": "350ms" })}
@@ -65,15 +76,14 @@ export default function Home() {
           >
             I build
             <br />
-            things <br />{" "}
-            <span className="whitespace-nowrap">
-              that{" "}
-              <span
-                className="inline-block hero-enter text-red"
-                style={cssVars({ "--enter-delay": "360ms" })}
-              >
-                ship.
-              </span>
+            things
+            <br />
+            that{" "}
+            <span
+              className="inline-block hero-enter text-red"
+              style={cssVars({ "--enter-delay": "360ms" })}
+            >
+              ship.
             </span>
           </h1>
           <p
@@ -103,7 +113,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8 sm:py-24">
+      <section className="mx-auto max-w-[1240px] px-5 pb-24 pt-20 sm:px-8 sm:pb-28 sm:pt-24">
         <Reveal>
           <SectionHeading
             index="01"
@@ -113,7 +123,7 @@ export default function Home() {
           />
         </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
-          {projects.map((item, i) => (
+          {featuredProjects.map((item, i) => (
             <Reveal
               key={item.slug}
               delay={Math.min(i, 5) * 60}
@@ -123,6 +133,11 @@ export default function Home() {
             </Reveal>
           ))}
         </div>
+        {hasMoreProjects ? (
+          <Reveal className="mt-10">
+            <ArrowLink href="/projects/">View all projects</ArrowLink>
+          </Reveal>
+        ) : null}
       </section>
     </>
   );

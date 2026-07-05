@@ -1,4 +1,26 @@
-[Visit uwyoschedule.org](https://uwyoschedule.org/) · [Get the code on GitHub](https://github.com/joelpeckham/uwyo-schedules)
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+
+<div className="not-prose -mt-2 mb-8 flex flex-wrap gap-3">
+  <a
+    href="https://uwyoschedule.org/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "red", size: "md" }))}
+  >
+    Visit uwyoschedule.org
+  </a>
+  <a
+    href="https://github.com/joelpeckham/uwyo-schedules"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+  >
+    GitHub
+  </a>
+</div>
+
+Plan a conflict-free UW semester around your real schedule — free, independent, and visual.
 
 ## It started with a friend
 
@@ -57,6 +79,24 @@ Sometimes there genuinely is no conflict-free week — two required labs only me
 ### Off the main thread
 
 All of this runs in a Web Worker. The page serializes a compact "solve pack" for each course — meeting times, faculty, seats, delivery modes — ships it to the worker, and gets back a solution (or the infeasibility hints above) without ever blocking the UI thread. That's why you can drag a block around and watch the whole week re-solve live, at interactive speed, without the interface stuttering.
+
+<div className="not-prose my-8 border-2 border-ink bg-white p-5 shadow-[var(--shadow-hard)]">
+  <p className="mb-4 font-mono text-meta uppercase tracking-[0.18em] text-grey">
+    {"How a schedule search runs"}
+  </p>
+  <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
+    <span className="border-2 border-ink bg-paper-2 px-2 py-1">Course picks + filters</span>
+    <span aria-hidden="true" className="text-grey">→</span>
+    <span className="border-2 border-ink bg-yellow px-2 py-1 font-medium">Solve pack</span>
+    <span aria-hidden="true" className="text-grey">→</span>
+    <span className="border-2 border-ink bg-blue px-2 py-1 font-medium text-white">Web Worker</span>
+    <span aria-hidden="true" className="text-grey">→</span>
+    <span className="border-2 border-ink bg-paper-2 px-2 py-1">Conflict-free week</span>
+  </div>
+  <p className="mt-3 text-sm leading-normal text-ink/80">
+    {"The UI stays responsive while the solver runs bitmask checks and backtracking off-thread."}
+  </p>
+</div>
 
 ## Getting the catalog
 

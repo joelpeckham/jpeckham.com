@@ -13,6 +13,7 @@ import {
   blockDisplay,
   clearRecoveredDriveFlags,
   createInitialState,
+  defaultDriveCount,
   drivesToAdd,
   failBlock,
   failDrive,
@@ -51,6 +52,16 @@ const HIGHLIGHT_MS = 420;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function clampText(text: string, capacity: number): string {
+  if (capacity <= 0) return text;
+  return text.slice(0, capacity);
 }
 
 type Highlight = {
@@ -92,6 +103,12 @@ function RaidBlock({
   // while any failure exists, so this picks a fresh random char each time.
   const display =
     block.failed && occupied ? randomStaticChar() : blockDisplay(block);
+  const contentLabel =
+    occupied && display
+      ? block.kind === "parity"
+        ? `, parity ${display}`
+        : `, value ${display}`
+      : "";
 
   return (
     <button
@@ -99,7 +116,7 @@ function RaidBlock({
       disabled={!occupied || block.failed}
       onClick={() => onFail(driveIndex, blockIndex)}
       className={cn(
-        "flex h-7 w-7 items-center justify-center border border-ink/25 font-mono text-[10px] transition-colors sm:h-8 sm:w-8 sm:text-[11px]",
+        "flex size-9 min-h-9 min-w-9 items-center justify-center border border-ink/25 font-mono text-[11px] transition-colors sm:size-8 sm:min-h-8 sm:min-w-8 sm:text-[11px]",
         blockIndex % 4 === 0 && "border-l-2 border-l-ink",
         blockIndex < 4 && "border-t-2 border-t-ink",
         block.kind === "parity" && !block.failed && "bg-yellow/35",
@@ -111,7 +128,7 @@ function RaidBlock({
       )}
       aria-label={
         occupied
-          ? `Drive ${driveIndex + 1} block ${blockIndex + 1}${block.failed ? " failed" : ""}`
+          ? `Drive ${driveIndex + 1} block ${blockIndex + 1}${contentLabel}${block.failed ? ", failed" : ", click to corrupt"}`
           : `Drive ${driveIndex + 1} empty block ${blockIndex + 1}`
       }
     >
@@ -140,7 +157,7 @@ function DriveCard({
   );
 
   return (
-    <Card className="min-w-[136px] shrink-0 snap-start p-3 sm:min-w-[168px]">
+    <Card className="min-w-[152px] shrink-0 snap-start p-3 sm:min-w-[168px]">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className={cn("label text-[10px]", drive.failed && "text-red")}>
           Drive {driveIndex + 1}
@@ -197,12 +214,12 @@ export function RaidVisualizer() {
     drive.blocks.some((block) => block.failed),
   );
   useEffect(() => {
-    if (!anyFailed) return;
+    if (!anyFailed || rebuilding || highlight) return;
     const id = window.setInterval(() => {
       setStaticTick((tick) => tick + 1);
     }, STATIC_MS);
     return () => window.clearInterval(id);
-  }, [anyFailed]);
+  }, [anyFailed, rebuilding, highlight]);
 
   const level = state.level;
   const stats = arrayStats(level, state.drives.length);
@@ -229,7 +246,12 @@ export function RaidVisualizer() {
   const handleLevelChange = useCallback(
     (nextLevel: RaidLevel) => {
       cancelRebuildAnimation();
+      const nextCapacity = maxLogicalCapacity(
+        nextLevel,
+        defaultDriveCount(nextLevel),
+      );
       setState(createInitialState(nextLevel));
+      setText((prev) => clampText(prev, nextCapacity));
       setStatus("Array reset for the new RAID level.");
     },
     [cancelRebuildAnimation],
@@ -289,18 +311,20 @@ export function RaidVisualizer() {
 
     const active = () =>
       rebuildTokenRef.current === token && mountedRef.current;
+    const instant = prefersReducedMotion();
+    const stepDelay = instant ? 0 : HIGHLIGHT_MS;
 
     for (const step of steps) {
       if (!active()) return;
 
       if (step.sources.length > 0) {
         setHighlight({ refs: step.sources, kind: "source" });
-        await sleep(HIGHLIGHT_MS);
+        if (stepDelay > 0) await sleep(stepDelay);
         if (!active()) return;
       }
 
       setHighlight({ refs: [step.target], kind: "target" });
-      await sleep(HIGHLIGHT_MS);
+      if (stepDelay > 0) await sleep(stepDelay);
       if (!active()) return;
 
       setState((prev) => applyRecoveryStep(prev, step));
@@ -330,17 +354,25 @@ export function RaidVisualizer() {
 
   const handleAddDrives = useCallback(() => {
     cancelRebuildAnimation();
-    setState((prev) => addDrives(prev));
+    const next = addDrives(state);
+    setState(next);
+    setText((current) =>
+      clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
+    );
     setStatus("Drives added — data cleared, write again to see the new layout.");
-  }, [cancelRebuildAnimation]);
+  }, [cancelRebuildAnimation, state]);
 
   const handleRemoveDrives = useCallback(() => {
     cancelRebuildAnimation();
-    setState((prev) => setDriveCount(prev, prev.drives.length - stepCount));
+    const next = setDriveCount(state, state.drives.length - stepCount);
+    setState(next);
+    setText((current) =>
+      clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
+    );
     setStatus(
       "Drives removed — data cleared, write again to see the new layout.",
     );
-  }, [cancelRebuildAnimation, stepCount]);
+  }, [cancelRebuildAnimation, state, stepCount]);
 
   return (
     <div className="not-prose my-8 flex flex-col gap-5">

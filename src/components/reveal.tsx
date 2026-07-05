@@ -34,16 +34,17 @@ export function Reveal({
 }: RevealProps) {
   const Component = (as ?? "div") as ElementType;
   const ref = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      typeof IntersectionObserver === "undefined",
+  );
 
   useEffect(() => {
     const node = ref.current;
     if (!node || visible) return;
 
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
+    if (typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
       (entries) => {

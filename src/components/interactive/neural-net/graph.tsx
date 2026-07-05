@@ -20,15 +20,26 @@ const GRID_Y = (VB_H - GRID_TOTAL) / 2;
 
 const HIDDEN_X = 330;
 const OUTPUT_X = 560;
-const NODE_R = 16;
+const NODE_R_DEFAULT = 16;
+const NODE_R_MIN = 5;
 
 const SPREAD_TOP = 56;
 const SPREAD_BOTTOM = VB_H - 56;
+const SPREAD_SPAN = SPREAD_BOTTOM - SPREAD_TOP;
+
+function nodeRadius(count: number): number {
+  if (count <= 1) return NODE_R_DEFAULT;
+  const maxForCount = SPREAD_SPAN / (2 * (count - 1));
+  return Math.max(NODE_R_MIN, Math.min(NODE_R_DEFAULT, maxForCount));
+}
 
 function spread(i: number, count: number): number {
   if (count <= 1) return (SPREAD_TOP + SPREAD_BOTTOM) / 2;
-  return SPREAD_TOP + ((SPREAD_BOTTOM - SPREAD_TOP) * i) / (count - 1);
+  return SPREAD_TOP + (SPREAD_SPAN * i) / (count - 1);
 }
+
+// Invisible wider stroke so weight lines stay tappable on touch screens.
+const EDGE_HIT_WIDTH = 14;
 
 function maxAbs(m: Matrix): number {
   let max = 0;
@@ -104,11 +115,13 @@ export function NetworkGraph({
 
   const maxAbsIH = maxAbs(wih);
   const maxAbsHO = maxAbs(who);
+  const hiddenR = nodeRadius(hiddenCount);
+  const outputR = nodeRadius(output.length);
 
   return (
     <svg
       viewBox={`0 0 ${VB_W} ${VB_H}`}
-      className="h-auto w-full touch-none select-none"
+      className="h-auto w-full select-none"
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label="Neural network graph. Left: 25 input pixels. Middle: hidden neurons. Right: 10 output neurons."
@@ -120,21 +133,29 @@ export function NetworkGraph({
             const w = wih[j][i];
             const s = edgeStyle(w, maxAbsIH);
             const text = `input ${i} \u2192 hidden ${j}: ${w.toFixed(4)}`;
+            const d = curve(p.x, p.y, h.x, h.y);
             return (
-              <path
-                key={`ih-${j}-${i}`}
-                d={curve(p.x, p.y, h.x, h.y)}
-                stroke={s.stroke}
-                strokeWidth={s.width}
-                strokeOpacity={s.opacity}
-                style={{ pointerEvents: "stroke" }}
-                onMouseEnter={() => showTip(text)}
-                onMouseLeave={hideTip}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  showTipAt(text, e);
-                }}
-              />
+              <g key={`ih-${j}-${i}`}>
+                <path
+                  d={d}
+                  stroke="transparent"
+                  strokeWidth={EDGE_HIT_WIDTH}
+                  style={{ pointerEvents: "stroke" }}
+                  onMouseEnter={() => showTip(text)}
+                  onMouseLeave={hideTip}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    showTipAt(text, e);
+                  }}
+                />
+                <path
+                  d={d}
+                  stroke={s.stroke}
+                  strokeWidth={s.width}
+                  strokeOpacity={s.opacity}
+                  style={{ pointerEvents: "none" }}
+                />
+              </g>
             );
           }),
         )}
@@ -147,21 +168,29 @@ export function NetworkGraph({
             const w = who[k][j];
             const s = edgeStyle(w, maxAbsHO);
             const text = `hidden ${j} \u2192 output ${k}: ${w.toFixed(4)}`;
+            const d = curve(h.x, h.y, o.x, o.y);
             return (
-              <path
-                key={`ho-${k}-${j}`}
-                d={curve(h.x, h.y, o.x, o.y)}
-                stroke={s.stroke}
-                strokeWidth={s.width}
-                strokeOpacity={s.opacity}
-                style={{ pointerEvents: "stroke" }}
-                onMouseEnter={() => showTip(text)}
-                onMouseLeave={hideTip}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  showTipAt(text, e);
-                }}
-              />
+              <g key={`ho-${k}-${j}`}>
+                <path
+                  d={d}
+                  stroke="transparent"
+                  strokeWidth={EDGE_HIT_WIDTH}
+                  style={{ pointerEvents: "stroke" }}
+                  onMouseEnter={() => showTip(text)}
+                  onMouseLeave={hideTip}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    showTipAt(text, e);
+                  }}
+                />
+                <path
+                  d={d}
+                  stroke={s.stroke}
+                  strokeWidth={s.width}
+                  strokeOpacity={s.opacity}
+                  style={{ pointerEvents: "none" }}
+                />
+              </g>
             );
           }),
         )}
@@ -200,7 +229,7 @@ export function NetworkGraph({
             key={`hn-${j}`}
             cx={h.x}
             cy={h.y}
-            r={NODE_R}
+            r={hiddenR}
             fill={activationFill(hidden[j])}
             stroke={INK}
             strokeWidth={2}
@@ -225,7 +254,7 @@ export function NetworkGraph({
               <circle
                 cx={o.x}
                 cy={o.y}
-                r={NODE_R + 5}
+                r={outputR + 5}
                 fill="none"
                 stroke={RED}
                 strokeWidth={3}
@@ -234,7 +263,7 @@ export function NetworkGraph({
             <circle
               cx={o.x}
               cy={o.y}
-              r={NODE_R}
+              r={outputR}
               fill={activationFill(output[k])}
               stroke={INK}
               strokeWidth={2}
@@ -249,9 +278,9 @@ export function NetworkGraph({
               }}
             />
             <text
-              x={o.x + NODE_R + 16}
-              y={o.y + 6}
-              fontSize={20}
+              x={o.x + outputR + 12}
+              y={o.y + 5}
+              fontSize={Math.max(14, outputR + 2)}
               fontFamily="var(--font-mono)"
               fontWeight={700}
               fill={k === predicted ? RED : INK}

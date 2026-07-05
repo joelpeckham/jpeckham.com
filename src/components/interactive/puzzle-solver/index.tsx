@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -51,7 +51,9 @@ export function PuzzleSolver() {
 
   const dealtRef = useRef(false);
   const solvingRef = useRef(false);
+  const solveGenRef = useRef(0);
   const workerRef = useRef<Worker | null>(null);
+  const statusId = useId();
 
   useEffect(() => {
     workerRef.current = new Worker(
@@ -64,6 +66,7 @@ export function PuzzleSolver() {
   }, []);
 
   const shuffle = useCallback(() => {
+    solveGenRef.current += 1;
     const next = randomPuzzle();
     setPuzzle(next);
     setStartPuzzle(next);
@@ -72,6 +75,8 @@ export function PuzzleSolver() {
     setStats(null);
     setPlaying(false);
     setManualMoves(0);
+    setSolving(false);
+    solvingRef.current = false;
   }, []);
 
   // Deal the first real puzzle after hydration.
@@ -82,6 +87,7 @@ export function PuzzleSolver() {
   }, [shuffle]);
 
   const reset = useCallback(() => {
+    solveGenRef.current += 1;
     setPuzzle(startPuzzle);
     setSolution(null);
     setStep(0);
@@ -89,6 +95,8 @@ export function PuzzleSolver() {
     setPlaying(false);
     setManualMoves(0);
     setRuns([]);
+    setSolving(false);
+    solvingRef.current = false;
   }, [startPuzzle]);
 
   const handleTileClick = useCallback((index: number) => {
@@ -111,10 +119,13 @@ export function PuzzleSolver() {
     setPlaying(false);
     solvingRef.current = true;
     setSolving(true);
+    const gen = ++solveGenRef.current;
+    const puzzleAtSolve = puzzle;
 
     const onMessage = (event: MessageEvent<SearchResult | null>) => {
       worker.removeEventListener("message", onMessage);
       worker.removeEventListener("error", onError);
+      if (gen !== solveGenRef.current) return;
       solvingRef.current = false;
       setSolving(false);
 
@@ -140,13 +151,14 @@ export function PuzzleSolver() {
     const onError = () => {
       worker.removeEventListener("message", onMessage);
       worker.removeEventListener("error", onError);
+      if (gen !== solveGenRef.current) return;
       solvingRef.current = false;
       setSolving(false);
     };
 
     worker.addEventListener("message", onMessage);
     worker.addEventListener("error", onError);
-    worker.postMessage({ puzzle, algorithm, heuristic });
+    worker.postMessage({ puzzle: puzzleAtSolve, algorithm, heuristic });
   }, [puzzle, algorithm, heuristic]);
 
   const goToStep = useCallback(
@@ -191,13 +203,14 @@ export function PuzzleSolver() {
   const hasSolution = solution !== null && solution.length > 1;
   const atEnd = solution ? step >= solution.length - 1 : false;
   const heuristicDisabled = algorithm === "bfs";
+  const boardInteractive = !solving && !playing;
 
   return (
     <div className="not-prose my-8 flex flex-col gap-5">
       {/* Controls */}
       <Card accent="blue">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <div className="flex flex-col gap-4 p-4 sm:p-5">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-6">
             <Select
               label="Algorithm"
               value={algorithm}
@@ -213,13 +226,13 @@ export function PuzzleSolver() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               type="button"
               variant="ink"
               size="sm"
               onClick={shuffle}
-              disabled={solving}
+              disabled={solving || playing}
             >
               {"Shuffle \u21bb"}
             </Button>
@@ -228,7 +241,7 @@ export function PuzzleSolver() {
               variant="blue"
               size="sm"
               onClick={runSolve}
-              disabled={solving || solved}
+              disabled={solving || playing || solved}
             >
               {solving ? "Solving\u2026" : "Solve \u2192"}
             </Button>
@@ -237,7 +250,7 @@ export function PuzzleSolver() {
               variant="red"
               size="sm"
               onClick={reset}
-              disabled={solving}
+              disabled={solving || playing}
             >
               {"Reset \u21ba"}
             </Button>
@@ -247,13 +260,18 @@ export function PuzzleSolver() {
 
       {/* Board */}
       <Card accent="red">
-        <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-4 p-4 sm:p-5">
           <Board
             puzzle={puzzle}
             onTileClick={handleTileClick}
-            interactive={!solving}
+            interactive={boardInteractive}
           />
-          <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs uppercase tracking-[0.12em]">
+          <div
+            id={statusId}
+            aria-live="polite"
+            aria-atomic="true"
+            className="flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3"
+          >
             <span className={cn(solved ? "font-bold text-red" : "text-grey")}>
               {solved
                 ? "Solved \u2713"
@@ -273,11 +291,11 @@ export function PuzzleSolver() {
       {/* Playback */}
       {hasSolution ? (
         <Card>
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3 p-4 sm:p-5">
             <div className="flex items-center gap-2">
               <span className="label">Solution playback</span>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -314,18 +332,21 @@ export function PuzzleSolver() {
                 Move {step} / {solution.length - 1}
               </span>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={solution.length - 1}
-              value={step}
-              onChange={(e) => {
-                setPlaying(false);
-                goToStep(Number(e.target.value));
-              }}
-              className="w-full accent-[color:var(--blue)]"
-              aria-label="Scrub through the solution"
-            />
+            <div className="py-1">
+              <input
+                type="range"
+                min={0}
+                max={solution.length - 1}
+                value={step}
+                onChange={(e) => {
+                  setPlaying(false);
+                  goToStep(Number(e.target.value));
+                }}
+                className="h-2 w-full cursor-pointer accent-[color:var(--blue)]"
+                aria-label="Scrub through the solution"
+                aria-valuetext={`Move ${step} of ${solution.length - 1}`}
+              />
+            </div>
           </div>
         </Card>
       ) : null}
@@ -334,7 +355,7 @@ export function PuzzleSolver() {
       {stats ? (
         <div className="flex flex-col gap-2">
           <span className="label">Last search</span>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
             <Stat label="Time" value={`${stats.timeMs.toFixed(1)} ms`} />
             <Stat label="Nodes visited" value={stats.visited.toLocaleString()} />
             <Stat label="Max depth" value={stats.maxDepth.toLocaleString()} />
@@ -349,7 +370,7 @@ export function PuzzleSolver() {
           <span className="label">Run comparison</span>
           <Card>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse font-mono text-sm">
+              <table className="w-full min-w-[32rem] border-collapse font-mono text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b-2 border-ink text-left uppercase tracking-[0.1em]">
                     <Th>#</Th>
@@ -413,19 +434,22 @@ function Select({
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const id = useId();
   return (
     <label
+      htmlFor={id}
       className={cn(
-        "flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]",
+        "flex min-w-0 flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]",
         disabled && "opacity-45",
       )}
     >
       {label}
       <select
+        id={id}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="border-2 border-ink bg-white px-3 py-2 font-mono text-sm normal-case tracking-normal focus-visible:outline-none disabled:cursor-not-allowed"
+        className="w-full border-2 border-ink bg-white px-3 py-2 font-mono text-sm normal-case tracking-normal focus-visible:outline-none disabled:cursor-not-allowed"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -439,7 +463,7 @@ function Select({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-[7rem] flex-col border-2 border-ink bg-white px-3 py-2">
+    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-3 py-2 sm:min-w-[7rem]">
       <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey">
         {label}
       </span>

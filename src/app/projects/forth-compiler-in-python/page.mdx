@@ -1,8 +1,8 @@
-[Get all the code on Github](https://github.com/joelpeckham/pyforth)
+[Get the code on GitHub](https://github.com/joelpeckham/pyforth)
 
 ## Introduction
 
-FORTH is a simple stack-based language. It is a great language to learn about compilers and interpreters. This article will show you how to write a FORTH compiler and interpreter in 130\* lines of Python.
+FORTH is a simple stack-based language. It is a great language to learn about compilers and interpreters. This article will show you how to write a FORTH compiler and interpreter in 130* lines of Python.
 
 ### Some disclaimers
 
@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 ```
 
 Then we can define our two states.
+
 If you are not familiar with dataclasses, they are a nice way to define classes that are just containers for data. They are a great way to define simple classes that don't need any methods. You can read more about them [in the Python docs](https://docs.python.org/3/library/dataclasses.html).
 
 ```python
@@ -69,7 +70,7 @@ def isInt(lexeme:str) -> bool:
 
 These two small functions will help us by splitting our code into small pieces called tokens and by checking if a given lexeme is an integer.
 
-## Getting primitive
+## Getting primitives
 
 Next, we'll define some primitives. These are the basic building blocks of our language. We'll put these in a file called `primitives.py`.
 
@@ -110,6 +111,7 @@ def primitive(func) -> None:
         funcs["compile"] = defaultCompile
         funcs["execute"] = func
     Primitives[lexeme] = funcs
+    return func
 ```
 
 The second decorator is called `compileTime()`. This will simply add a marker to the docstring of the function to indicate that it implements special compile-time behavior. This is useful for primitives that need to do something special when they are compiled, but also need to do something special when they are executed.
@@ -124,6 +126,8 @@ def compileTime(func) -> function:
 ```
 
 Lastly in this `primitives.py` file, we'll define some primitives. We'll start with some simple ones that don't need any special compile-time behavior. You can stop here, but I suggest you use all of them to see how they work.
+
+Arithmetic and comparisons:
 
 ```python
 @primitive
@@ -198,7 +202,11 @@ def equal(state:InterpretState) -> None:
     else:
         state.dataStack.append(0)
     state.pos += 1
+```
 
+Bitwise operations:
+
+```python
 @primitive
 def bitwiseAnd(state:InterpretState) -> None:
     """Lexeme: AND"""
@@ -219,7 +227,11 @@ def bitwiseNot(state:InterpretState) -> None:
     a = state.dataStack.pop()
     state.dataStack.append(~a)
     state.pos += 1
+```
 
+Stack manipulation:
+
+```python
 @primitive
 def swap(state:InterpretState) -> None:
     """Lexeme: SWAP"""
@@ -258,7 +270,11 @@ def rot(state:InterpretState) -> None:
     state.dataStack.append(a)
     state.dataStack.append(c)
     state.pos += 1
+```
 
+Input and output:
+
+```python
 @primitive
 def key(state:InterpretState) -> None:
     """Lexeme: KEY"""
@@ -283,7 +299,11 @@ def cr(state:InterpretState) -> None:
     """Lexeme: CR"""
     print()
     state.pos += 1
+```
 
+Compile-time words for definitions, branches, and loops:
+
+```python
 @primitive
 @compileTime
 def colon(state:CompileState) -> None:
@@ -392,6 +412,7 @@ class Interpreter:
         while not state.end:
             code = state.codes[state.pos]
             Primitives[code]['execute'](state)
+            # PUSH, CALL, and variable handling omitted — see the repo
 ```
 
 ## Making it interactive
@@ -423,6 +444,4 @@ else:
 
 ### Woo! It's done!
 
-Make sure you've added the correct python install path to the shebang at the top, then run with `./pyforth.py` and you should be good to go!
-
-The source code is available on [GitHub](https://github.com/joelpeckham/pyforth).
+Make sure you've added the correct Python install path to the shebang at the top, then run with `./pyforth.py` and you should be good to go!

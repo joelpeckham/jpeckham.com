@@ -51,12 +51,13 @@ export function Board({
   return (
     <div
       role="application"
-      tabIndex={interactive ? 0 : undefined}
+      tabIndex={interactive ? 0 : -1}
       aria-label={`8-puzzle board. Blank is at position ${blankIndex + 1} of 9. Use arrow keys or click adjacent tiles to slide them into the blank.`}
       onKeyDown={handleKeyDown}
       className={cn(
-        "relative mx-auto aspect-square w-full max-w-[20rem] border-2 border-ink bg-paper-2",
-        interactive && "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+        "@container relative mx-auto aspect-square w-full max-w-[min(100%,20rem)] touch-manipulation border-2 border-ink bg-paper-2 select-none",
+        interactive &&
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
       )}
     >
       {puzzle.split("").map((ch, index) => {
@@ -75,11 +76,11 @@ export function Board({
           movable ? "cursor-pointer" : "cursor-default",
         );
         const labelClassName = cn(
-          "absolute inset-[4px] flex items-center justify-center border-2 border-ink font-display text-4xl font-black tabular-nums transition-colors",
+          "absolute inset-[4px] flex items-center justify-center border-2 border-ink font-display text-[clamp(1.25rem,28cqw,2.25rem)] font-black tabular-nums transition-colors sm:text-4xl",
           solved
             ? "bg-yellow text-ink"
             : movable
-              ? "bg-white text-ink hover:bg-yellow"
+              ? "bg-white text-ink [@media(hover:hover)]:hover:bg-yellow active:bg-yellow"
               : "bg-white text-ink",
         );
 
@@ -90,7 +91,7 @@ export function Board({
               type="button"
               onClick={() => onTileClick?.(index)}
               aria-label={`Tile ${ch} — click or use arrow keys to slide into the blank`}
-              className={tileClassName}
+              className={cn(tileClassName, "touch-manipulation")}
               style={tileStyle}
             >
               <span className={labelClassName}>{ch}</span>

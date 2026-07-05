@@ -5,6 +5,8 @@ type SectionHeadingProps = {
   index?: string;
   eyebrow?: string;
   title: string;
+  titleAs?: "h1" | "h2";
+  titleId?: string;
   accent?: "red" | "blue" | "yellow";
   align?: "left" | "center";
   className?: string;
@@ -14,6 +16,8 @@ export function SectionHeading({
   index,
   eyebrow,
   title,
+  titleAs: Title = "h2",
+  titleId,
   accent = "red",
   align = "left",
   className,
@@ -33,9 +37,12 @@ export function SectionHeading({
           </span>
         ) : null}
       </div>
-      <h2 className="m-0 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
+      <Title
+        id={titleId}
+        className="m-0 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]"
+      >
         {title}
-      </h2>
+      </Title>
       <div data-rule className="mt-4 h-1 bg-ink" />
     </div>
   );

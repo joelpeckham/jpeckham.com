@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { cssVars } from "@/lib/utils";
+import { cn, cssVars } from "@/lib/utils";
 
 /*
  * Triangle mask for the about-page portrait.
@@ -85,7 +85,11 @@ function toCssPolygon(pts: Vertex[]) {
     .join(", ")})`;
 }
 
-export function AboutPortrait() {
+type AboutPortraitProps = {
+  className?: string;
+};
+
+export function AboutPortrait({ className }: AboutPortraitProps = {}) {
   // The two CSS polygons the shadow and photo morph between on hover. Only the
   // clip region rotates, so the pixels never move.
   const basePts = triangleVertices(ROTATION);
@@ -103,7 +107,12 @@ export function AboutPortrait() {
   ).toFixed(2)}% ${(toSurface(0) * 100).toFixed(2)}%)`;
 
   return (
-    <div className="group relative mx-auto mb-8 w-full max-w-[340px] self-center md:mb-0">
+    <div
+      className={cn(
+        "group relative mx-auto mb-8 w-full max-w-[340px] self-center md:mb-0",
+        className,
+      )}
+    >
       <span
         aria-hidden="true"
         className="absolute -right-6 -top-6 block size-[140px] rounded-[50%] bg-red transition-[border-radius,rotate] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:hover:rotate-90 [@media(hover:hover)]:hover:rounded-none"

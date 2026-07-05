@@ -65,6 +65,7 @@ function MdxImage({
         alt={alt ?? ""}
         loading="lazy"
         decoding="async"
+        className="block h-auto w-full max-w-full"
         {...props}
       />
     );

@@ -78,7 +78,12 @@ function computeView(net: NeuralNetwork, input: number[]): ViewModel {
 }
 
 const controlInput =
-  "w-16 border-2 border-ink bg-white px-2 py-1 font-mono text-sm focus-visible:outline-none";
+  "w-full border-2 border-ink bg-white px-2 py-1 font-mono text-sm focus-visible:outline-none sm:w-16";
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 export function NeuralNet() {
   const [hidden, setHidden] = useState(HIDDEN_DEFAULT);
@@ -231,8 +236,15 @@ export function NeuralNet() {
     const tip = tooltipRef.current;
     if (!wrap || !tip) return;
     const rect = wrap.getBoundingClientRect();
-    tip.style.left = `${clientX - rect.left}px`;
-    tip.style.top = `${clientY - rect.top}px`;
+    const pad = 8;
+    let left = clientX - rect.left;
+    let top = clientY - rect.top;
+    const halfW = tip.offsetWidth / 2;
+    const tipH = tip.offsetHeight;
+    left = Math.max(pad + halfW, Math.min(rect.width - pad - halfW, left));
+    top = Math.max(pad + tipH * 1.35, Math.min(rect.height - pad, top));
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
   }, []);
 
   const moveTip = useCallback(
@@ -244,18 +256,18 @@ export function NeuralNet() {
   // hover. Tapping empty graph space (handled on the wrapper) hides it.
   const showTipAt = useCallback(
     (text: string, e: React.PointerEvent) => {
-      positionTip(e.clientX, e.clientY);
       showTip(text);
+      positionTip(e.clientX, e.clientY);
     },
     [positionTip, showTip],
   );
 
   return (
-    <div className="not-prose my-8 flex flex-col gap-5">
+    <div className="not-prose my-8 flex min-w-0 flex-col gap-5">
       {/* Controls */}
       <Card accent="blue">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <div className="flex flex-col gap-4 p-4 sm:p-5">
+          <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-3">
             <label className="flex w-full flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:w-auto">
               Hidden neurons: {hidden}
               <input
@@ -283,7 +295,7 @@ export function NeuralNet() {
               />
             </label>
 
-            <label className="flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]">
+            <label className="flex min-w-0 flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:w-auto">
               Iterations / train
               <input
                 type="number"
@@ -300,12 +312,22 @@ export function NeuralNet() {
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               type="button"
               variant={playing ? "yellow" : "blue"}
               size="sm"
-              onClick={() => setPlaying((p) => !p)}
+              onClick={() => {
+                if (playing) {
+                  setPlaying(false);
+                  return;
+                }
+                if (prefersReducedMotion()) {
+                  runSteps(batch);
+                  return;
+                }
+                setPlaying(true);
+              }}
             >
               {playing ? "Pause \u23f8" : "Play \u25b6"}
             </Button>
@@ -320,7 +342,7 @@ export function NeuralNet() {
       </Card>
 
       {/* Stats */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
         <Stat label="Iterations" value={iterations.toLocaleString()} />
         <Stat label="Accuracy" value={`${view.accuracy.toFixed(0)}%`} />
         <Stat
@@ -330,9 +352,9 @@ export function NeuralNet() {
       </div>
 
       {/* Input selector */}
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <span className="label">Input</span>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {trainingData.map((sample) => {
             const isActive = selected === sample.label;
             return (
@@ -343,13 +365,13 @@ export function NeuralNet() {
                 aria-pressed={isActive}
                 aria-label={`Feed the network the training image for ${sample.label}`}
                 className={cn(
-                  "border-2 border-ink bg-white p-1 transition-transform",
+                  "flex min-h-11 min-w-11 items-center justify-center border-2 border-ink bg-white p-1 transition-transform sm:min-h-0 sm:min-w-0",
                   isActive
                     ? "shadow-hard"
                     : "opacity-60 hover:-translate-y-0.5 hover:opacity-100",
                 )}
               >
-                <DigitGlyph bits={sample.bits} size={34} />
+                <DigitGlyph bits={sample.bits} size={34} className="sm:h-[34px] sm:w-[34px]" />
               </button>
             );
           })}
@@ -359,7 +381,7 @@ export function NeuralNet() {
             aria-pressed={selected === "draw"}
             aria-label="Draw your own digit for the network to classify"
             className={cn(
-              "border-2 border-ink px-3 py-2 font-mono text-xs uppercase tracking-[0.1em] transition-transform",
+              "flex min-h-11 items-center border-2 border-ink px-3 py-2 font-mono text-xs uppercase tracking-[0.1em] transition-transform sm:min-h-0",
               selected === "draw"
                 ? "bg-yellow text-ink shadow-hard"
                 : "bg-white opacity-70 hover:-translate-y-0.5 hover:opacity-100",
@@ -397,10 +419,13 @@ export function NeuralNet() {
       <Card accent="red">
         <div
           ref={graphWrapRef}
-          className="relative p-2"
+          className="relative min-w-0 overflow-hidden p-2 sm:p-3"
           onMouseMove={moveTip}
           onPointerDown={hideTip}
         >
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-grey sm:hidden">
+            Tap neurons or connections to inspect values
+          </p>
           <NetworkGraph
             wih={view.wih}
             who={view.who}
@@ -414,24 +439,24 @@ export function NeuralNet() {
           />
           <div
             ref={tooltipRef}
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[130%] whitespace-nowrap border-2 border-ink bg-yellow px-2 py-1 font-mono text-xs text-ink opacity-0 transition-opacity duration-100"
+            className="pointer-events-none absolute z-10 max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-[130%] truncate border-2 border-ink bg-yellow px-2 py-1 font-mono text-xs text-ink opacity-0 transition-opacity duration-100"
             style={{ left: 0, top: 0 }}
           />
         </div>
       </Card>
 
       {/* Output activation bars */}
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <span className="label">Output activations</span>
         <div className="flex flex-col gap-1.5">
           {view.output.map((value, k) => {
             const isPred = k === view.predicted;
             return (
-              <div key={k} className="flex items-center gap-3">
-                <span className="w-4 text-right font-mono text-sm font-bold">
+              <div key={k} className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <span className="w-4 shrink-0 text-right font-mono text-sm font-bold">
                   {k}
                 </span>
-                <div className="relative h-5 flex-1 border-2 border-ink bg-white">
+                <div className="relative h-5 min-w-0 flex-1 border-2 border-ink bg-white">
                   <div
                     className="h-full"
                     style={{
@@ -440,7 +465,7 @@ export function NeuralNet() {
                     }}
                   />
                 </div>
-                <span className="w-14 text-right font-mono text-sm tabular-nums">
+                <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums sm:w-14 sm:text-sm">
                   {value.toFixed(3)}
                 </span>
               </div>
@@ -464,11 +489,13 @@ export function NeuralNet() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-[7rem] flex-col border-2 border-ink bg-white px-3 py-2">
-      <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey">
+    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-2 py-2 sm:min-w-[7rem] sm:px-3">
+      <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-grey sm:text-xs">
         {label}
       </span>
-      <span className="font-mono text-lg font-bold tabular-nums">{value}</span>
+      <span className="truncate font-mono text-base font-bold tabular-nums sm:text-lg">
+        {value}
+      </span>
     </div>
   );
 }
@@ -482,7 +509,7 @@ function DrawPad({
 }) {
   return (
     <div
-      className="grid w-full max-w-[220px] gap-1 border-2 border-ink bg-white p-1"
+      className="grid w-full max-w-[220px] gap-1 border-2 border-ink bg-white p-1 sm:max-w-[200px]"
       style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
     >
       {bits.map((bit, i) => (
@@ -491,7 +518,7 @@ function DrawPad({
           type="button"
           onClick={() => onToggle(i)}
           aria-label={`Toggle pixel ${i}`}
-          className="aspect-square w-full border border-grey-line"
+          className="aspect-square min-h-9 w-full border border-grey-line sm:min-h-0"
           style={{ background: bit ? INK : "#ffffff" }}
         />
       ))}
@@ -507,7 +534,7 @@ export function ActivationLegend() {
     { label: "Strong activation", value: 0.95 },
   ];
   return (
-    <div className="not-prose my-6 flex flex-wrap gap-4">
+    <div className="not-prose my-6 flex flex-wrap gap-3 sm:gap-4">
       {samples.map((s) => (
         <div key={s.label} className="flex items-center gap-3">
           <span
