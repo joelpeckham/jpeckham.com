@@ -80,12 +80,14 @@ export default function Home() {
             <br />
             things
             <br />
-            that{" "}
-            <span
-              className="inline-block hero-enter text-red"
-              style={cssVars({ "--enter-delay": "360ms" })}
-            >
-              ship.
+            <span className="whitespace-nowrap">
+              that{" "}
+              <span
+                className="inline-block hero-enter text-red"
+                style={cssVars({ "--enter-delay": "360ms" })}
+              >
+                ship.
+              </span>
             </span>
           </h1>
           <p
