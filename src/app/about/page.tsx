@@ -38,15 +38,15 @@ export const metadata: Metadata = {
 };
 
 const stack = [
-  "PHP",
-  "Laravel",
-  "Livewire",
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Tailwind CSS",
-  "Postgres",
-];
+  { label: "PHP", href: "https://www.php.net/" },
+  { label: "Laravel", href: "https://laravel.com/" },
+  { label: "Livewire", href: "https://livewire.laravel.com/" },
+  { label: "TypeScript", href: "https://www.typescriptlang.org/" },
+  { label: "React", href: "https://react.dev/" },
+  { label: "Next.js", href: "https://nextjs.org/" },
+  { label: "Tailwind CSS", href: "https://tailwindcss.com/" },
+  { label: "Postgres", href: "https://www.postgresql.org/" },
+] as const;
 
 export default function AboutPage() {
   return (
@@ -79,16 +79,22 @@ export default function AboutPage() {
               hospice pharmacy solution on the market. When I&apos;m not coding,
               I&apos;m outside — hiking, climbing, or skiing.
             </p>
-            <ul
+            <div
               aria-label="Tech stack"
-              className="mt-8 flex flex-wrap gap-2"
+              className="mt-8 flex max-w-[560px] flex-wrap gap-2"
             >
               {stack.map((t) => (
-                <li key={t}>
-                  <Tag className="border-paper text-paper">{t}</Tag>
-                </li>
+                <a
+                  key={t.label}
+                  href={t.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex transition-colors hover:text-yellow hover:[&_span]:border-yellow"
+                >
+                  <Tag className="border-paper text-paper">{t.label}</Tag>
+                </a>
               ))}
-            </ul>
+            </div>
           </div>
 
           <AboutPortrait className="min-w-0 md:justify-self-end" />

@@ -118,8 +118,10 @@
    Base element defaults
 --------------------------------------------------------------------------- */
 
-* {
-  border-color: var(--ink);
+@layer base {
+  * {
+    border-color: var(--ink);
+  }
 }
 
 body {
