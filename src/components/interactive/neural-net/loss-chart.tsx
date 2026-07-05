@@ -1,11 +1,13 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const RED = "#e1352a";
 const INK = "#141210";
 const GRID = "#cfc7b5";
 
-const VB_W = 700;
-const VB_H = 220;
+// Fallback size used for the very first (server) render before the container is
+// measured on the client.
+const DEFAULT_W = 640;
+const DEFAULT_H = 240;
 const PAD_L = 58;
 const PAD_R = 16;
 const PAD_T = 16;
@@ -46,82 +48,113 @@ function downsample(
 export function LossChart({ history }: { history: number[] }) {
   const points = useMemo(() => downsample(history), [history]);
 
-  const hasData = points.length > 1;
-  const maxX = hasData ? points[points.length - 1].x : 1;
-  const maxY = hasData ? Math.max(...points.map((p) => p.y)) : 1;
+  // Measure the container so the SVG can fill whatever height the layout gives
+  // it (the chart shares a stretched two-column row on wide viewports). Drawing
+  // at real pixel coordinates keeps the axis text and line crisp instead of
+  // stretching a fixed viewBox.
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [{ w, h }, setSize] = useState({ w: DEFAULT_W, h: DEFAULT_H });
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setSize({ w: rect.width, h: rect.height });
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const hasData = points.length > 0;
+  const maxX = hasData ? Math.max(points[points.length - 1].x, 1) : 1;
+  const maxY = hasData ? Math.max(...points.map((p) => p.y), 0.001) : 1;
   const minY = 0;
 
-  const plotW = VB_W - PAD_L - PAD_R;
-  const plotH = VB_H - PAD_T - PAD_B;
+  const plotW = w - PAD_L - PAD_R;
+  const plotH = h - PAD_T - PAD_B;
 
   const sx = (x: number) => PAD_L + (maxX === 0 ? 0 : (x / maxX) * plotW);
   const sy = (y: number) =>
     PAD_T + plotH - (maxY === minY ? 0 : ((y - minY) / (maxY - minY)) * plotH);
 
   const path = hasData
-    ? points.map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.x)} ${sy(p.y)}`).join(" ")
+    ? (points.length === 1
+        ? [{ x: 0, y: points[0].y }, points[0]]
+        : points
+      )
+        .map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.x)} ${sy(p.y)}`)
+        .join(" ")
     : "";
 
   const yTicks = [0, 0.5, 1].map((t) => minY + (maxY - minY) * t);
 
   return (
-    <svg
-      viewBox={`0 0 ${VB_W} ${VB_H}`}
-      className="h-auto w-full"
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      aria-label="Loss over training iterations"
-    >
-      {/* axes */}
-      <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + plotH} stroke={INK} strokeWidth={2} />
-      <line x1={PAD_L} y1={PAD_T + plotH} x2={PAD_L + plotW} y2={PAD_T + plotH} stroke={INK} strokeWidth={2} />
-
-      {/* y gridlines + labels */}
-      {yTicks.map((t, i) => {
-        const y = sy(t);
-        return (
-          <g key={i}>
-            <line x1={PAD_L} y1={y} x2={PAD_L + plotW} y2={y} stroke={GRID} strokeWidth={1} />
-            <text
-              x={PAD_L - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize={13}
-              fontFamily="var(--font-mono)"
-              fill={INK}
-            >
-              {t.toFixed(2)}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* axis titles */}
-      <text
-        x={PAD_L + plotW / 2}
-        y={VB_H - 6}
-        textAnchor="middle"
-        fontSize={13}
-        fontFamily="var(--font-mono)"
-        fill={INK}
+    <div ref={wrapRef} className="h-full min-h-[180px] w-full">
+      <svg
+        width={w}
+        height={h}
+        viewBox={`0 0 ${w} ${h}`}
+        className="block h-full w-full"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Loss over training iterations"
       >
-        Iteration
-      </text>
+        {/* axes */}
+        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + plotH} stroke={INK} strokeWidth={2} />
+        <line x1={PAD_L} y1={PAD_T + plotH} x2={PAD_L + plotW} y2={PAD_T + plotH} stroke={INK} strokeWidth={2} />
 
-      {hasData ? (
-        <path d={path} fill="none" stroke={RED} strokeWidth={2.5} />
-      ) : (
+        {/* y gridlines + labels */}
+        {yTicks.map((t, i) => {
+          const y = sy(t);
+          return (
+            <g key={i}>
+              <line x1={PAD_L} y1={y} x2={PAD_L + plotW} y2={y} stroke={GRID} strokeWidth={1} />
+              <text
+                x={PAD_L - 8}
+                y={y + 4}
+                textAnchor="end"
+                fontSize={13}
+                fontFamily="var(--font-mono)"
+                fill={INK}
+              >
+                {t.toFixed(2)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* axis titles */}
         <text
           x={PAD_L + plotW / 2}
-          y={PAD_T + plotH / 2}
+          y={h - 6}
           textAnchor="middle"
-          fontSize={15}
+          fontSize={13}
           fontFamily="var(--font-mono)"
-          fill={GRID}
+          fill={INK}
         >
-          Train to see the loss curve
+          Iteration
         </text>
-      )}
-    </svg>
+
+        {hasData ? (
+          <path d={path} fill="none" stroke={RED} strokeWidth={2.5} />
+        ) : (
+          <text
+            x={PAD_L + plotW / 2}
+            y={PAD_T + plotH / 2}
+            textAnchor="middle"
+            fontSize={15}
+            fontFamily="var(--font-mono)"
+            fill={GRID}
+          >
+            Train to see the loss curve
+          </text>
+        )}
+      </svg>
+    </div>
   );
 }

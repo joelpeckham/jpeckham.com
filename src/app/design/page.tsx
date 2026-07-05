@@ -71,7 +71,7 @@ export default function DesignPage() {
 
       <section
         aria-labelledby="portfolio-heading"
-        className="mx-auto max-w-[960px] px-5 py-16 pb-24 sm:px-8 sm:py-20 sm:pb-28"
+        className="mx-auto max-w-[1240px] px-5 py-16 pb-24 sm:px-8 sm:py-20 sm:pb-28"
       >
         <h2 id="portfolio-heading" className="sr-only">
           Portfolio pages
@@ -86,7 +86,7 @@ export default function DesignPage() {
                 height={792}
                 loading={page === 1 ? "eager" : "lazy"}
                 decoding="async"
-                className="h-auto max-w-full border-2 border-ink shadow-hard"
+                className="mx-auto block h-auto w-full border-2 border-ink"
               />
             );
 

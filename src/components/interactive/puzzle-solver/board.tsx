@@ -9,6 +9,7 @@ type BoardProps = {
 };
 
 const CELL = 100 / SIZE;
+const TILES = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 function tileIndexForKey(puzzle: Puzzle, key: string): number | null {
   const blank = puzzle.indexOf("-");
@@ -26,9 +27,9 @@ function tileIndexForKey(puzzle: Puzzle, key: string): number | null {
   }
 }
 
-// A 3x3 board of tiles. Each tile is positioned absolutely from its index and
-// keyed by its digit, so when the puzzle string changes React keeps the same
-// DOM node and the CSS transition slides it to its new cell.
+// A 3x3 board of tiles. Tiles render in fixed digit order (1–8) and are
+// positioned with transform so React never reorders DOM nodes when a tile moves.
+// Each tile is keyed by its digit, so the same element slides to its new cell.
 export function Board({
   puzzle,
   onTileClick,
@@ -55,24 +56,23 @@ export function Board({
       aria-label={`8-puzzle board. Blank is at position ${blankIndex + 1} of 9. Use arrow keys or click adjacent tiles to slide them into the blank.`}
       onKeyDown={handleKeyDown}
       className={cn(
-        "@container relative mx-auto aspect-square w-full max-w-[min(100%,20rem)] touch-manipulation border-2 border-ink bg-paper-2 select-none",
+        "@container relative mx-auto aspect-square w-full max-w-[min(100%,20rem)] touch-manipulation border-2 border-ink bg-paper-2 select-none lg:mx-0 lg:max-w-none",
         interactive &&
           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
       )}
     >
-      {puzzle.split("").map((ch, index) => {
-        if (ch === "-") return null;
+      {TILES.map((ch) => {
+        const index = puzzle.indexOf(ch);
         const row = Math.floor(index / SIZE);
         const col = index % SIZE;
         const movable = interactive && canMove(puzzle, index);
         const tileStyle = {
           width: `${CELL}%`,
           height: `${CELL}%`,
-          left: `${col * CELL}%`,
-          top: `${row * CELL}%`,
+          transform: `translate(${col * 100}%, ${row * 100}%)`,
         };
         const tileClassName = cn(
-          "absolute transition-[left,top] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+          "absolute left-0 top-0 transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
           movable ? "cursor-pointer" : "cursor-default",
         );
         const labelClassName = cn(

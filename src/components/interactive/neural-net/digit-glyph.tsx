@@ -6,11 +6,17 @@ type DigitGlyphProps = {
   bits: number[];
   size?: number;
   className?: string;
+  showBorder?: boolean;
 };
 
 // Renders a 5x5 bitmap as a crisp inline SVG so we never depend on external
 // sprite images.
-export function DigitGlyph({ bits, size = 44, className }: DigitGlyphProps) {
+export function DigitGlyph({
+  bits,
+  size = 44,
+  className,
+  showBorder = true,
+}: DigitGlyphProps) {
   return (
     <svg
       width={size}
@@ -36,15 +42,17 @@ export function DigitGlyph({ bits, size = 44, className }: DigitGlyphProps) {
         );
       })}
       {/* thin grid so empty cells stay legible */}
-      <rect
-        x={0}
-        y={0}
-        width={GRID_SIZE}
-        height={GRID_SIZE}
-        fill="none"
-        stroke={INK}
-        strokeWidth={0.08}
-      />
+      {showBorder ? (
+        <rect
+          x={0}
+          y={0}
+          width={GRID_SIZE}
+          height={GRID_SIZE}
+          fill="none"
+          stroke={INK}
+          strokeWidth={0.08}
+        />
+      ) : null}
     </svg>
   );
 }

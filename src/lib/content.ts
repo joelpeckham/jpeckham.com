@@ -48,7 +48,7 @@ export const projects: ContentItem[] = [
   {
     slug: "uwyo-schedule",
     href: "/projects/uwyo-schedule/",
-    title: "uwyoschedule — UW Class Schedule Planner",
+    title: "uwyoschedule",
     description:
       "A conflict-free class schedule planner for University of Wyoming students, built on a live copy of the UW course catalog.",
     date: "2026-06-01",

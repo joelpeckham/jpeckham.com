@@ -206,161 +206,183 @@ export function PuzzleSolver() {
   const boardInteractive = !solving && !playing;
 
   return (
-    <div className="not-prose my-8 flex flex-col gap-5">
-      {/* Controls */}
-      <Card accent="blue">
-        <div className="flex flex-col gap-4 p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-6">
-            <Select
-              label="Algorithm"
-              value={algorithm}
-              onChange={(v) => setAlgorithm(v as Algorithm)}
-              options={ALGORITHMS.map((a) => ({ value: a.id, label: a.label }))}
+    <div className="not-prose my-8 flex flex-col gap-4 lg:gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+        {/* Board */}
+        <Card accent="red" className="lg:order-1">
+          <div className="flex flex-col gap-3 p-4 sm:p-5 lg:max-w-[16rem] lg:gap-2.5 lg:p-3 xl:max-w-[18rem]">
+            <Board
+              puzzle={puzzle}
+              onTileClick={handleTileClick}
+              interactive={boardInteractive}
             />
-            <Select
-              label="Heuristic"
-              value={heuristic}
-              disabled={heuristicDisabled}
-              onChange={(v) => setHeuristic(v as Heuristic)}
-              options={HEURISTICS.map((h) => ({ value: h.id, label: h.label }))}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <Button
-              type="button"
-              variant="ink"
-              size="sm"
-              onClick={shuffle}
-              disabled={solving || playing}
+            <div
+              id={statusId}
+              aria-live="polite"
+              aria-atomic="true"
+              className="flex flex-col gap-0.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 lg:text-xs"
             >
-              {"Shuffle \u21bb"}
-            </Button>
-            <Button
-              type="button"
-              variant="blue"
-              size="sm"
-              onClick={runSolve}
-              disabled={solving || playing || solved}
-            >
-              {solving ? "Solving\u2026" : "Solve \u2192"}
-            </Button>
-            <Button
-              type="button"
-              variant="red"
-              size="sm"
-              onClick={reset}
-              disabled={solving || playing}
-            >
-              {"Reset \u21ba"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Board */}
-      <Card accent="red">
-        <div className="flex flex-col gap-4 p-4 sm:p-5">
-          <Board
-            puzzle={puzzle}
-            onTileClick={handleTileClick}
-            interactive={boardInteractive}
-          />
-          <div
-            id={statusId}
-            aria-live="polite"
-            aria-atomic="true"
-            className="flex flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3"
-          >
-            <span className={cn(solved ? "font-bold text-red" : "text-grey")}>
-              {solved
-                ? "Solved \u2713"
-                : `Manhattan distance to goal: ${distance}`}
-            </span>
-            <span className="text-grey">Your moves: {manualMoves}</span>
-          </div>
-          {!solved ? (
-            <p className="text-sm text-grey">
-              Click a tile next to the blank to slide it, or hit Solve to let a
-              search algorithm finish it for you.
-            </p>
-          ) : null}
-        </div>
-      </Card>
-
-      {/* Playback */}
-      {hasSolution ? (
-        <Card>
-          <div className="flex flex-col gap-3 p-4 sm:p-5">
-            <div className="flex items-center gap-2">
-              <span className="label">Solution playback</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPlaying(false);
-                  goToStep(step - 1);
-                }}
-                disabled={step === 0}
-              >
-                {"\u25c0 Prev"}
-              </Button>
-              <Button
-                type="button"
-                variant={playing ? "yellow" : "blue"}
-                size="sm"
-                onClick={togglePlay}
-              >
-                {playing ? "Pause \u23f8" : atEnd ? "Replay \u21ba" : "Play \u25b6"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPlaying(false);
-                  goToStep(step + 1);
-                }}
-                disabled={atEnd}
-              >
-                {"Next \u25b6"}
-              </Button>
-              <span className="font-mono text-sm tabular-nums text-grey">
-                Move {step} / {solution.length - 1}
+              <span className={cn(solved ? "font-bold text-red" : "text-grey")}>
+                {solved
+                  ? "Solved \u2713"
+                  : `Manhattan distance: ${distance}`}
               </span>
+              <span className="text-grey">Your moves: {manualMoves}</span>
             </div>
-            <div className="py-1">
-              <input
-                type="range"
-                min={0}
-                max={solution.length - 1}
-                value={step}
-                onChange={(e) => {
-                  setPlaying(false);
-                  goToStep(Number(e.target.value));
-                }}
-                className="h-2 w-full cursor-pointer accent-[color:var(--blue)]"
-                aria-label="Scrub through the solution"
-                aria-valuetext={`Move ${step} of ${solution.length - 1}`}
+            {!solved ? (
+              <p className="text-xs text-grey lg:leading-snug">
+                Click a tile next to the blank, or hit Solve.
+              </p>
+            ) : null}
+          </div>
+        </Card>
+
+        {/* Controls */}
+        <Card accent="blue" className="lg:order-2">
+          <div className="flex flex-col gap-3 p-4 sm:p-5 lg:gap-2.5 lg:p-3">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4 lg:grid-cols-1 lg:gap-2">
+              <Select
+                label="Algorithm"
+                value={algorithm}
+                onChange={(v) => setAlgorithm(v as Algorithm)}
+                options={ALGORITHMS.map((a) => ({
+                  value: a.id,
+                  label: a.label,
+                }))}
               />
+              <Select
+                label="Heuristic"
+                value={heuristic}
+                disabled={heuristicDisabled}
+                onChange={(v) => setHeuristic(v as Heuristic)}
+                options={HEURISTICS.map((h) => ({
+                  value: h.id,
+                  label: h.label,
+                }))}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 lg:gap-1.5">
+              <Button
+                type="button"
+                variant="ink"
+                size="sm"
+                className="lg:px-3 lg:py-1.5 lg:text-xs"
+                onClick={shuffle}
+                disabled={solving || playing}
+              >
+                {"Shuffle \u21bb"}
+              </Button>
+              <Button
+                type="button"
+                variant="blue"
+                size="sm"
+                className="lg:px-3 lg:py-1.5 lg:text-xs"
+                onClick={runSolve}
+                disabled={solving || playing || solved}
+              >
+                {solving ? "Solving\u2026" : "Solve \u2192"}
+              </Button>
+              <Button
+                type="button"
+                variant="red"
+                size="sm"
+                className="lg:px-3 lg:py-1.5 lg:text-xs"
+                onClick={reset}
+                disabled={solving || playing}
+              >
+                {"Reset \u21ba"}
+              </Button>
             </div>
           </div>
         </Card>
-      ) : null}
+      </div>
 
-      {/* Stats */}
-      {stats ? (
-        <div className="flex flex-col gap-2">
-          <span className="label">Last search</span>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-            <Stat label="Time" value={`${stats.timeMs.toFixed(1)} ms`} />
-            <Stat label="Nodes visited" value={stats.visited.toLocaleString()} />
-            <Stat label="Max depth" value={stats.maxDepth.toLocaleString()} />
-            <Stat label="Solution moves" value={`${stats.path.length - 1}`} />
-          </div>
+      {/* Playback + stats */}
+      {hasSolution || stats ? (
+        <div className="grid gap-4 lg:grid-cols-2 lg:gap-3">
+          {hasSolution ? (
+            <Card>
+              <div className="flex flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+                <span className="label">Solution playback</span>
+                <div className="flex flex-wrap items-center gap-2 lg:gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="lg:px-3 lg:py-1.5 lg:text-xs"
+                    onClick={() => {
+                      setPlaying(false);
+                      goToStep(step - 1);
+                    }}
+                    disabled={step === 0}
+                  >
+                    {"\u25c0 Prev"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={playing ? "yellow" : "blue"}
+                    size="sm"
+                    className="lg:px-3 lg:py-1.5 lg:text-xs"
+                    onClick={togglePlay}
+                  >
+                    {playing
+                      ? "Pause \u23f8"
+                      : atEnd
+                        ? "Replay \u21ba"
+                        : "Play \u25b6"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="lg:px-3 lg:py-1.5 lg:text-xs"
+                    onClick={() => {
+                      setPlaying(false);
+                      goToStep(step + 1);
+                    }}
+                    disabled={atEnd}
+                  >
+                    {"Next \u25b6"}
+                  </Button>
+                  <span className="font-mono text-xs tabular-nums text-grey sm:text-sm lg:text-xs">
+                    Move {step} / {solution.length - 1}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={solution.length - 1}
+                  value={step}
+                  onChange={(e) => {
+                    setPlaying(false);
+                    goToStep(Number(e.target.value));
+                  }}
+                  className="h-1.5 w-full cursor-pointer accent-[color:var(--blue)] lg:h-1"
+                  aria-label="Scrub through the solution"
+                  aria-valuetext={`Move ${step} of ${solution.length - 1}`}
+                />
+              </div>
+            </Card>
+          ) : null}
+
+          {stats ? (
+            <div className="flex min-w-0 flex-col gap-2 lg:gap-1.5">
+              <span className="label">Last search</span>
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-1.5">
+                <Stat label="Time" value={`${stats.timeMs.toFixed(1)} ms`} />
+                <Stat
+                  label="Nodes visited"
+                  value={stats.visited.toLocaleString()}
+                />
+                <Stat label="Max depth" value={stats.maxDepth.toLocaleString()} />
+                <Stat
+                  label="Solution moves"
+                  value={`${stats.path.length - 1}`}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -449,7 +471,7 @@ function Select({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border-2 border-ink bg-white px-3 py-2 font-mono text-sm normal-case tracking-normal focus-visible:outline-none disabled:cursor-not-allowed"
+        className="w-full border-2 border-ink bg-white px-3 py-2 font-mono text-sm normal-case tracking-normal focus-visible:outline-none disabled:cursor-not-allowed lg:px-2 lg:py-1.5 lg:text-xs"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -463,11 +485,13 @@ function Select({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-3 py-2 sm:min-w-[7rem]">
-      <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey">
+    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-3 py-2 sm:min-w-[7rem] lg:px-2 lg:py-1.5">
+      <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey lg:text-[0.6875rem]">
         {label}
       </span>
-      <span className="font-mono text-lg font-bold tabular-nums">{value}</span>
+      <span className="font-mono text-lg font-bold tabular-nums lg:text-base">
+        {value}
+      </span>
     </div>
   );
 }
