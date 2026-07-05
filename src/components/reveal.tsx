@@ -7,6 +7,7 @@ import {
   type ElementType,
   type ReactNode,
 } from "react";
+import { isReturningToList } from "@/components/scroll-to-top";
 import { cn, cssVars } from "@/lib/utils";
 
 type RevealProps = {
@@ -34,6 +35,11 @@ export function Reveal({
 }: RevealProps) {
   const Component = (as ?? "div") as ElementType;
   const ref = useRef<HTMLElement>(null);
+  // When arriving via a back-to-list navigation, skip the entrance animation so
+  // the page matches how the user left it and the cover morph has a visible
+  // target. Captured once at mount; on SPA back-navigation there is no
+  // hydration, so this cannot cause a server/client mismatch.
+  const [instant] = useState(isReturningToList);
   const [visible, setVisible] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -41,6 +47,7 @@ export function Reveal({
   );
 
   useEffect(() => {
+    if (instant) return;
     const node = ref.current;
     if (!node || visible) return;
 
@@ -57,13 +64,17 @@ export function Reveal({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [threshold, visible]);
+  }, [threshold, visible, instant]);
 
   return (
     <Component
       ref={ref}
-      className={cn("reveal", visible && "is-visible", className)}
-      style={delay ? cssVars({ "--reveal-delay": `${delay}ms` }) : undefined}
+      className={cn(
+        "reveal",
+        instant ? "reveal-shown" : visible && "is-visible",
+        className,
+      )}
+      style={!instant && delay ? cssVars({ "--reveal-delay": `${delay}ms` }) : undefined}
     >
       {children}
     </Component>

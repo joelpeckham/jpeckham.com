@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ViewTransition } from "react";
-import Link from "next/link";
 import { Tag } from "@/components/ui/tag";
 import {
   CoverArt,
@@ -20,7 +19,7 @@ import {
 } from "@/lib/content";
 import { siteName } from "@/lib/site";
 import { JsonLd, articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
-import { ScrollToTopOnMount } from "@/components/scroll-to-top";
+import { BackToListLink, ScrollToTopOnMount } from "@/components/scroll-to-top";
 import "highlight.js/styles/an-old-hope.css";
 
 function itemForSlug(slug: ContentSlug): ContentItem {
@@ -103,7 +102,7 @@ export function ArticleShell({
 
       <article className="mx-auto max-w-[960px] px-5 py-12 sm:px-8">
         <nav className="mb-10" aria-label="Breadcrumb">
-          <Link
+          <BackToListLink
             href={sectionHref}
             className="group inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors hover:border-ink"
           >
@@ -111,7 +110,7 @@ export function ArticleShell({
               ←
             </span>
             All {section}
-          </Link>
+          </BackToListLink>
         </nav>
 
         <header className="mb-10 border-b-4 border-ink pb-8">

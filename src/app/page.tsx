@@ -4,6 +4,7 @@ import { ArrowLink } from "@/components/ui/arrow-link";
 import { buttonVariants } from "@/components/ui/button";
 import { ContentCard } from "@/components/content-card";
 import { Reveal } from "@/components/reveal";
+import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
 import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
@@ -26,6 +27,7 @@ export default function Home() {
 
   return (
     <>
+      <RestoreCardScrollOnMount />
       <JsonLd data={websiteJsonLd()} />
       <JsonLd data={personJsonLd()} />
       <section className="relative overflow-hidden border-b-[3px] border-ink bg-paper">

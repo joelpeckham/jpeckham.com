@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
 
 const description =
-  "An older graphic design portfolio from Joel Peckham, a software engineer and former designer. He no longer takes on design work, but still likes to show this off.";
+  "An older graphic design portfolio from Joel Peckham, a software engineer and former designer. Joel no longer takes on design work, but still likes to show this off.";
 
 export const metadata: Metadata = {
   title: "Design",
@@ -45,7 +45,7 @@ export default function DesignPage() {
           <span className="label text-yellow">04 · Design</span>
           <h1
             id="design-heading"
-            className="mb-6 mt-3 max-w-[16ch] font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]"
+            className="mb-6 mt-3 max-w-[16ch] font-display text-h1 font-black uppercase leading-[1.05] tracking-light"
           >
             An old portfolio
             <br />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContentCard } from "@/components/content-card";
 import { Reveal } from "@/components/reveal";
+import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { projects } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
@@ -36,6 +37,7 @@ export default function ProjectsPage() {
       aria-labelledby="projects-heading"
       className="mx-auto max-w-[1240px] px-5 py-20 pb-24 sm:px-8 sm:py-24"
     >
+      <RestoreCardScrollOnMount />
       <Reveal>
         <SectionHeading
           index="02"
@@ -52,7 +54,7 @@ export default function ProjectsPage() {
       </Reveal>
 
       {sorted.length ? (
-        <ul className="mt-12 grid list-none gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 lg:[&>*:last-child:nth-child(3n+1)]:col-start-2">
+        <ul className="mt-12 grid list-none gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
           {sorted.map((item, i) => (
             <li key={item.slug} className="h-full">
               <Reveal
@@ -66,7 +68,7 @@ export default function ProjectsPage() {
         </ul>
       ) : (
         <Reveal className="mt-12 border-2 border-dashed border-ink/25 bg-paper px-6 py-12 text-center">
-          <p className="font-display text-h3 font-black uppercase tracking-[-0.02em]">
+          <p className="font-display text-h3 font-black uppercase tracking-light">
             Nothing here yet
           </p>
           <p className="mx-auto mt-3 max-w-[420px] leading-normal text-ink/70">

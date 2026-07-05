@@ -255,6 +255,16 @@ h4 {
     both;
 }
 
+/* Shown immediately with no entrance animation — used when returning to a list
+   page so it matches how the user left it and the cover morph lands on a
+   visible card. */
+.reveal.reveal-shown,
+.reveal.reveal-shown [data-rule] {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
 /* A ruled divider (e.g. SectionHeading) draws left-to-right once its enclosing
    reveal becomes visible. Static/visible when not inside a reveal. */
 [data-rule] {
