@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { NeuralNetwork, mulberry32, type Matrix } from "./network";
 import { NetworkGraph } from "./graph";
@@ -270,26 +271,24 @@ export function NeuralNet() {
           <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
             <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-4">
               <ControlField label={`Hidden neurons: ${hidden}`}>
-                <input
-                  type="range"
+                <Slider
+                  accent="blue"
                   min={HIDDEN_MIN}
                   max={HIDDEN_MAX}
                   value={hidden}
-                  onChange={(e) => changeHidden(Number(e.target.value))}
-                  className="w-full accent-[color:var(--blue)]"
+                  onValueChange={changeHidden}
                   aria-label="Number of hidden neurons"
                 />
               </ControlField>
 
               <ControlField label={`Learning rate: ${learningRate.toFixed(2)}`}>
-                <input
-                  type="range"
+                <Slider
+                  accent="red"
                   min={0.01}
                   max={1}
                   step={0.01}
                   value={learningRate}
-                  onChange={(e) => changeLearningRate(Number(e.target.value))}
-                  className="w-full accent-[color:var(--red)]"
+                  onValueChange={changeLearningRate}
                   aria-label="Learning rate"
                 />
               </ControlField>

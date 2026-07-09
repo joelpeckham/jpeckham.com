@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { Board } from "./board";
 import {
@@ -412,16 +413,15 @@ export function PuzzleSolver() {
                     Move {step} / {solution.length - 1}
                   </span>
                 </div>
-                <input
-                  type="range"
+                <Slider
+                  accent="blue"
                   min={0}
                   max={solution.length - 1}
                   value={step}
-                  onChange={(e) => {
+                  onValueChange={(value) => {
                     setPlaying(false);
-                    goToStep(Number(e.target.value));
+                    goToStep(value);
                   }}
-                  className="h-1.5 w-full cursor-pointer accent-[color:var(--blue)] lg:h-1"
                   aria-label="Scrub through the solution"
                   aria-valuetext={`Move ${step} of ${solution.length - 1}`}
                 />
