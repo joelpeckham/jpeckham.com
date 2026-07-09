@@ -5,6 +5,14 @@
   "engines": {
     "node": "24"
   },
+  "packageManager": "pnpm@10.10.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
   "scripts": {
     "predev": "node scripts/copy-resume.mjs",
     "dev": "next dev",
