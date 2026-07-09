@@ -64,8 +64,8 @@ export default function AboutPage() {
             <p className="max-w-[560px] text-lg leading-relaxed">
               I&apos;m Joel — a software developer and former graphic designer
               based in Laramie, Wyoming. I graduated with a B.S. in Computer
-              Science from Southern Adventist University in 2022. I work
-              end-to-end and care as much about the seams as the surface. For the
+              Science in 2022. I work end-to-end and care about doing things right before they
+              come back to bite me. For the
               last three years I&apos;ve been at{" "}
               <a
                 href="https://www.betterrx.com/"
