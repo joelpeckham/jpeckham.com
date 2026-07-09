@@ -13,6 +13,7 @@ import {
   heuristicLabel,
   manhattanDistance,
   move,
+  parsePuzzle,
   randomPuzzle,
   type Algorithm,
   type Heuristic,
@@ -48,6 +49,8 @@ export function PuzzleSolver() {
 
   const [solving, setSolving] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [puzzleInput, setPuzzleInput] = useState("");
+  const [puzzleInputError, setPuzzleInputError] = useState<string | null>(null);
 
   const dealtRef = useRef(false);
   const solvingRef = useRef(false);
@@ -85,6 +88,29 @@ export function PuzzleSolver() {
     dealtRef.current = true;
     shuffle();
   }, [shuffle]);
+
+  const applyPuzzle = useCallback((next: Puzzle) => {
+    solveGenRef.current += 1;
+    setPuzzle(next);
+    setStartPuzzle(next);
+    setSolution(null);
+    setStep(0);
+    setStats(null);
+    setPlaying(false);
+    setManualMoves(0);
+    setSolving(false);
+    solvingRef.current = false;
+    setPuzzleInputError(null);
+  }, []);
+
+  const setCustomPuzzle = useCallback(() => {
+    const parsed = parsePuzzle(puzzleInput);
+    if (!parsed) {
+      setPuzzleInputError("Invalid puzzle");
+      return;
+    }
+    applyPuzzle(parsed);
+  }, [puzzleInput, applyPuzzle]);
 
   const reset = useCallback(() => {
     solveGenRef.current += 1;
@@ -207,10 +233,10 @@ export function PuzzleSolver() {
 
   return (
     <div className="not-prose my-8 flex flex-col gap-4 lg:gap-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
         {/* Board */}
-        <Card accent="red" className="lg:order-1">
-          <div className="flex flex-col gap-3 p-4 sm:p-5 lg:max-w-[16rem] lg:gap-2.5 lg:p-3 xl:max-w-[18rem]">
+        <Card accent="red" className="h-full lg:order-1">
+          <div className="flex h-full flex-col gap-3 p-4 sm:p-5 lg:max-w-[16rem] lg:gap-2.5 lg:p-3 xl:max-w-[18rem]">
             <Board
               puzzle={puzzle}
               onTileClick={handleTileClick}
@@ -238,8 +264,8 @@ export function PuzzleSolver() {
         </Card>
 
         {/* Controls */}
-        <Card accent="blue" className="lg:order-2">
-          <div className="flex flex-col gap-3 p-4 sm:p-5 lg:gap-2.5 lg:p-3">
+        <Card accent="blue" className="h-full lg:order-2">
+          <div className="flex h-full flex-col gap-3 p-4 sm:p-5 lg:gap-2.5 lg:p-3">
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4 lg:grid-cols-1 lg:gap-2">
               <Select
                 label="Algorithm"
@@ -260,6 +286,43 @@ export function PuzzleSolver() {
                   label: h.label,
                 }))}
               />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                  type="text"
+                  value={puzzleInput}
+                  onChange={(e) => {
+                    setPuzzleInput(e.target.value);
+                    if (puzzleInputError) setPuzzleInputError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setCustomPuzzle();
+                    }
+                  }}
+                  disabled={solving || playing}
+                  placeholder="e.g. 1 2 3 4 5 6 7 8 _"
+                  aria-label="Custom puzzle state"
+                  aria-invalid={puzzleInputError ? true : undefined}
+                  className="min-w-0 flex-1 border-2 border-ink bg-white px-3 py-2 font-mono text-sm tracking-normal focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 lg:px-2 lg:py-1.5 lg:text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 lg:px-3 lg:py-1.5 lg:text-xs"
+                  onClick={setCustomPuzzle}
+                  disabled={solving || playing}
+                >
+                  {"SET \u2192"}
+                </Button>
+              </div>
+              {puzzleInputError ? (
+                <p className="font-mono text-xs text-red">{puzzleInputError}</p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2 lg:gap-1.5">
@@ -300,10 +363,10 @@ export function PuzzleSolver() {
 
       {/* Playback + stats */}
       {hasSolution || stats ? (
-        <div className="grid gap-4 lg:grid-cols-2 lg:gap-3">
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-3">
           {hasSolution ? (
-            <Card>
-              <div className="flex flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+            <Card className="h-full">
+              <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
                 <span className="label">Solution playback</span>
                 <div className="flex flex-wrap items-center gap-2 lg:gap-1.5">
                   <Button
@@ -367,21 +430,33 @@ export function PuzzleSolver() {
           ) : null}
 
           {stats ? (
-            <div className="flex min-w-0 flex-col gap-2 lg:gap-1.5">
-              <span className="label">Last search</span>
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-1.5">
-                <Stat label="Time" value={`${stats.timeMs.toFixed(1)} ms`} />
-                <Stat
-                  label="Nodes visited"
-                  value={stats.visited.toLocaleString()}
-                />
-                <Stat label="Max depth" value={stats.maxDepth.toLocaleString()} />
-                <Stat
-                  label="Solution moves"
-                  value={`${stats.path.length - 1}`}
-                />
+            <Card className="h-full">
+              <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+                <span className="label">Last search</span>
+                <div className="grid flex-1 grid-cols-2 content-center gap-y-4 sm:grid-cols-4 sm:gap-y-0">
+                  <StatItem
+                    label="Time"
+                    value={`${stats.timeMs.toFixed(1)} ms`}
+                    index={0}
+                  />
+                  <StatItem
+                    label="Nodes visited"
+                    value={stats.visited.toLocaleString()}
+                    index={1}
+                  />
+                  <StatItem
+                    label="Max depth"
+                    value={stats.maxDepth.toLocaleString()}
+                    index={2}
+                  />
+                  <StatItem
+                    label="Solution moves"
+                    value={`${stats.path.length - 1}`}
+                    index={3}
+                  />
+                </div>
               </div>
-            </div>
+            </Card>
           ) : null}
         </div>
       ) : null}
@@ -483,9 +558,24 @@ function Select({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function StatItem({
+  label,
+  value,
+  index,
+}: {
+  label: string;
+  value: string;
+  index: number;
+}) {
   return (
-    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-3 py-2 sm:min-w-[7rem] lg:px-2 lg:py-1.5">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col px-2 sm:px-3",
+        index % 2 === 1 && "border-l-2 border-ink pl-3",
+        index > 0 && "sm:border-l-2 sm:border-ink sm:pl-3",
+        index > 0 && index % 2 === 0 && "max-sm:border-l-0 max-sm:pl-2",
+      )}
+    >
       <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey lg:text-[0.6875rem]">
         {label}
       </span>

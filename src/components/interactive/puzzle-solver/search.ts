@@ -47,6 +47,62 @@ export function heuristicLabel(id: Heuristic): string {
   return HEURISTICS.find((h) => h.id === id)?.label ?? id;
 }
 
+function normalizeTileChar(ch: string): string | null {
+  if (ch === "_" || ch === "-" || ch === "0" || ch.toLowerCase() === "x") {
+    return "-";
+  }
+  if (/^[1-8]$/.test(ch)) return ch;
+  return null;
+}
+
+function validateParsedPuzzle(puzzle: string): Puzzle | null {
+  if (puzzle.length !== 9) return null;
+
+  let blank = 0;
+  const seen = new Set<string>();
+  for (const ch of puzzle) {
+    if (ch === "-") {
+      blank++;
+      continue;
+    }
+    if (!/^[1-8]$/.test(ch) || seen.has(ch)) return null;
+    seen.add(ch);
+  }
+
+  if (blank !== 1 || seen.size !== 8) return null;
+  return puzzle;
+}
+
+// Parse a user-entered puzzle string into canonical 9-char form. Accepts
+// flexible delimiters and blank aliases (_, -, 0, x/X).
+export function parsePuzzle(input: string): Puzzle | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const compact = trimmed.replace(/[^1-8_\-0Xx]/gi, "");
+  if (compact.length === 9) {
+    const tiles: string[] = [];
+    for (const ch of compact) {
+      const normalized = normalizeTileChar(ch);
+      if (normalized === null) return null;
+      tiles.push(normalized);
+    }
+    return validateParsedPuzzle(tiles.join(""));
+  }
+
+  const tokens = trimmed.split(/[^1-8_\-0Xx]+/i).filter(Boolean);
+  const tiles: string[] = [];
+  for (const token of tokens) {
+    for (const ch of token) {
+      const normalized = normalizeTileChar(ch);
+      if (normalized === null) return null;
+      tiles.push(normalized);
+    }
+  }
+
+  return validateParsedPuzzle(tiles.join(""));
+}
+
 // Sum over every tile of its grid distance from where it belongs. The blank is
 // ignored so the heuristic stays admissible (never overestimates).
 export function manhattanDistance(puzzle: Puzzle): number {

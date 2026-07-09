@@ -1,6 +1,17 @@
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
-[Read the full paper PDF](/joel_peckham_evaluating_transformer_networks_2022.pdf)
+<div className="not-prose -mt-2 mb-8 flex flex-wrap gap-3">
+  <a
+    href="/joel_peckham_evaluating_transformer_networks_2022.pdf"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "red", size: "md" }))}
+  >
+    Read the full paper
+  </a>
+</div>
 
 For my senior research project I asked a simple question: can a large language model read a news article about a company and predict whether its stock price will go up or down?
 

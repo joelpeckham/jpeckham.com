@@ -145,7 +145,7 @@ export function LossChart({ history }: { history: number[] }) {
         ) : (
           <text
             x={PAD_L + plotW / 2}
-            y={PAD_T + plotH / 2}
+            y={PAD_T + (plotH / 2) - 10}
             textAnchor="middle"
             fontSize={15}
             fontFamily="var(--font-mono)"

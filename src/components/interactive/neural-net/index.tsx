@@ -78,7 +78,7 @@ function computeView(net: NeuralNetwork, input: number[]): ViewModel {
 }
 
 const controlInput =
-  "w-full min-w-0 border-2 border-ink bg-white px-2 py-1 font-mono text-sm focus-visible:outline-none sm:w-20";
+  "h-8 w-full min-w-0 border-2 border-ink bg-white px-2 font-mono text-sm focus-visible:outline-none";
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
@@ -264,143 +264,160 @@ export function NeuralNet() {
 
   return (
     <div className="not-prose my-8 flex min-w-0 flex-col gap-4 lg:gap-5">
-      {/* Controls */}
-      <Card accent="blue">
-        <div className="flex flex-col gap-3 p-3 sm:p-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-5 lg:gap-y-3">
-            <label className="flex min-w-0 flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]">
-              Hidden neurons: {hidden}
-              <input
-                type="range"
-                min={HIDDEN_MIN}
-                max={HIDDEN_MAX}
-                value={hidden}
-                onChange={(e) => changeHidden(Number(e.target.value))}
-                className="w-full accent-[color:var(--blue)]"
-                aria-label="Number of hidden neurons"
-              />
-            </label>
+      {/* Controls + stats */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-stretch lg:gap-5">
+        <Card accent="blue" className="h-full">
+          <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-4">
+              <ControlField label={`Hidden neurons: ${hidden}`}>
+                <input
+                  type="range"
+                  min={HIDDEN_MIN}
+                  max={HIDDEN_MAX}
+                  value={hidden}
+                  onChange={(e) => changeHidden(Number(e.target.value))}
+                  className="w-full accent-[color:var(--blue)]"
+                  aria-label="Number of hidden neurons"
+                />
+              </ControlField>
 
-            <label className="flex min-w-0 flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em]">
-              Learning rate: {learningRate.toFixed(2)}
-              <input
-                type="range"
-                min={0.01}
-                max={1}
-                step={0.01}
-                value={learningRate}
-                onChange={(e) => changeLearningRate(Number(e.target.value))}
-                className="w-full accent-[color:var(--red)]"
-                aria-label="Learning rate"
-              />
-            </label>
+              <ControlField label={`Learning rate: ${learningRate.toFixed(2)}`}>
+                <input
+                  type="range"
+                  min={0.01}
+                  max={1}
+                  step={0.01}
+                  value={learningRate}
+                  onChange={(e) => changeLearningRate(Number(e.target.value))}
+                  className="w-full accent-[color:var(--red)]"
+                  aria-label="Learning rate"
+                />
+              </ControlField>
 
-            <label className="flex min-w-0 flex-col gap-1 font-mono text-xs uppercase tracking-[0.12em] sm:col-span-2 lg:col-span-1">
-              Iterations / train
-              <input
-                type="number"
-                min={1}
-                max={5000}
-                step={10}
-                value={batch}
-                onChange={(e) =>
-                  setBatch(Math.max(1, Number(e.target.value) || 1))
-                }
-                className={controlInput}
-                aria-label="Iterations per train click"
-              />
-            </label>
+              <ControlField
+                label="Iterations / train"
+                className="sm:col-span-2 lg:col-span-1"
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={5000}
+                  step={10}
+                  value={batch}
+                  onChange={(e) =>
+                    setBatch(Math.max(1, Number(e.target.value) || 1))
+                  }
+                  className={controlInput}
+                  aria-label="Iterations per train click"
+                />
+              </ControlField>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={playing ? "yellow" : "blue"}
+                size="sm"
+                onClick={() => {
+                  if (playing) {
+                    setPlaying(false);
+                    return;
+                  }
+                  if (prefersReducedMotion()) {
+                    runSteps(batch);
+                    return;
+                  }
+                  setPlaying(true);
+                }}
+              >
+                {playing ? "Pause \u23f8" : "Play \u25b6"}
+              </Button>
+              <Button type="button" variant="ink" size="sm" onClick={trainBatch}>
+                {`Train ${batch} \u2192`}
+              </Button>
+              <Button type="button" variant="red" size="sm" onClick={reset}>
+                {"Reset \u21ba"}
+              </Button>
+            </div>
           </div>
+        </Card>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
+        <Card className="h-full">
+          <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+            <span className="label">Training stats</span>
+            <div className="grid flex-1 grid-cols-3 content-center">
+              <StatItem
+                label="Iterations"
+                value={iterations.toLocaleString()}
+                index={0}
+              />
+              <StatItem
+                label="Accuracy"
+                value={`${view.accuracy.toFixed(0)}%`}
+                index={1}
+              />
+              <StatItem
+                label="Loss"
+                value={view.loss === null ? "N/A" : view.loss.toFixed(5)}
+                index={2}
+              />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Input selector */}
+      <Card>
+        <div className="flex flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+          <span className="label">Input</span>
+          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-11 sm:gap-1.5">
+            {trainingData.map((sample) => {
+              const isActive = selected === sample.label;
+              return (
+                <button
+                  key={sample.label}
+                  type="button"
+                  onClick={() => selectImage(sample.label)}
+                  aria-pressed={isActive}
+                  aria-label={`Feed the network the training image for ${sample.label}`}
+                  className={cn(
+                    "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink bg-white p-0.5 transition-transform",
+                    isActive
+                      ? "shadow-hard"
+                      : "opacity-60 hover:-translate-y-0.5 hover:opacity-100",
+                  )}
+                >
+                  <DigitGlyph
+                    bits={sample.bits}
+                    size={34}
+                    showBorder={false}
+                    className="h-full w-full"
+                  />
+                </button>
+              );
+            })}
+            <button
               type="button"
-              variant={playing ? "yellow" : "blue"}
-              size="sm"
-              onClick={() => {
-                if (playing) {
-                  setPlaying(false);
-                  return;
-                }
-                if (prefersReducedMotion()) {
-                  runSteps(batch);
-                  return;
-                }
-                setPlaying(true);
-              }}
+              onClick={selectDraw}
+              aria-pressed={selected === "draw"}
+              aria-label="Draw your own digit for the network to classify"
+              className={cn(
+                "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink p-1 font-mono text-[10px] uppercase leading-none tracking-[0.08em] transition-transform sm:text-[11px]",
+                selected === "draw"
+                  ? "bg-yellow text-ink shadow-hard"
+                  : "bg-white opacity-70 hover:-translate-y-0.5 hover:opacity-100",
+              )}
             >
-              {playing ? "Pause \u23f8" : "Play \u25b6"}
-            </Button>
-            <Button type="button" variant="ink" size="sm" onClick={trainBatch}>
-              {`Train ${batch} \u2192`}
-            </Button>
-            <Button type="button" variant="red" size="sm" onClick={reset}>
-              {"Reset \u21ba"}
-            </Button>
+              Draw
+            </button>
           </div>
         </div>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:max-w-md">
-        <Stat label="Iterations" value={iterations.toLocaleString()} />
-        <Stat label="Accuracy" value={`${view.accuracy.toFixed(0)}%`} />
-        <Stat
-          label="Loss"
-          value={view.loss === null ? "N/A" : view.loss.toFixed(5)}
-        />
-      </div>
-
-      {/* Input selector */}
-      <div className="flex min-w-0 flex-col gap-2">
-        <span className="label">Input</span>
-        <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-11 sm:gap-1.5">
-          {trainingData.map((sample) => {
-            const isActive = selected === sample.label;
-            return (
-              <button
-                key={sample.label}
-                type="button"
-                onClick={() => selectImage(sample.label)}
-                aria-pressed={isActive}
-                aria-label={`Feed the network the training image for ${sample.label}`}
-                className={cn(
-                  "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink bg-white p-0.5 transition-transform",
-                  isActive
-                    ? "shadow-hard"
-                    : "opacity-60 hover:-translate-y-0.5 hover:opacity-100",
-                )}
-              >
-                <DigitGlyph
-                  bits={sample.bits}
-                  size={34}
-                  showBorder={false}
-                  className="h-full w-full"
-                />
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={selectDraw}
-            aria-pressed={selected === "draw"}
-            aria-label="Draw your own digit for the network to classify"
-            className={cn(
-              "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink p-1 font-mono text-[10px] uppercase leading-none tracking-[0.08em] transition-transform sm:text-[11px]",
-              selected === "draw"
-                ? "bg-yellow text-ink shadow-hard"
-                : "bg-white opacity-70 hover:-translate-y-0.5 hover:opacity-100",
-            )}
-          >
-            Draw
-          </button>
-        </div>
-      </div>
-
       {/* Draw pad */}
       {selected === "draw" ? (
         <Card>
-          <div className="flex flex-col items-start gap-3 p-3 sm:flex-row sm:items-center sm:p-4">
+          <div className="flex flex-col items-start gap-2.5 p-4 sm:flex-row sm:items-center sm:p-5 lg:gap-2 lg:p-3">
             <DrawPad bits={drawn} onToggle={toggleDrawnPixel} />
             <div className="flex flex-col gap-2 text-sm">
               <p className="max-w-sm text-grey">
@@ -424,7 +441,7 @@ export function NeuralNet() {
       <Card accent="red">
         <div
           ref={graphWrapRef}
-          className="relative mx-auto min-w-0 max-w-2xl overflow-hidden p-2 sm:p-3"
+          className="relative mx-auto min-w-0 max-w-2xl overflow-hidden p-4 sm:p-5 lg:p-3"
           onMouseMove={moveTip}
           onPointerDown={hideTip}
         >
@@ -451,57 +468,95 @@ export function NeuralNet() {
       </Card>
 
       {/* Output activations + loss chart */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-        <div className="flex min-w-0 flex-col gap-2">
-          <span className="label">Output activations</span>
-          <div className="flex flex-col gap-1.5">
-            {view.output.map((value, k) => {
-              const isPred = k === view.predicted;
-              return (
-                <div key={k} className="flex min-w-0 items-center gap-2 sm:gap-3">
-                  <span className="w-4 shrink-0 text-right font-mono text-sm font-bold">
-                    {k}
-                  </span>
-                  <div className="relative h-5 min-w-0 flex-1 border-2 border-ink bg-white">
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${Math.max(0, Math.min(1, value)) * 100}%`,
-                        background: isPred ? RED : INK,
-                      }}
-                    />
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-5">
+        <Card className="h-full">
+          <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+            <span className="label">Output activations</span>
+            <div className="flex flex-1 flex-col justify-center gap-1.5">
+              {view.output.map((value, k) => {
+                const isPred = k === view.predicted;
+                return (
+                  <div
+                    key={k}
+                    className="flex min-w-0 items-center gap-2 sm:gap-3"
+                  >
+                    <span className="w-4 shrink-0 text-right font-mono text-sm font-bold">
+                      {k}
+                    </span>
+                    <div className="relative h-5 min-w-0 flex-1 border-2 border-ink bg-white">
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${Math.max(0, Math.min(1, value)) * 100}%`,
+                          background: isPred ? RED : INK,
+                        }}
+                      />
+                    </div>
+                    <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums sm:w-14 sm:text-sm">
+                      {value.toFixed(3)}
+                    </span>
                   </div>
-                  <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums sm:w-14 sm:text-sm">
-                    {value.toFixed(3)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-2">
-          <span className="label">Loss over iterations</span>
-          <Card className="h-full">
-            <div className="flex h-full flex-col p-2 sm:p-3">
-              <div className="flex-1 min-h-[180px]">
-                <LossChart history={view.lossHistory} />
-              </div>
+                );
+              })}
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
+
+        <Card className="h-full">
+          <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+            <span className="label">Loss over iterations</span>
+            <div className="min-h-[180px] flex-1">
+              <LossChart history={view.lossHistory} />
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function ControlField({
+  label,
+  children,
+  className,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="flex min-w-0 flex-col border-2 border-ink bg-white px-2 py-1.5 sm:px-3 sm:py-2">
-      <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-grey sm:text-xs">
+    <label
+      className={cn(
+        "grid min-w-0 grid-rows-[2.5rem_2rem] gap-1 font-mono text-xs uppercase tracking-[0.12em]",
+        className,
+      )}
+    >
+      <span className="flex items-end leading-snug">{label}</span>
+      <span className="flex w-full items-center">{children}</span>
+    </label>
+  );
+}
+
+function StatItem({
+  label,
+  value,
+  index,
+}: {
+  label: string;
+  value: string;
+  index: number;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col px-2 sm:px-3",
+        index > 0 && "border-l-2 border-ink pl-3",
+      )}
+    >
+      <span className="font-mono text-xs uppercase tracking-[0.12em] text-grey lg:text-[0.6875rem]">
         {label}
       </span>
-      <span className="truncate font-mono text-base font-bold tabular-nums sm:text-lg">
+      <span className="font-mono text-lg font-bold tabular-nums lg:text-base">
         {value}
       </span>
     </div>
