@@ -84,10 +84,19 @@ function MdxImage({
   );
 }
 
+function MdxTable(props: ComponentProps<"table">) {
+  return (
+    <div className="my-8 min-w-0 max-w-full overflow-x-auto [&_table]:my-0">
+      <table {...props} />
+    </div>
+  );
+}
+
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     a: MdxLink,
     img: MdxImage,
+    table: MdxTable,
     ...components,
   };
 }

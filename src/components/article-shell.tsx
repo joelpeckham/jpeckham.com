@@ -100,7 +100,7 @@ export function ArticleShell({
         </div>
       </ViewTransition>
 
-      <article className="mx-auto max-w-[960px] px-5 py-12 sm:px-8">
+      <article className="mx-auto w-full min-w-0 max-w-[960px] px-5 py-12 sm:px-8">
         <nav className="mb-10" aria-label="Breadcrumb">
           <BackToListLink
             href={sectionHref}

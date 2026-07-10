@@ -77,9 +77,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jost.variable} ${jetbrainsMono.variable} h-full`}
+      className={`${jost.variable} ${jetbrainsMono.variable} h-full overflow-x-clip`}
     >
-      <body className="flex min-h-full flex-col font-sans">
+      <body className="flex min-h-full min-w-0 flex-col overflow-x-clip font-sans">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-5 focus:top-5 focus:z-[100] focus:border-2 focus:border-ink focus:bg-paper focus:px-4 focus:py-2 focus:font-mono focus:text-sm focus:uppercase focus:tracking-[0.06em]"
@@ -87,7 +87,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <SiteHeader />
-        <main id="main" className="flex-1">
+        <main id="main" className="min-w-0 flex-1">
           {children}
         </main>
         <SiteFooter />

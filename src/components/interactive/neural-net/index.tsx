@@ -329,7 +329,27 @@ export function NeuralNet() {
                   setPlaying(true);
                 }}
               >
-                {playing ? "Pause \u23f8" : "Play \u25b6"}
+                {playing ? (
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className="size-[1.15em] shrink-0"
+                  >
+                    <rect x="4" y="3" width="3" height="10" />
+                    <rect x="9" y="3" width="3" height="10" />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    className="size-[1.15em] shrink-0"
+                  >
+                    <path d="M4 3 L13 8 L4 13 Z" />
+                  </svg>
+                )}
+                <span>{playing ? "Pause" : "Play"}</span>
               </Button>
               <Button type="button" variant="ink" size="sm" onClick={trainBatch}>
                 {`Train ${batch} \u2192`}

@@ -233,11 +233,12 @@ export function PuzzleSolver() {
   const boardInteractive = !solving && !playing;
 
   return (
-    <div className="not-prose my-8 flex flex-col gap-4 lg:gap-4">
+    <div className="not-prose my-8 flex min-w-0 max-w-full flex-col gap-4 lg:gap-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-        {/* Board */}
-        <Card accent="red" className="h-full lg:order-1">
-          <div className="flex h-full flex-col gap-3 p-4 sm:p-5 lg:max-w-[16rem] lg:gap-2.5 lg:p-3 xl:max-w-[18rem]">
+        {/* Board (+ playback on mobile) */}
+        <div className="flex min-w-0 flex-col gap-4 lg:order-1">
+          <Card accent="red" className="h-full">
+            <div className="flex h-full flex-col gap-3 p-4 sm:p-5 lg:max-w-[16rem] lg:gap-2.5 lg:p-3 xl:max-w-[18rem]">
             <Board
               puzzle={puzzle}
               onTileClick={handleTileClick}
@@ -261,8 +262,22 @@ export function PuzzleSolver() {
                 Click a tile next to the blank, or hit Solve.
               </p>
             ) : null}
-          </div>
-        </Card>
+            </div>
+          </Card>
+          {hasSolution ? (
+            <div className="lg:hidden">
+              <SolutionPlayback
+                solution={solution}
+                step={step}
+                playing={playing}
+                atEnd={atEnd}
+                togglePlay={togglePlay}
+                goToStep={goToStep}
+                setPlaying={setPlaying}
+              />
+            </div>
+          ) : null}
+        </div>
 
         {/* Controls */}
         <Card accent="blue" className="h-full lg:order-2">
@@ -366,67 +381,17 @@ export function PuzzleSolver() {
       {hasSolution || stats ? (
         <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-3">
           {hasSolution ? (
-            <Card className="h-full">
-              <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
-                <span className="label">Solution playback</span>
-                <div className="flex flex-wrap items-center gap-2 lg:gap-1.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="lg:px-3 lg:py-1.5 lg:text-xs"
-                    onClick={() => {
-                      setPlaying(false);
-                      goToStep(step - 1);
-                    }}
-                    disabled={step === 0}
-                  >
-                    {"\u25c0 Prev"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={playing ? "yellow" : "blue"}
-                    size="sm"
-                    className="lg:px-3 lg:py-1.5 lg:text-xs"
-                    onClick={togglePlay}
-                  >
-                    {playing
-                      ? "Pause \u23f8"
-                      : atEnd
-                        ? "Replay \u21ba"
-                        : "Play \u25b6"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="lg:px-3 lg:py-1.5 lg:text-xs"
-                    onClick={() => {
-                      setPlaying(false);
-                      goToStep(step + 1);
-                    }}
-                    disabled={atEnd}
-                  >
-                    {"Next \u25b6"}
-                  </Button>
-                  <span className="font-mono text-xs tabular-nums text-grey sm:text-sm lg:text-xs">
-                    Move {step} / {solution.length - 1}
-                  </span>
-                </div>
-                <Slider
-                  accent="blue"
-                  min={0}
-                  max={solution.length - 1}
-                  value={step}
-                  onValueChange={(value) => {
-                    setPlaying(false);
-                    goToStep(value);
-                  }}
-                  aria-label="Scrub through the solution"
-                  aria-valuetext={`Move ${step} of ${solution.length - 1}`}
-                />
-              </div>
-            </Card>
+            <div className="hidden h-full lg:block">
+              <SolutionPlayback
+                solution={solution}
+                step={step}
+                playing={playing}
+                atEnd={atEnd}
+                togglePlay={togglePlay}
+                goToStep={goToStep}
+                setPlaying={setPlaying}
+              />
+            </div>
           ) : null}
 
           {stats ? (
@@ -463,10 +428,10 @@ export function PuzzleSolver() {
 
       {/* Run comparison */}
       {runs.length > 0 ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 max-w-full flex-col gap-2">
           <span className="label">Run comparison</span>
           <Card>
-            <div className="overflow-x-auto">
+            <div className="min-w-0 max-w-full overflow-x-auto">
               <table className="w-full min-w-[32rem] border-collapse font-mono text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b-2 border-ink text-left uppercase tracking-[0.1em]">
@@ -608,4 +573,166 @@ function Td({
   className?: string;
 }) {
   return <td className={cn("px-3 py-2", className)}>{children}</td>;
+}
+
+const ICON_CLASS = "size-[1.15em] shrink-0";
+
+function PrevIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+      className={ICON_CLASS}
+    >
+      <rect x="3" y="3" width="2.2" height="10" />
+      <path d="M13 3 L6 8 L13 13 Z" />
+    </svg>
+  );
+}
+
+function NextIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+      className={ICON_CLASS}
+    >
+      <path d="M3 3 L10 8 L3 13 Z" />
+      <rect x="10.8" y="3" width="2.2" height="10" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+      className={ICON_CLASS}
+    >
+      <path d="M4 3 L13 8 L4 13 Z" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+      className={ICON_CLASS}
+    >
+      <rect x="4" y="3" width="3" height="10" />
+      <rect x="9" y="3" width="3" height="10" />
+    </svg>
+  );
+}
+
+function ReplayIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="square"
+      aria-hidden="true"
+      className={ICON_CLASS}
+    >
+      <path d="M12.5 8 A4.5 4.5 0 1 1 8 3.5" />
+      <path d="M8 0.8 L8 6.2 L11.4 3.5 Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function SolutionPlayback({
+  solution,
+  step,
+  playing,
+  atEnd,
+  togglePlay,
+  goToStep,
+  setPlaying,
+}: {
+  solution: Puzzle[] | null;
+  step: number;
+  playing: boolean;
+  atEnd: boolean;
+  togglePlay: () => void;
+  goToStep: (i: number) => void;
+  setPlaying: (playing: boolean) => void;
+}) {
+  if (!solution) return null;
+  const lastStep = solution.length - 1;
+  const playLabel = playing ? "Pause" : atEnd ? "Replay" : "Play";
+
+  return (
+    <Card className="h-full">
+      <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
+        <span className="label">Solution playback</span>
+        <div className="flex min-w-0 items-center gap-2 lg:gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label="Previous move"
+            className="shrink-0 max-sm:px-3 lg:px-3 lg:py-1.5 lg:text-xs"
+            onClick={() => {
+              setPlaying(false);
+              goToStep(step - 1);
+            }}
+            disabled={step === 0}
+          >
+            <PrevIcon />
+            <span className="sr-only sm:not-sr-only">Prev</span>
+          </Button>
+          <Button
+            type="button"
+            variant={playing ? "yellow" : "blue"}
+            size="sm"
+            aria-label={playLabel}
+            className="shrink-0 lg:px-3 lg:py-1.5 lg:text-xs"
+            onClick={togglePlay}
+          >
+            {playing ? <PauseIcon /> : atEnd ? <ReplayIcon /> : <PlayIcon />}
+            <span>{playLabel}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label="Next move"
+            className="shrink-0 max-sm:px-3 lg:px-3 lg:py-1.5 lg:text-xs"
+            onClick={() => {
+              setPlaying(false);
+              goToStep(step + 1);
+            }}
+            disabled={atEnd}
+          >
+            <span className="sr-only sm:not-sr-only">Next</span>
+            <NextIcon />
+          </Button>
+          <span className="ml-auto font-mono text-xs tabular-nums text-grey sm:text-sm lg:text-xs">
+            Move {step} / {lastStep}
+          </span>
+        </div>
+        <Slider
+          accent="blue"
+          min={0}
+          max={lastStep}
+          value={step}
+          onValueChange={(value) => {
+            setPlaying(false);
+            goToStep(value);
+          }}
+          aria-label="Scrub through the solution"
+          aria-valuetext={`Move ${step} of ${lastStep}`}
+        />
+      </div>
+    </Card>
+  );
 }
