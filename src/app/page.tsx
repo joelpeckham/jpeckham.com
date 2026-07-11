@@ -73,21 +73,20 @@ export default function Home() {
             Joel Peckham · Full-stack · AI · Laramie, WY
           </span>
           <h1
-            className="mb-6 mt-3 max-w-[900px] enter font-display text-mega font-black uppercase leading-[0.92] tracking-[-0.02em]"
+            className="mb-6 mt-3 max-w-[900px] enter font-display text-[clamp(3rem,10vw,8rem)] font-black uppercase leading-[0.92] tracking-[-0.02em]"
             style={cssVars({ "--enter-delay": "80ms" })}
           >
-            I build
+            I make
             <br />
-            things
+            software
             <br />
-            <span className="whitespace-nowrap">
-              that{" "}
-              <span
-                className="inline-block hero-enter text-red"
-                style={cssVars({ "--enter-delay": "360ms" })}
-              >
-                ship.
-              </span>
+            <span className="whitespace-nowrap">that helps</span>
+            <br />
+            <span
+              className="inline-block hero-enter text-red"
+              style={cssVars({ "--enter-delay": "360ms" })}
+            >
+              people.
             </span>
           </h1>
           <p
@@ -95,7 +94,7 @@ export default function Home() {
             style={cssVars({ "--enter-delay": "200ms" })}
           >
             Joel Peckham — Full-stack and AI developer. I build tools, train
-            models, and turn algorithms into things you can click on.
+            models, and put most of it right here so you can try it yourself.
           </p>
           <div
             className="pointer-events-auto mt-8 flex flex-wrap gap-4 enter"

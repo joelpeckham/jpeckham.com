@@ -57,15 +57,15 @@ export default function AboutPage() {
           <div className="min-w-0">
             <span className="label text-yellow">03 · About</span>
             <h1 className="mb-6 mt-3 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
-              I make software
+              Hi, I&apos;m Joel.
               <br />
-              that helps people.
+              Nice to meet you.
             </h1>
             <p className="max-w-[560px] text-lg leading-relaxed">
-              I&apos;m Joel — a software developer and former graphic designer
+              I&apos;m a software developer and former graphic designer
               based in Laramie, Wyoming. I graduated with a B.S. in Computer
-              Science in 2022. I work end-to-end and care about doing things right before they
-              come back to bite me. For the
+              Science in 2022. I work across the whole stack and I like doing
+              things right – <em>before </em> they come back to bite me. For the
               last three years I&apos;ve been at{" "}
               <a
                 href="https://www.betterrx.com/"
@@ -77,7 +77,7 @@ export default function AboutPage() {
               </a>
               , building the best
               hospice pharmacy solution on the market. When I&apos;m not coding,
-              I&apos;m outside — hiking, climbing, or skiing.
+              I&apos;m outside hiking, climbing, or skiing.
             </p>
             <div
               aria-label="Tech stack"

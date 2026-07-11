@@ -15,15 +15,19 @@ graphic type, and geometric shapes.
 
 ## Content Fundamentals
 
-**Voice** — first person, confident, plain-spoken. Joel talks about the work,
-not himself. Short declarative sentences; the occasional fragment for punch.
+**Voice** — first person, casual, sincere. Joel sounds like a real person who
+genuinely likes helping people, not a brand. Short declarative sentences; the
+occasional fragment for punch. No corporate jargon, no slogans that could
+appear on a consultancy's landing page ("ship", "leverage", "end-to-end",
+"sweat the seams").
 
-- **Person:** "I build things that ship." "I work end-to-end." Visitors are
-  addressed directly in CTAs ("Get in touch", "Tell me about the project").
+- **Person:** "I make software that helps people." "Hi, I'm Joel." Visitors are
+  addressed directly and warmly in CTAs ("Say hello", "Try it yourself").
 - **Casing:** Display headlines and all mono labels/buttons are **UPPERCASE**.
   Body copy is sentence case. Never title-case running text.
-- **Tone:** craftsman, not salesman — "code that reads like prose", "I care as
-  much about the seams as the surface". Specific over generic.
+- **Tone:** friendly and concrete, never salesy or clever-for-clever's-sake.
+  Say what the thing actually does and invite people to try it. Specific over
+  generic; sincere over slick.
 - **Numbers as structure:** sections are indexed `01 / 02 / 03` in mono, used as
   a design device (see `Badge`, `SectionHeading`).
 - **Emoji:** avoided. A single geometric glyph (`✱`, `→`) may stand in for an
