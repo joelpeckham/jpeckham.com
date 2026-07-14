@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Tag } from "@/components/ui/tag";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { AboutPortrait } from "@/components/about-portrait";
+import { AboutReadyGate } from "@/components/about-ready-gate";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResumePreview } from "@/components/resume-preview";
@@ -52,120 +53,129 @@ export default function AboutPage() {
   return (
     <>
       <JsonLd data={profilePageJsonLd()} />
-      <section className="relative overflow-hidden border-b-[3px] border-ink bg-ink text-paper">
-        <div className="mx-auto grid max-w-[1240px] items-start gap-10 px-5 py-20 sm:gap-12 sm:px-8 sm:py-24 md:grid-cols-[1.3fr_minmax(0,1fr)] lg:py-28">
-          <div className="min-w-0">
-            <span className="label text-yellow">03 · About</span>
-            <h1 className="mb-6 mt-3 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
-              Hi, I&apos;m Joel.
-              <br />
-              Nice to meet you.
-            </h1>
-            <p className="max-w-[560px] text-lg leading-relaxed">
-              I&apos;m a software developer and former graphic designer
-              based in Laramie, Wyoming. I graduated with a B.S. in Computer
-              Science in 2022. I work across the whole stack and I like doing
-              things right – <em>before </em> they come back to bite me. For the
-              last three years I&apos;ve been at{" "}
-              <a
-                href="https://www.betterrx.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
-              >
-                BetterRx
-              </a>
-              , building the best
-              hospice pharmacy solution on the market. When I&apos;m not coding,
-              I&apos;m outside hiking, climbing, or skiing.
-            </p>
-            <div
-              aria-label="Tech stack"
-              className="mt-8 flex max-w-[560px] flex-wrap gap-2"
-            >
-              {stack.map((t) => (
+      <AboutReadyGate>
+        <section className="relative overflow-hidden border-b-[3px] border-ink bg-ink text-paper">
+          <div className="mx-auto grid max-w-[1240px] items-start gap-10 px-5 py-20 sm:gap-12 sm:px-8 sm:py-24 md:grid-cols-[1.3fr_minmax(0,1fr)] lg:py-28">
+            <div className="min-w-0">
+              <span className="label text-yellow">03 · About</span>
+              <h1 className="mb-6 mt-3 font-display text-h1 font-black uppercase leading-[1.05] tracking-[-0.02em]">
+                Hi, I&apos;m Joel.
+                <br />
+                Nice to meet you.
+              </h1>
+              <p className="max-w-[560px] text-lg leading-relaxed">
+                I&apos;m a software developer and former graphic designer based
+                in Laramie, Wyoming. I graduated with a B.S. in Computer Science
+                in 2022. I work across the whole stack and I like doing things
+                right – <em>before </em> they come back to bite me. For the last
+                three years I&apos;ve been at{" "}
                 <a
-                  key={t.label}
-                  href={t.href}
+                  href="https://www.betterrx.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex transition-colors hover:text-yellow hover:[&_span]:border-yellow"
+                  className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
                 >
-                  <Tag className="border-paper text-paper">{t.label}</Tag>
+                  BetterRx
                 </a>
-              ))}
+                , building the best hospice pharmacy solution on the market.
+                When I&apos;m not coding, I&apos;m outside hiking, climbing, or
+                skiing.
+              </p>
+              <div
+                aria-label="Tech stack"
+                className="mt-8 flex max-w-[560px] flex-wrap gap-2"
+              >
+                {stack.map((t) => (
+                  <a
+                    key={t.label}
+                    href={t.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex transition-colors hover:text-yellow hover:[&_span]:border-yellow"
+                  >
+                    <Tag className="border-paper text-paper">{t.label}</Tag>
+                  </a>
+                ))}
+              </div>
             </div>
+
+            <AboutPortrait className="min-w-0 md:justify-self-end" />
           </div>
+        </section>
 
-          <AboutPortrait className="min-w-0 md:justify-self-end" />
-        </div>
-      </section>
+        <Reveal
+          as="section"
+          className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8"
+        >
+          <SectionHeading
+            index="04"
+            eyebrow="Say hello"
+            title="Contact"
+            accent="blue"
+          />
+          <ul className="mt-8 space-y-4 font-mono">
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                Email
+              </span>
+              <ArrowLink href="mailto:mail@jpeckham.com">
+                mail@jpeckham.com
+              </ArrowLink>
+            </li>
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                Phone
+              </span>
+              <ArrowLink href="tel:13076311986">+1 (307) 631-1986</ArrowLink>
+              <span className="text-xs text-grey">
+                (Text message preferred.)
+              </span>
+            </li>
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                GitHub
+              </span>
+              <ArrowLink href="https://github.com/joelpeckham" external>
+                github.com/joelpeckham
+              </ArrowLink>
+            </li>
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                LinkedIn
+              </span>
+              <ArrowLink
+                href="https://www.linkedin.com/in/joelpeckham/"
+                external
+              >
+                linkedin.com/in/joelpeckham
+              </ArrowLink>
+            </li>
+          </ul>
+        </Reveal>
 
-      <Reveal as="section" className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8">
-        <SectionHeading
-          index="04"
-          eyebrow="Say hello"
-          title="Contact"
-          accent="blue"
-        />
-        <ul className="mt-8 space-y-4 font-mono">
-          <li className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-meta uppercase tracking-[0.18em] text-grey">
-              Email
-            </span>
-            <ArrowLink href="mailto:mail@jpeckham.com">
-              mail@jpeckham.com
-            </ArrowLink>
-          </li>
-          <li className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-meta uppercase tracking-[0.18em] text-grey">
-              Phone
-            </span>
-            <ArrowLink href="tel:13076311986">
-              +1 (307) 631-1986
-            </ArrowLink>
-            <span className="text-xs text-grey">(Text message preferred.)</span>
-          </li>
-          <li className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-meta uppercase tracking-[0.18em] text-grey">
-              GitHub
-            </span>
-            <ArrowLink
-              href="https://github.com/joelpeckham"
-              external
+        <Reveal
+          as="section"
+          className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8"
+        >
+          <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <SectionHeading
+              index="05"
+              eyebrow="Curriculum vitae"
+              title="Resume"
+            />
+            <a
+              href="/Joel_Peckham_Resume.pdf"
+              className={cn(
+                buttonVariants({ variant: "ink", size: "sm" }),
+                "shrink-0",
+              )}
             >
-              github.com/joelpeckham
-            </ArrowLink>
-          </li>
-          <li className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-meta uppercase tracking-[0.18em] text-grey">
-              LinkedIn
-            </span>
-            <ArrowLink
-              href="https://www.linkedin.com/in/joelpeckham/"
-              external
-            >
-              linkedin.com/in/joelpeckham
-            </ArrowLink>
-          </li>
-        </ul>
-      </Reveal>
-
-      <Reveal as="section" className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-8">
-        <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <SectionHeading index="05" eyebrow="Curriculum vitae" title="Resume" />
-          <a
-            href="/Joel_Peckham_Resume.pdf"
-            className={cn(
-              buttonVariants({ variant: "ink", size: "sm" }),
-              "shrink-0",
-            )}
-          >
-            Download PDF →
-          </a>
-        </div>
-        <ResumePreview />
-      </Reveal>
+              Download PDF →
+            </a>
+          </div>
+          <ResumePreview />
+        </Reveal>
+      </AboutReadyGate>
     </>
   );
 }

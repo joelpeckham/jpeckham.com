@@ -1,4 +1,8 @@
+"use client";
+
 import Image from "next/image";
+import { useCallback, useRef } from "react";
+import { useAboutReady } from "@/components/about-ready-gate";
 import { cn, cssVars } from "@/lib/utils";
 
 /*
@@ -85,6 +89,10 @@ function toCssPolygon(pts: Vertex[]) {
     .join(", ")})`;
 }
 
+// Number of <Image> layers that must fire onLoad / onError before the portrait
+// is considered ready. Matches the three layers rendered below.
+const IMAGE_LAYER_COUNT = 3;
+
 type AboutPortraitProps = {
   className?: string;
 };
@@ -105,6 +113,20 @@ export function AboutPortrait({ className }: AboutPortraitProps = {}) {
     (1 - toSurface(POP_TOP_HEIGHT)) *
     100
   ).toFixed(2)}% ${(toSurface(0) * 100).toFixed(2)}%)`;
+
+  const markReady = useAboutReady();
+  const loadedRef = useRef(0);
+  const readyFiredRef = useRef(false);
+  const markLayerSettled = useCallback(() => {
+    loadedRef.current += 1;
+    if (
+      !readyFiredRef.current &&
+      loadedRef.current >= IMAGE_LAYER_COUNT
+    ) {
+      readyFiredRef.current = true;
+      markReady?.();
+    }
+  }, [markReady]);
 
   return (
     <div
@@ -145,6 +167,8 @@ export function AboutPortrait({ className }: AboutPortraitProps = {}) {
             priority
             sizes="(min-width: 768px) 340px, 90vw"
             className="object-cover [clip-path:var(--clip-base)] transition-[clip-path] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:[clip-path:var(--clip-hover)]"
+            onLoad={markLayerSettled}
+            onError={markLayerSettled}
           />
           {/* Foreground cutout, body layer: clipped to the same rotating triangle
               as the photo so the snowboard and feet clip cleanly during the mask
@@ -156,6 +180,8 @@ export function AboutPortrait({ className }: AboutPortraitProps = {}) {
             priority
             sizes="(min-width: 768px) 340px, 90vw"
             className="object-cover [clip-path:var(--clip-base)] transition-[clip-path] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:group-hover:[clip-path:var(--clip-hover)]"
+            onLoad={markLayerSettled}
+            onError={markLayerSettled}
           />
           {/* Foreground cutout, head layer: clipped to the static top band so the
               upper body keeps popping out above the triangle and never gets cut
@@ -169,6 +195,8 @@ export function AboutPortrait({ className }: AboutPortraitProps = {}) {
             sizes="(min-width: 768px) 340px, 90vw"
             className="object-cover"
             style={{ clipPath: bandInset }}
+            onLoad={markLayerSettled}
+            onError={markLayerSettled}
           />
         </div>
       </div>
