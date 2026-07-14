@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowLink } from "@/components/ui/arrow-link";
 import { Shape } from "@/components/ui/shape";
 import { cn } from "@/lib/utils";
 
@@ -41,12 +41,12 @@ export default function NotFound() {
       <p className="mt-3 max-w-[420px] text-ink/80">
         The page you&apos;re looking for doesn&apos;t exist or has moved.
       </p>
-      <ArrowLink
+      <Link
         href="/"
         className={cn(buttonVariants({ variant: "ink", size: "lg" }), "mt-8")}
       >
         Back home
-      </ArrowLink>
+      </Link>
     </div>
   );
 }
