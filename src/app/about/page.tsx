@@ -150,6 +150,14 @@ export default function AboutPage() {
                 linkedin.com/in/joelpeckham
               </ArrowLink>
             </li>
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                X
+              </span>
+              <ArrowLink href="https://x.com/peckham_joel" external>
+                x.com/peckham_joel
+              </ArrowLink>
+            </li>
           </ul>
         </Reveal>
 

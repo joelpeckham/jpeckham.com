@@ -7,6 +7,7 @@ const links = [
     label: "LinkedIn",
     external: true,
   },
+  { href: "https://x.com/peckham_joel", label: "X", external: true },
   { href: "mailto:mail@jpeckham.com", label: "Email", external: false },
   { href: "/feed.xml", label: "RSS", external: false },
 ];

@@ -48,6 +48,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    creator: "@peckham_joel",
     title: "Joel Peckham — Software & AI Developer",
     description:
       "Full-stack and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",

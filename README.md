@@ -2,7 +2,7 @@
 
 This is the source for my personal site. It's basically my resume — except the projects have buttons you can actually press.
 
-**[Live site](https://jpeckham.com)** · **[Resume (PDF)](https://jpeckham.com/Joel_Peckham_Resume.pdf)** · **[Email](mailto:mail@jpeckham.com)** · **[GitHub](https://github.com/joelpeckham)** · **[LinkedIn](https://www.linkedin.com/in/joelpeckham/)**
+**[Live site](https://jpeckham.com)** · **[Resume (PDF)](https://jpeckham.com/Joel_Peckham_Resume.pdf)** · **[Email](mailto:mail@jpeckham.com)** · **[GitHub](https://github.com/joelpeckham)** · **[LinkedIn](https://www.linkedin.com/in/joelpeckham/)** · **[X](https://x.com/peckham_joel)**
 
 Anyway, I'm Joel! – a fullstack and AI developer based in Laramie, Wyoming. For the last three years I've been at [BetterRx](https://www.betterrx.com/) building hospice pharmacy software, and I graduated with a B.S. in Computer Science in 2022.
 

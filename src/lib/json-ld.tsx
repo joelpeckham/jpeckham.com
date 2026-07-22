@@ -72,6 +72,7 @@ export function personJsonLd() {
     sameAs: [
       "https://github.com/joelpeckham",
       "https://www.linkedin.com/in/joelpeckham/",
+      "https://x.com/peckham_joel",
     ],
   };
 }
