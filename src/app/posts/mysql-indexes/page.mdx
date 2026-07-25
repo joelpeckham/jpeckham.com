@@ -74,7 +74,7 @@ If the rule feels arbitrary, picture a phone book. It's sorted by last name, the
 
 Equalities (plus `IN` and prefix `LIKE`) stack from the left. A range on a middle column uses that column, then freezes every column after it for the index *range walk*. The freeze isn't spite. It's the same sort order doing its job: within one `(org_id, status)` pair the entries are sorted by `assignee_id`, but across a *range* of statuses those `assignee_id` values are a bunch of interleaved runs, not one sorted list, so the walk can't use them to narrow further. MySQL may still filter on the later columns after the fact, but they don't tighten the walk the way people hope.<Cite n={5} /> The heuristic for web list queries: equalities first, range last.
 
-Drag to reorder the index. Cycle the predicates. Try the "Range freezes status" preset: the sorted key strip shows why status turns into interleaved runs the walk cannot span.
+Open the nested phone book. Drag the key order and watch the groups re-nest. Tap a column to "know it," put a range in the middle, or try "Missing org_id" — matches shatter into fragments across every org, exactly like hunting every Joel.
 
 <LeftPrefixDemo />
 
@@ -103,12 +103,12 @@ Selectivity is "how many rows share this value?" relative to the query you run, 
 
 Old folklore about "indexes only help under 30% of the table" is obsolete. The optimizer decides with estimates and cost, not that rule of thumb.<Cite n={7} /> Your job at this stage is the gut check: low-cardinality flags (`status`, `is_active`, booleans) make weak *leading* keys. High-cardinality lookups (`token_hash`, `email`, `public_id`) make fine single-column uniques. Multi-tenant list endpoints almost always want the tenant id first.
 
-Drag the sliders. Watch "status alone" stay huge until you scope the org.
+Play Guess Who with the same three questions in two orders. The survivors never change. The peek count does — because only the first question gets a free index jump, and everything after walks whoever is still standing.
 
 <SelectivityDemo />
 
 <Takeaway>
-Low-cardinality flags make weak *leading* keys. Scope the tenant (or other high-cardinality equality) first, then status.
+Low-cardinality flags make weak *leading* keys. Scope the tenant (or other high-cardinality equality) first, then status. Same answer, different bill.
 </Takeaway>
 
 Toy math. Production wants realistic volumes in staging. Twenty-row fixtures will lie to you about indexes.
@@ -253,7 +253,7 @@ LIMIT 20;
 Equality then range on the trailing column. Indexing only `created_at` helps nobody's "my orders" page.
 
 <TryIt>
-Paste your hottest list query into a scratch file. Write the composite that matches its left prefix (equalities first, range last). Open the left-prefix demo, rebuild that key order, and confirm the walk lights what you expect, especially if you put a date range in the middle.
+Paste your hottest list query into a scratch file. Write the composite that matches its left prefix (equalities first, range last). Open the nested phone book, rebuild that key order, and confirm the walk lights what you expect — especially if you put a date range in the middle.
 </TryIt>
 
 ## Checklist before you merge the migration

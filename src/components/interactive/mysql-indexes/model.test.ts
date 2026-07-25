@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INDEX_COLS,
-  buildLeftPrefixKeyScene,
-  estimateSelectivity,
+  buildPhoneBookScene,
+  dealGuessBoard,
+  evaluateGuessOrder,
   evaluateLeftPrefix,
+  guessOrderKey,
   moveCol,
   reorderCol,
   predicateSqlLines,
   strategyStory,
+  tileMatchesAll,
 } from "./model";
 
 describe("evaluateLeftPrefix", () => {
@@ -42,22 +45,6 @@ describe("evaluateLeftPrefix", () => {
     expect(v.tone).toBe("warn");
   });
 
-  it("blocks leading wildcard LIKE", () => {
-    const v = evaluateLeftPrefix(["org_id", "subject"], {
-      subject: "like_contains",
-    });
-    expect(v.status).toBe("none");
-  });
-
-  it("allows prefix LIKE to continue the walk", () => {
-    const v = evaluateLeftPrefix(["org_id", "subject"], {
-      org_id: "eq",
-      subject: "like_prefix",
-    });
-    expect(v.status).toBe("uses");
-    expect(v.usableCols).toEqual(["org_id", "subject"]);
-  });
-
   it("treats a gap as a partial prefix", () => {
     const v = evaluateLeftPrefix(DEFAULT_INDEX_COLS, {
       org_id: "eq",
@@ -74,30 +61,20 @@ describe("predicateSqlLines", () => {
     const lines = predicateSqlLines(DEFAULT_INDEX_COLS, {
       status: "eq",
       org_id: "eq",
-      subject: "like_contains",
     });
-    expect(lines).toEqual([
-      "org_id = ?",
-      "status = ?",
-      "subject LIKE '%refund%'",
-    ]);
+    expect(lines).toEqual(["org_id = ?", "status = ?"]);
   });
 
   it("returns no lines when nothing is toggled on", () => {
     expect(predicateSqlLines(DEFAULT_INDEX_COLS, {})).toEqual([]);
   });
 
-  it("renders each operator shape", () => {
-    const lines = predicateSqlLines(["org_id", "status", "updated_at"], {
-      org_id: "in",
-      status: "like_prefix",
+  it("renders equality and range shapes", () => {
+    const lines = predicateSqlLines(["org_id", "updated_at"], {
+      org_id: "eq",
       updated_at: "gt",
     });
-    expect(lines).toEqual([
-      "org_id IN (?, ?, ?)",
-      "status LIKE 'refund%'",
-      "updated_at > ?",
-    ]);
+    expect(lines).toEqual(["org_id = ?", "updated_at > ?"]);
   });
 });
 
@@ -125,17 +102,45 @@ describe("reorderCol", () => {
   });
 });
 
-describe("estimateSelectivity", () => {
-  it("makes status-alone look worse than org-scoped status", () => {
-    const e = estimateSelectivity({
-      orgCount: 200,
-      statusDistinct: 3,
-      assigneeDistinct: 40,
-      orgScoped: true,
-    });
-    expect(e.statusAloneRows).toBeGreaterThan(e.orgThenStatusRows);
-    expect(e.orgStatusAssigneeRows).toBeLessThan(e.orgThenStatusRows);
-    expect(e.statusTone).toBe("bad");
+describe("evaluateGuessOrder", () => {
+  const board = dealGuessBoard(48);
+
+  it("deals a board with expected selectivities", () => {
+    expect(board).toHaveLength(48);
+    const orgHits = board.filter((t) => t.org === 42).length;
+    const statusHits = board.filter((t) => t.status === "open").length;
+    const assigneeHits = board.filter((t) => t.assignee === 7).length;
+    expect(orgHits).toBe(6); // 1/8
+    expect(statusHits).toBe(16); // 1/3
+    expect(assigneeHits).toBe(8); // 1/6
+  });
+
+  it("ends with the same survivors regardless of order", () => {
+    const a = evaluateGuessOrder(board, ["status", "org", "assignee"]);
+    const b = evaluateGuessOrder(board, ["org", "status", "assignee"]);
+    expect(a.survivors).toBe(b.survivors);
+    expect(a.survivors).toBe(
+      board.filter(tileMatchesAll).length,
+    );
+  });
+
+  it("charges more peeks when the weak question leads", () => {
+    const trap = evaluateGuessOrder(board, ["status", "org", "assignee"]);
+    const good = evaluateGuessOrder(board, ["org", "status", "assignee"]);
+    expect(trap.totalPeeks).toBeGreaterThan(good.totalPeeks);
+    expect(trap.stages[0].indexJump).toBe(true);
+    expect(trap.stages[0].peeks).toBe(0);
+    expect(good.stages[0].peeks).toBe(0);
+    // After status-first, ~16 survivors; peeks for org = 16
+    expect(trap.stages[1].peeks).toBe(16);
+    // After org-first, 6 survivors; peeks for status = 6
+    expect(good.stages[1].peeks).toBe(6);
+  });
+
+  it("formats order keys for the scoreboard", () => {
+    expect(guessOrderKey(["org", "status", "assignee"])).toBe(
+      "org → status → assignee",
+    );
   });
 });
 
@@ -149,7 +154,7 @@ describe("strategyStory", () => {
   });
 });
 
-describe("buildLeftPrefixKeyScene", () => {
+describe("buildPhoneBookScene", () => {
   it("uses interleaved mode when a range freezes status", () => {
     const indexCols = ["org_id", "updated_at", "status"] as const;
     const predicates = {
@@ -158,10 +163,15 @@ describe("buildLeftPrefixKeyScene", () => {
       status: "eq" as const,
     };
     const verdict = evaluateLeftPrefix(indexCols, predicates);
-    const scene = buildLeftPrefixKeyScene(indexCols, predicates, verdict);
-    expect(scene.mode).toBe("interleaved");
-    expect(scene.matches.some(Boolean)).toBe(true);
-    expect(scene.matches.every(Boolean)).toBe(false);
+    const scene = buildPhoneBookScene(indexCols, predicates, verdict);
+    expect(scene.highlight.kind).toBe("interleaved");
+    if (scene.highlight.kind === "interleaved") {
+      expect(scene.highlight.matchRowIds.length).toBeGreaterThan(0);
+      expect(scene.highlight.walkRowIds.length).toBeGreaterThan(
+        scene.highlight.matchRowIds.length,
+      );
+    }
+    expect(scene.badge.toLowerCase()).toContain("interleaved");
   });
 
   it("uses a contiguous walk for a clean equality prefix", () => {
@@ -169,12 +179,47 @@ describe("buildLeftPrefixKeyScene", () => {
       org_id: "eq",
       status: "eq",
     });
-    const scene = buildLeftPrefixKeyScene(
+    const scene = buildPhoneBookScene(
       DEFAULT_INDEX_COLS,
       { org_id: "eq", status: "eq" },
       verdict,
     );
-    expect(scene.mode).toBe("contiguous");
-    expect(scene.walkEnd).toBeGreaterThan(scene.walkStart);
+    expect(scene.highlight.kind).toBe("contiguous");
+    if (scene.highlight.kind === "contiguous") {
+      expect(scene.highlight.rowIds.length).toBeGreaterThan(0);
+    }
+    expect(scene.badge).toContain("1 jump");
+  });
+
+  it("scatters matches when the leading column is missing", () => {
+    const verdict = evaluateLeftPrefix(DEFAULT_INDEX_COLS, {
+      status: "eq",
+      assignee_id: "eq",
+    });
+    const scene = buildPhoneBookScene(
+      DEFAULT_INDEX_COLS,
+      { status: "eq", assignee_id: "eq" },
+      verdict,
+    );
+    expect(scene.highlight.kind).toBe("scattered");
+    if (scene.highlight.kind === "scattered") {
+      expect(scene.highlight.fragmentCount).toBeGreaterThan(1);
+      expect(scene.highlight.rowIds.length).toBeGreaterThan(0);
+    }
+    expect(scene.badge).toContain("fragments");
+  });
+
+  it("re-nests groups when index columns reorder", () => {
+    const verdict = evaluateLeftPrefix(
+      ["status", "org_id", "updated_at"],
+      { status: "eq" },
+    );
+    const scene = buildPhoneBookScene(
+      ["status", "org_id", "updated_at"],
+      { status: "eq" },
+      verdict,
+    );
+    expect(scene.groups[0]?.col).toBe("status");
+    expect(scene.columns[0]).toBe("status");
   });
 });
