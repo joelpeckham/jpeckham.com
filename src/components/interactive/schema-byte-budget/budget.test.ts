@@ -3,7 +3,14 @@ import {
   createPreset,
   decimalStorageBytes,
   estimateRow,
+  idStrategyEstimate,
+  jsonNumberRoundTrip,
+  pagesForLimit,
   resetColumnIdCounter,
+  rowsPerPage,
+  simulateTimeDisplay,
+  sumMoneyLines,
+  varcharWorstCaseBytes,
   type SchemaColumn,
 } from "./budget";
 
@@ -96,5 +103,110 @@ describe("estimateRow", () => {
     ]);
     expect(ts.columns[0].bytes).toBe(4);
     expect(dt.columns[0].bytes).toBe(5);
+  });
+});
+
+describe("varcharWorstCaseBytes", () => {
+  it("prices VARCHAR(255) utf8mb4 near 1KB", () => {
+    const v = varcharWorstCaseBytes(255, "utf8mb4");
+    expect(v.perChar).toBe(4);
+    expect(v.payload).toBe(1020);
+    expect(v.prefix).toBe(2);
+    expect(v.bytes).toBe(1022);
+  });
+
+  it("uses a 1-byte prefix when the max payload fits in 255 bytes", () => {
+    const v = varcharWorstCaseBytes(80, "utf8mb4");
+    expect(v.payload).toBe(320);
+    // 320 > 255 → still 2-byte prefix
+    expect(v.prefix).toBe(2);
+    const skinny = varcharWorstCaseBytes(60, "utf8mb4");
+    expect(skinny.payload).toBe(240);
+    expect(skinny.prefix).toBe(1);
+  });
+});
+
+describe("idStrategyEstimate", () => {
+  it("flags JS precision only for bare BIGINT PK", () => {
+    expect(idStrategyEstimate("int-pk").jsPrecisionRisk).toBe(false);
+    expect(idStrategyEstimate("bigint-pk").jsPrecisionRisk).toBe(true);
+    expect(idStrategyEstimate("ulid-pk").jsPrecisionRisk).toBe(false);
+    expect(idStrategyEstimate("bigint-plus-public").jsPrecisionRisk).toBe(
+      false,
+    );
+  });
+
+  it("sizes ULID PK as 26×4 under utf8mb4", () => {
+    expect(idStrategyEstimate("ulid-pk").clusteredKeyBytes).toBe(104);
+    expect(idStrategyEstimate("bigint-plus-public").clusteredKeyBytes).toBe(8);
+    expect(idStrategyEstimate("bigint-plus-public").totalBytes).toBe(112);
+  });
+});
+
+describe("simulateTimeDisplay", () => {
+  it("keeps DATETIME digits across session timezones", () => {
+    const sim = simulateTimeDisplay({
+      kind: "datetime",
+      writtenLocal: "2026-03-15T00:00:00",
+      writeSessionTz: "America/Phoenix",
+      readSessionTz: "America/New_York",
+    });
+    expect(sim.converts).toBe(false);
+    expect(sim.displayedLocal).toBe("2026-03-15 00:00:00");
+    expect(sim.timestamp2038Risk).toBe(false);
+  });
+
+  it("shifts TIMESTAMP display when the read session timezone changes", () => {
+    const sim = simulateTimeDisplay({
+      kind: "timestamp",
+      writtenLocal: "2026-03-15T00:00:00",
+      writeSessionTz: "America/Phoenix",
+      readSessionTz: "America/New_York",
+    });
+    expect(sim.converts).toBe(true);
+    expect(sim.timestamp2038Risk).toBe(true);
+    // Phoenix (UTC-7) midnight → 07:00 UTC → 03:00 Eastern (EDT in March)
+    expect(sim.displayedLocal).toBe("2026-03-15 03:00:00");
+  });
+});
+
+describe("sumMoneyLines", () => {
+  it("keeps cents and DECIMAL exact", () => {
+    for (const mode of ["cents", "decimal"] as const) {
+      const sum = sumMoneyLines(mode, 100, 10);
+      expect(sum.expectedCents).toBe(1000);
+      expect(sum.storedTotalCents).toBe(1000);
+      expect(sum.driftCents).toBe(0);
+      expect(sum.floatLies).toBe(false);
+    }
+  });
+
+  it("shows DOUBLE raw sum lying and truncate drift", () => {
+    const sum = sumMoneyLines("double", 10, 10);
+    expect(sum.floatLies).toBe(true);
+    expect(sum.floatRaw).not.toBe(1);
+    expect(sum.storedTotalCents).toBe(99);
+    expect(sum.driftCents).toBe(-1);
+    expect(sum.roundedCents).toBe(100);
+  });
+});
+
+describe("jsonNumberRoundTrip", () => {
+  it("corrupts ids above MAX_SAFE_INTEGER", () => {
+    const rt = jsonNumberRoundTrip(BigInt("9007199254740993"));
+    expect(rt.corrupted).toBe(true);
+    expect(rt.afterJson).not.toBe(rt.mysqlId);
+  });
+
+  it("keeps small ints intact", () => {
+    const rt = jsonNumberRoundTrip(BigInt(42));
+    expect(rt.corrupted).toBe(false);
+  });
+});
+
+describe("rowsPerPage", () => {
+  it("packs more skinny rows than fat ones", () => {
+    expect(rowsPerPage(100)).toBeGreaterThan(rowsPerPage(2000));
+    expect(pagesForLimit(2000, 50)).toBeGreaterThan(pagesForLimit(100, 50));
   });
 });

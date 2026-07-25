@@ -107,8 +107,225 @@ function fspExtraBytes(fsp: number | undefined): number {
   return 3;
 }
 
-function varcharLengthPrefix(charBytes: number): number {
+export function varcharLengthPrefix(charBytes: number): number {
   return charBytes < 256 ? 1 : 2;
+}
+
+/** Worst-case on-page budget for VARCHAR(n) under a charset (teaching estimate). */
+export function varcharWorstCaseBytes(
+  length: number,
+  charset: Charset = "utf8mb4",
+): { payload: number; prefix: number; bytes: number; perChar: number } {
+  const n = Math.max(0, Math.floor(length));
+  const perChar = CHARSET_BYTES[charset];
+  const payload = n * perChar;
+  const prefix = varcharLengthPrefix(payload);
+  return { payload, prefix, bytes: prefix + payload, perChar };
+}
+
+export type IdStrategy =
+  | "int-pk"
+  | "bigint-pk"
+  | "ulid-pk"
+  | "bigint-plus-public";
+
+export type IdStrategyEstimate = {
+  id: IdStrategy;
+  label: string;
+  columns: SchemaColumn[];
+  clusteredKeyBytes: number;
+  totalBytes: number;
+  /** Exposed as a bare JSON number to clients */
+  jsPrecisionRisk: boolean;
+  note: string;
+};
+
+export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
+  switch (strategy) {
+    case "int-pk": {
+      const columns: SchemaColumn[] = [
+        {
+          id: "pk",
+          name: "id",
+          kind: "integer",
+          intWidth: "int",
+          nullable: false,
+        },
+      ];
+      return {
+        id: strategy,
+        label: "INT PK",
+        columns,
+        clusteredKeyBytes: 4,
+        totalBytes: 4,
+        jsPrecisionRisk: false,
+        note: "Skinny and fast — fine when ids never leave the database.",
+      };
+    }
+    case "bigint-pk": {
+      const columns: SchemaColumn[] = [
+        {
+          id: "pk",
+          name: "id",
+          kind: "integer",
+          intWidth: "bigint",
+          unsigned: true,
+          nullable: false,
+        },
+      ];
+      return {
+        id: strategy,
+        label: "BIGINT PK",
+        columns,
+        clusteredKeyBytes: 8,
+        totalBytes: 8,
+        jsPrecisionRisk: true,
+        note: "Plenty of range, but a bare JSON number can round in JavaScript.",
+      };
+    }
+    case "ulid-pk": {
+      const columns: SchemaColumn[] = [
+        {
+          id: "pk",
+          name: "id",
+          kind: "char",
+          length: 26,
+          charset: "utf8mb4",
+          nullable: false,
+        },
+      ];
+      const clusteredKeyBytes = 26 * 4;
+      return {
+        id: strategy,
+        label: "CHAR(26) ULID as PK",
+        columns,
+        clusteredKeyBytes,
+        totalBytes: clusteredKeyBytes,
+        jsPrecisionRisk: false,
+        note: "Opaque and client-mintable — but every secondary index copies ~104B.",
+      };
+    }
+    case "bigint-plus-public": {
+      const columns: SchemaColumn[] = [
+        {
+          id: "pk",
+          name: "id",
+          kind: "integer",
+          intWidth: "bigint",
+          unsigned: true,
+          nullable: false,
+        },
+        {
+          id: "pub",
+          name: "public_id",
+          kind: "char",
+          length: 26,
+          charset: "utf8mb4",
+          nullable: false,
+        },
+      ];
+      return {
+        id: strategy,
+        label: "BIGINT + public_id",
+        columns,
+        clusteredKeyBytes: 8,
+        totalBytes: 8 + 26 * 4,
+        jsPrecisionRisk: false,
+        note: "Cheap joins inside; stringy ULID at the API boundary.",
+      };
+    }
+  }
+}
+
+export type SessionTz = "UTC" | "America/Phoenix" | "America/New_York";
+
+export const SESSION_TZ_LABELS: Record<SessionTz, string> = {
+  UTC: "UTC",
+  "America/Phoenix": "America/Phoenix",
+  "America/New_York": "America/New_York",
+};
+
+/**
+ * Teaching simulation: app writes wall-clock digits in the write session TZ.
+ * TIMESTAMP converts; DATETIME keeps the digits.
+ */
+export function simulateTimeDisplay(opts: {
+  kind: "timestamp" | "datetime";
+  /** Local wall-clock written by the app, no offset — e.g. 2026-03-15T00:00:00 */
+  writtenLocal: string;
+  writeSessionTz: SessionTz;
+  readSessionTz: SessionTz;
+}): {
+  storedLabel: string;
+  displayedLocal: string;
+  converts: boolean;
+  timestamp2038Risk: boolean;
+} {
+  const { kind, writtenLocal, writeSessionTz, readSessionTz } = opts;
+  const timestamp2038Risk = kind === "timestamp";
+
+  if (kind === "datetime") {
+    const digits = writtenLocal.replace("T", " ");
+    return {
+      storedLabel: digits,
+      displayedLocal: digits,
+      converts: false,
+      timestamp2038Risk,
+    };
+  }
+
+  // TIMESTAMP: interpret writtenLocal in writeSessionTz → UTC instant → format in readSessionTz
+  const instant = wallClockToUtc(writtenLocal, writeSessionTz);
+  const displayedLocal = formatInTz(instant, readSessionTz);
+  return {
+    storedLabel: `UTC instant (${formatInTz(instant, "UTC")})`,
+    displayedLocal,
+    converts: true,
+    timestamp2038Risk,
+  };
+}
+
+/** Parse "YYYY-MM-DDTHH:mm:ss" as wall clock in `tz` and return a UTC Date. */
+function wallClockToUtc(local: string, tz: SessionTz): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/.exec(local);
+  if (!m) return new Date(NaN);
+  const [, ys, mos, ds, hs, mis, ss] = m;
+  const y = Number(ys);
+  const mo = Number(mos);
+  const d = Number(ds);
+  const h = Number(hs);
+  const mi = Number(mis);
+  const s = Number(ss);
+
+  // Binary search a UTC epoch whose wall clock in `tz` matches the digits.
+  let lo = Date.UTC(y, mo - 1, d - 1, 0, 0, 0);
+  let hi = Date.UTC(y, mo - 1, d + 1, 23, 59, 59);
+  const target = `${ys}-${mos}-${ds}T${hs}:${mis}:${ss}`;
+  for (let i = 0; i < 40; i++) {
+    const mid = Math.floor((lo + hi) / 2);
+    const wall = formatInTz(new Date(mid), tz).replace(" ", "T");
+    if (wall === target) return new Date(mid);
+    if (wall < target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  // Fallback: treat as UTC digits if search misses (shouldn't for normal inputs).
+  return new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+}
+
+function formatInTz(date: Date, tz: SessionTz): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
 }
 
 function columnTypeLabel(col: SchemaColumn): string {
@@ -140,7 +357,7 @@ function columnTypeLabel(col: SchemaColumn): string {
   }
 }
 
-function estimateColumn(col: SchemaColumn): ColumnEstimate {
+export function estimateColumn(col: SchemaColumn): ColumnEstimate {
   const notes: string[] = [];
   let bytes = 0;
   let offPage = false;
@@ -172,12 +389,13 @@ function estimateColumn(col: SchemaColumn): ColumnEstimate {
     case "varchar": {
       const n = Math.max(0, col.length ?? 255);
       const cs = col.charset ?? "utf8mb4";
-      const perChar = CHARSET_BYTES[cs];
-      const payload = n * perChar;
-      const prefix = varcharLengthPrefix(payload);
+      const { payload, prefix, bytes: worst, perChar } = varcharWorstCaseBytes(
+        n,
+        cs,
+      );
       // Teaching budget: count declared worst-case so the strip grows with length.
       // Real InnoDB may spill long values off-page; we flag that separately.
-      bytes = prefix + payload;
+      bytes = worst;
       const INLINE_SOFT = 768;
       offPage = payload > INLINE_SOFT;
       notes.push(
@@ -572,6 +790,85 @@ export function moneyModeOf(col: SchemaColumn): "double" | "decimal" | "cents" |
   if (col.kind === "decimal") return "decimal";
   if (col.kind === "bigint_cents") return "cents";
   return null;
+}
+
+/** Illustrative InnoDB page size for “rows per page” teaching demos. */
+export const INNODB_PAGE_BYTES = 16_384;
+/** Rough usable bytes after page headers / fillers — teaching constant. */
+export const INNODB_PAGE_USABLE_BYTES = 15_000;
+
+export function rowsPerPage(rowBytes: number): number {
+  if (rowBytes <= 0) return 0;
+  return Math.max(1, Math.floor(INNODB_PAGE_USABLE_BYTES / rowBytes));
+}
+
+/** Pages touched to return `limit` rows (list-endpoint metaphor). */
+export function pagesForLimit(rowBytes: number, limit: number): number {
+  const rpp = rowsPerPage(rowBytes);
+  if (rpp <= 0) return limit;
+  return Math.ceil(limit / rpp);
+}
+
+/**
+ * Classic float footgun: sum many “ten cent” line items.
+ * DOUBLE’s raw sum often ≠ expected even when lucky rounding hides it;
+ * truncating to cents (a common bug) makes the penny loss obvious.
+ */
+export function sumMoneyLines(
+  mode: "double" | "cents" | "decimal",
+  lineCount: number,
+  unitCents = 10,
+): {
+  expectedCents: number;
+  /** What a truncate-to-cents cast would store */
+  storedTotalCents: number;
+  driftCents: number;
+  floatRaw: number | null;
+  /** True when binary float sum is not identically the decimal expectation */
+  floatLies: boolean;
+  roundedCents: number;
+} {
+  const n = Math.max(0, Math.floor(lineCount));
+  const expectedCents = n * unitCents;
+  if (mode === "cents" || mode === "decimal") {
+    return {
+      expectedCents,
+      storedTotalCents: expectedCents,
+      driftCents: 0,
+      floatRaw: null,
+      floatLies: false,
+      roundedCents: expectedCents,
+    };
+  }
+  let dollars = 0;
+  const unitDollars = unitCents / 100;
+  for (let i = 0; i < n; i++) dollars += unitDollars;
+  const expectedDollars = expectedCents / 100;
+  const truncatedCents = Math.floor(dollars * 100);
+  const roundedCents = Math.round(dollars * 100);
+  return {
+    expectedCents,
+    storedTotalCents: truncatedCents,
+    driftCents: truncatedCents - expectedCents,
+    floatRaw: dollars,
+    floatLies: dollars !== expectedDollars,
+    roundedCents,
+  };
+}
+
+/** JSON number round-trip for a MySQL-style unsigned BIGINT id. */
+export function jsonNumberRoundTrip(mysqlId: bigint): {
+  mysqlId: string;
+  afterJson: string;
+  corrupted: boolean;
+} {
+  const asNumber = Number(mysqlId);
+  const afterJson = String(asNumber);
+  return {
+    mysqlId: mysqlId.toString(),
+    afterJson,
+    corrupted: afterJson !== mysqlId.toString(),
+  };
 }
 
 export function applyMoneyMode(
