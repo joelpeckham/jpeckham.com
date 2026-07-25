@@ -85,14 +85,14 @@ export function MoneyModeDemo() {
         }
       : {
           tone: "warn" as const,
-          title: "Float already lied — rounding papered over it",
+          title: "Float already lied; rounding papered over it",
           detail: `Raw sum is ${sum.floatRaw}, not ${(sum.expectedCents / 100).toFixed(2)}. Math.round happens to save you this time. Don’t bet the ledger on luck.`,
         };
 
   return (
     <DemoShell
       title="Money mode"
-      blurb="Ring up a cart of $0.10 line items. Watch DOUBLE’s raw sum diverge — then see what a truncate-to-cents cast does to the invoice."
+      blurb="Ring up a cart of $0.10 line items. Watch DOUBLE’s raw sum diverge, then see what a truncate-to-cents cast does to the invoice."
     >
       <div className="flex flex-wrap gap-2">
         {MODES.map((m) => (

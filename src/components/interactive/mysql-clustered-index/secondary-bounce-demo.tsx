@@ -14,7 +14,6 @@ export function SecondaryBounceDemo() {
   const target = rows.find((r) => r.id === targetId) ?? rows[0];
 
   useEffect(() => {
-    setHop(0);
     const t1 = window.setTimeout(() => setHop(1), 160);
     const t2 = window.setTimeout(() => setHop(2), 380);
     return () => {
@@ -22,6 +21,11 @@ export function SecondaryBounceDemo() {
       window.clearTimeout(t2);
     };
   }, [targetId]);
+
+  function selectTarget(id: number) {
+    setTargetId(id);
+    setHop(0);
+  }
 
   return (
     <DemoShell
@@ -36,7 +40,7 @@ export function SecondaryBounceDemo() {
             type="button"
             size="sm"
             variant={targetId === row.id ? "ink" : "outline"}
-            onClick={() => setTargetId(row.id)}
+            onClick={() => selectTarget(row.id)}
           >
             {row.email.split("@")[0]}
           </Button>

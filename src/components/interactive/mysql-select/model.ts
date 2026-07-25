@@ -37,7 +37,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "warn",
     title: "Function freezes the date column",
     reason:
-      "org_id + status can still use a left prefix, but YEAR(updated_at) is not a range on updated_at — MySQL can't walk that column as a B-tree interval.",
+      "org_id + status can still use a left prefix, but YEAR(updated_at) is not a range on updated_at. MySQL can't walk that column as a B-tree interval.",
     litSegments: 2,
   },
   {
@@ -119,6 +119,15 @@ export const TICKET_PROJECT_COLS: ProjectCol[] = [
     listDefault: true,
   },
 ];
+
+/** The SELECT list each projection mode ships to the server. */
+export function projectionSelectSql(mode: "star" | "list"): string {
+  if (mode === "star") return "SELECT *";
+  const cols = TICKET_PROJECT_COLS.filter((c) => c.listDefault).map(
+    (c) => c.name,
+  );
+  return `SELECT ${cols.join(", ")}`;
+}
 
 export type ProjectionEstimate = {
   mode: "star" | "list";
@@ -247,7 +256,7 @@ export function evaluatePrefixHighlight(
 
   const assigneeNote =
     assignee !== "off"
-      ? " assignee_id is not in this index — filter after or use a different key."
+      ? " assignee_id is not in this index; filter after or use a different key."
       : "";
 
   if (lit === 3) {

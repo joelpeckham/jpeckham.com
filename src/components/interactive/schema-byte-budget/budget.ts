@@ -159,7 +159,7 @@ export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
         clusteredKeyBytes: 4,
         totalBytes: 4,
         jsPrecisionRisk: false,
-        note: "Skinny and fast — fine when ids never leave the database.",
+        note: "Skinny and fast. Fine when ids never leave the database.",
       };
     }
     case "bigint-pk": {
@@ -202,7 +202,7 @@ export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
         clusteredKeyBytes,
         totalBytes: clusteredKeyBytes,
         jsPrecisionRisk: false,
-        note: "Opaque and client-mintable — but every secondary index copies ~104B.",
+        note: "Opaque and client-mintable, but every secondary index copies ~104B.",
       };
     }
     case "bigint-plus-public": {
@@ -373,7 +373,7 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
     }
     case "double":
       bytes = 8;
-      notes.push("8 bytes, approximate — not for money.");
+      notes.push("8 bytes, approximate. Not for money.");
       break;
     case "decimal": {
       const p = col.precision ?? 12;
@@ -431,7 +431,7 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
     case "datetime": {
       const extra = fspExtraBytes(col.fsp);
       bytes = 5 + extra;
-      notes.push("Stores the wall-clock digits you give it — no session TZ conversion.");
+      notes.push("Stores the wall-clock digits you give it, with no session TZ conversion.");
       break;
     }
     case "timestamp": {
@@ -444,7 +444,7 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
   }
 
   if (col.nullable) {
-    notes.push("Nullable — contributes to the null bitmap.");
+    notes.push("Nullable; contributes to the null bitmap.");
   }
 
   return {

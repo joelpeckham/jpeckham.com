@@ -11,7 +11,7 @@ import {
 } from "@/components/cover-art";
 import {
   contentCtaLabel,
-  contentSectionLabel,
+  contentLabel,
   formatDate,
   type ContentItem,
 } from "@/lib/content";
@@ -40,7 +40,7 @@ export function ContentCard({
               <CoverArt
                 art={item.art}
                 u={webUnit}
-                label={contentSectionLabel(item.kind)}
+                label={contentLabel(item)}
                 fontDisplay={webFontDisplay}
                 fontMono={webFontMono}
                 transitionKey={coverTransitionKey(item.slug)}
@@ -52,7 +52,7 @@ export function ContentCard({
         <div className="flex flex-1 flex-col p-6">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 font-mono text-meta uppercase tracking-[0.18em] text-grey">
-              <span>{contentSectionLabel(item.kind)}</span>
+              <span>{contentLabel(item)}</span>
               {item.interactive ? (
                 <span className="text-red">· Interactive</span>
               ) : null}

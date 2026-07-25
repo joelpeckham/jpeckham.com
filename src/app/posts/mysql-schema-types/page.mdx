@@ -9,13 +9,15 @@ import { Cite, References } from "@/components/cite";
 
 ## Come on in, the water's fine.
 
-This is the first post in [Learn MySQL](/projects/mysql/), a series of interactive articles for web folks who want to actually *understand* MySQL and InnoDB, not just copy a Prisma migration and hope production is in a good mood.
+This is the first post in [Learn MySQL](/projects/mysql/), a series of interactive articles for web folks who want to actually *understand* MySQL and InnoDB, not just run `php artisan migrate` and hope production is in a good mood.
 
 I'll cover foundations first (schema, indexes, queries, writes, transactions), then the deep stuff (MVCC, locks, the buffer pool, replication, forensics). Read in order or skip around. Your call.
 
 Today: tables, column types, and the boring choices that decide whether your app is correct and whether list endpoints still feel snappy six months from now.
 
-I know the spicy lock diagrams are waiting, but everything later assumes a row already has a shape. Indexes hang off columns. Transactions flip typed values. The buffer pool caches pages stuffed with those rows. Get the type wrong (`DOUBLE` for money, `TIMESTAMP` for "the user meant Tuesday in Arizona") and clever caching will not save you. Schema is the cheapest place to avoid a miserable migration two years from now. It is also where ORMs sound the most sure while being the most wrong.
+I know the spicy lock diagrams are waiting, but everything later assumes a row already has a shape. Indexes hang off columns. Transactions flip typed values. The buffer pool caches pages stuffed with those rows. Get the type wrong (`DOUBLE` for money, `TIMESTAMP` for "the user meant Tuesday in Arizona") and clever caching will not save you. Schema is the cheapest place to avoid a miserable migration two years from now. It is also where the ORM sounds most confident while quietly making decisions you never reviewed.
+
+The app examples in this series are Laravel and Eloquent, because that's what I ship at my day job. Don't bail if you're on something else. Every footgun here is really a MySQL footgun wearing a PHP accent, and the fix is always in the SQL.
 
 Even if this is the only post you read, I want you leaving with a radar for the footguns hiding in your ORM migrations. If a section never answers "why should I care?", I failed. Yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
 
@@ -23,7 +25,7 @@ Even if this is the only post you read, I want you leaving with a radar for the 
 
 When you `CREATE TABLE` in modern MySQL, you're almost certainly getting InnoDB.<Cite n={1} /> InnoDB does not stash your table like a CSV on a USB stick, a bag of rows in whatever order they showed up. It builds a clustered index: the whole table is physically sorted by the primary key and packed into fixed-size pages on disk. Looking up a row by PK is not "find a pointer, then hop somewhere else." The leaf of that index *is* the row. (We'll unpack the primary-key side of this next. For now, just remember your columns live inside those pages.)
 
-The itch I want in your brain today: the types you put on columns decide what sits in those pages. Wider, sloppier types mean fatter rows, fewer rows per page, and every "give me 50 listings" query hauling more junk for the same answer.
+The itch I want in your brain today: the types you put on columns decide what sits in those pages. The arithmetic is blunt. An InnoDB page is 16KB by default,<Cite n={19} /> so a table of tidy ~160-byte rows packs roughly a hundred rows into every page it reads, while the same table with sloppy 1.6KB rows fits about ten. Same query, same answer, ten times the pages touched and ten times the cache eaten.
 
 A migration is not "just SQL." It reshapes the physical thing every request reads. That is why I'm spending a whole article on `INT` vs `BIGINT` and whether your bio column can survive a `😀` emoji.
 
@@ -39,13 +41,13 @@ For each type family below: what it is, what breaks if you shrug, and what I'd p
 
 MySQL integers come in fixed widths, from `TINYINT` (1 byte) up through `BIGINT` (8 bytes). Signed vs unsigned only changes the *range*, not how much space they take.<Cite n={2} /> That's useful background, but the real decision is what you put on the primary key (and every foreign key that copies it). That value shows up in joins, indexes, exports, and often right in your URLs.
 
-The default most of us reach for is an autoincrementing `INT`. It's skinny, fast, and everyone gets it. Perfect for internal tables that never leave the database. The catch is the ceiling (signed `INT` tops out around 2.1 billion) and the fact that `/orders/41`, `/orders/42` is a scavenger hunt waiting to happen if those ids ever hit a public URL.
+The classic default is an autoincrementing `INT`. It's skinny, fast, and everyone gets it. Perfect for internal tables that never leave the database. The catch is the ceiling (signed `INT` tops out around 2.1 billion) and the fact that `/orders/41`, `/orders/42` is a scavenger hunt waiting to happen if those ids ever hit a public URL.
 
-Stepping up to `BIGINT` mostly solves the "will I run out?" anxiety and stays cheap to join on. The new footgun is the frontend: ship a huge integer as a bare JSON number and JavaScript can quietly round it, so the id in the UI is no longer the id in MySQL.<Cite n={3} /> "Big integer in the database" and "safe number in React" are different problems.
+Stepping up to `BIGINT` mostly solves the "will I run out?" anxiety and stays cheap to join on. Laravel already voted here: `$table->id()` has meant `BIGINT UNSIGNED AUTO_INCREMENT` for years, and it's one of the framework defaults I'd actually defend in court. The new footgun is the frontend: ship a huge integer as a bare JSON number and JavaScript can quietly round it, so the id in the UI is no longer the id in MySQL.<Cite n={3} /> "Big integer in the database" and "safe number in React" are different problems.
 
 Sometimes you don't want a sequence at all. UUIDs and ULIDs let clients or other services mint ids without asking MySQL first, and they make nicer opaque public identifiers. The cost is width. Those keys get copied into every secondary index, and random UUIDs as the *clustered* primary key scatter inserts across the table (more on that in the primary-key post). If this *is* your PK, prefer something time-sortable like a ULID or `uuid_v7`.
 
-What I reach for on a normal web app with a public API is both: a skinny `BIGINT UNSIGNED AUTO_INCREMENT` (or plain `INT` if I'm sure) as the clustered key for joins, plus a unique `CHAR(26)` ULID-style `public_id` for URLs and JSON. The database keeps the cheap integer. The frontend only ever sees a string, so the Number-precision trap never shows up. Two columns to generate and index, sure. Almost always worth it. That's what the marketplace schema below uses.
+What I reach for on a normal web app with a public API is both: a skinny `BIGINT UNSIGNED AUTO_INCREMENT` (or plain `INT` if I'm sure) as the clustered key for joins, plus a unique `CHAR(26)` ULID-style `public_id` for URLs and JSON. The database keeps the cheap integer. The frontend only ever sees a string, so the Number-precision trap never shows up. In Laravel that's `$table->id()` next to `$table->ulid('public_id')->unique()`, with the `HasUlids` trait pointed at `public_id` (override `uniqueIds()`) so the model mints it on create. Two columns to generate and index, sure. Almost always worth it. That's what the marketplace schema below uses.
 
 If the table is truly internal, a lone `INT` or `BIGINT` is fine. Just size it for growth. If clients need to create the row id themselves, lean on ULID/UUID, ideally as that public id column, or as a time-sortable PK if you really only want one. Day-one goal either way: boring joins in the database, stable strings at the API boundary, and zero Slack threads titled "why did this id change by one??"
 
@@ -62,6 +64,8 @@ I like two adult options:
 1. Integer minor units: `price_cents` as an integer, plus `CHAR(3)` for the currency code. This is the Stripe-shaped universe.<Cite n={6} />
 2. `DECIMAL(M,D)`: exact fixed-point if you'd rather keep a decimal scale in the column.<Cite n={7} />
 
+In migration-builder terms that's `$table->unsignedInteger('price_cents')` with an `'integer'` cast on the model, or `$table->decimal('price', 10, 2)` with a `'decimal:2'` cast. The thing to never write is `$table->float('price')`, which Laravel will create without so much as a raised eyebrow. And watch the cast side too: put a `'float'` cast on a perfectly exact `DECIMAL` column and you've reintroduced the bug in PHP after MySQL did everything right.
+
 Money bugs rarely announce themselves as money bugs. They show up as "the API is wrong," "the frontend rounded weird," or "accounting export is haunted." Half the time the ghost is the column type.
 
 Ring up a cart of dime line items. Bytes barely move. The invoice either balances or sprouts a ghost penny:
@@ -76,7 +80,7 @@ I learned this the hard way at [BetterRX](https://www.betterrx.com/), the hospic
 
 What finally stuck: treat event / schedule time ("stay starts on this local date") as a wall-clock problem that needs an explicit timezone, or a UTC instant you convert with a library you trust. Treat row mutation time (`created_at` / `updated_at`) as "when did the database notice this row change?", usually fine as UTC with something like `CURRENT_TIMESTAMP(3)`.
 
-One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future rows are not a bit in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Prisma maps `DateTime` to whatever the migration shrugged into existence, and Rails/`ActiveRecord` has historically leaned `TIMESTAMP`. Read the SQL. Time bugs feel like flaky jobs. They're usually typed lies with a timezone on top.
+One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future dates are routine in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Laravel's `$table->timestamps()` quietly creates nullable `TIMESTAMP` columns, which is fine for `created_at` bookkeeping and exactly wrong for schedules. When you mean an event time, say `$table->dateTime('starts_at')` and mean it. Time bugs feel like flaky jobs. They're usually typed lies with a timezone on top.
 
 Here's the TZ shapeshift as a job outcome. Write a Phoenix midnight, run the worker from New York, and watch whether meds fire on the right clock:
 
@@ -90,11 +94,13 @@ A character set is literally "here are the symbols, and here's the byte pattern 
 
 Lengths are where the byte math gets sneaky. `VARCHAR(n)` is *n characters*, but storage and row-size budgets think in *bytes*.<Cite n={13} /><Cite n={14} /> Under `utf8mb4`, one character can cost up to 4 bytes, so a full `VARCHAR(255)` is not "about 255 bytes." Worst case it's `255 × 4 = 1020` bytes of payload. MySQL also stores a length prefix: 1 byte if the column can never exceed 255 bytes, 2 bytes once the max might be bigger, which `utf8mb4` `VARCHAR(255)` always might (`1020 > 255`).<Cite n={14} /> So the declared budget is roughly 1022 bytes, about 1KB, for a single "probably fine" column. Actual rows only pay for the bytes you use, but indexes, row-size limits, and "how many of these fit on a page" care about that worst-case declaration. Stack a dozen `VARCHAR(255)` "just in case" fields on a hot list query and you've donated a lot of cache to empty aspiration.
 
+This exact math is why a generation of Laravel developers has `Schema::defaultStringLength(191)` memorized without knowing what it does. When the framework switched its default charset to `utf8mb4`, indexes on `VARCHAR(255)` columns blew past an old 767-byte index-key limit and migrations started failing with `1071: Specified key was too long`. The fix everyone pasted from Stack Overflow works because `191 × 4 = 764` bytes just barely squeaks under. The bytes were always there. The emoji just sent the bill.
+
 What I pick for normal app text: `utf8mb4` with `utf8mb4_0900_ai_ci` (or whatever your MySQL 8+/9.x default already is). The name is less mystical than it looks. Collation suffixes are a little cheat sheet.<Cite n={15} /> `_ci` / `_cs` mean case-insensitive vs case-sensitive. `_ai` / `_as` mean accent-insensitive vs accent-sensitive. `0900` means the collation is based on Unicode Collation Algorithm 9.0.0. So `utf8mb4_0900_ai_ci` says: compare as Unicode text, ignore case, ignore accents. That is usually what you want for names, emails, and search-ish equality. Reach for `_bin` when you need raw byte identity (tokens, case-sensitive codes). Reach for a language-specific collation (`utf8mb4_tr_0900_ai_ci`, etc.) when a locale's sort rules are a product requirement, not before.
 
-What I avoid: `latin1` and friends inherited from stone-tablet tutorials, anything still declaring `CHARSET utf8` / `utf8mb3` for user-facing text, and cargo-cult `VARCHAR(255)` on every column. Prefer lengths from the product ("display name max 80 in the UI"), not from "255 feels traditional." Fixed-ish identifiers (`CHAR(26)` ULIDs, `CHAR(3)` currency codes) can stay `CHAR`/`VARCHAR` at the real width. Long blobs of prose belong in `TEXT` (or JSON, if the shape is sparse), not a comically wide `VARCHAR` pretending it's a memo field.
+What I avoid: `latin1` and friends inherited from stone-tablet tutorials, anything still declaring `CHARSET utf8` / `utf8mb3` for user-facing text, and cargo-cult `VARCHAR(255)` on every column. That 255 usually arrives via `$table->string('title')` with no second argument. Pass the real one: `$table->string('title', 140)`, where 140 came from the product ("display name max 80 in the UI"), not from "255 feels traditional." Fixed-ish identifiers (`CHAR(26)` ULIDs, `CHAR(3)` currency codes) can stay `CHAR`/`VARCHAR` at the real width. Long blobs of prose belong in `TEXT` (or JSON, if the shape is sparse), not a comically wide `VARCHAR` pretending it's a memo field.
 
-Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as "why didn't this unique email match?" Both are cheaper to fix in the migration PR than in a war room.
+Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as "why didn't this unique email match?" All of them are cheaper to fix in the migration PR than in a war room.
 
 Drag the length, flip the charset, and watch the kilobyte thermometer plus how many of these fit on a page:
 
@@ -102,7 +108,9 @@ Drag the length, flip the charset, and watch the kilobyte thermometer plus how m
 
 ### NULL is a third state (not "empty," not "zero," not "the frontend forgot")
 
-SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. It turns `WHERE` into three-valued logic cosplay, interacts weirdly with unique indexes, and maps to JS `null`/`undefined` depending on which driver is gaslighting you today.
+SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. Comparisons against it return neither true nor false but *unknown*, and `WHERE` only keeps rows that are actually true. So `WHERE discount_code != 'BLACKFRIDAY'` silently drops every row where `discount_code` is NULL, which is technically correct three-valued logic and practically a bug report.<Cite n={16} />
+
+Unique indexes have their own NULL surprise: MySQL allows multiple NULLs in a unique nullable column.<Cite n={20} /> `$table->string('external_id')->nullable()->unique()` compiles fine, migrates fine, and then lets a thousand rows share "no external id" while everyone assumes it means one. Sometimes that's exactly what you want. Decide, don't discover.
 
 If the domain always has a value, say `NOT NULL` and give a real default. If "missing" is a product concept, keep `NULL` on purpose and teach your API the same story. Half of "why didn't this row match my filter?" bugs are NULL semantics wearing a trench coat.
 
@@ -124,7 +132,23 @@ Every column type is a little vote for how wide a row is. Fatter rows mean fewer
 
 Healthcare schemas are a paperwork festival, so the worked example is a tiny marketplace instead: users, listings, order lines. Same type decisions, less PHI.
 
-First, the anti-pattern. What a hasty Prisma migration vibes like when nobody reviewed the SQL:
+First, the anti-pattern. Here's a migration that would sail through review, because nothing in a Laravel migration file *looks* dangerous:
+
+```php
+Schema::create('listings_bad', function (Blueprint $table) {
+    $table->increments('id');                   // INT, like it's 2014
+    $table->unsignedInteger('shop_id');
+    $table->string('title');                    // VARCHAR(255), unreviewed
+    $table->string('description', 8000);        // "it's basically text, right?"
+    $table->float('price');                     // TODO: money stuff later
+    $table->char('currency', 3)->nullable();
+    $table->timestamp('starts_at')->nullable(); // event time, session-TZ type
+    $table->text('attrs');                      // JSON we pinky-swear to parse
+    $table->timestamps();
+});
+```
+
+Which lands in MySQL as roughly:
 
 ```sql
 -- Bad: looks fine until money, time, emoji, or row width bite
@@ -142,7 +166,7 @@ CREATE TABLE listings_bad (
 ) DEFAULT CHARSET = utf8;
 ```
 
-Why this is a trap, in plain language: float money, `utf8` becoming mb3, event time on `TIMESTAMP`, JSON-shaped data stuffed in `TEXT`, nullable everything, and a description column trying to eat the whole row budget for lunch.
+Why this is a trap, in plain language: float money, `utf8` quietly meaning mb3 (courtesy of a crusty `'charset' => 'utf8'` in `config/database.php` that nobody has touched since it was scaffolded), event time on `TIMESTAMP`, JSON-shaped data stuffed in `TEXT`, nullable everything, and a description column trying to eat the whole row budget for lunch.
 
 Now a version I'd actually defend (load *Marketplace v1* in the row-budget demo above and compare the strip):
 
@@ -190,6 +214,8 @@ CREATE TABLE order_items (
 
 What I optimized for: exact money, event time that doesn't shapeshift with session TZ, `utf8mb4`, lengths tied to product reality, JSON only for sparse junk, and description as `TEXT` so it isn't pretending to be a polite in-row `VARCHAR`.
 
+You can express all of that in the schema builder without dropping to raw SQL: `$table->id()`, `$table->char('public_id', 26)->unique()`, `$table->string('title', 140)`, `$table->text('description')`, `$table->unsignedInteger('price_cents')`, `$table->char('currency', 3)`, `$table->dateTime('starts_at')`, `$table->json('attrs')->nullable()`. The builder isn't the enemy. Unread defaults are.
+
 Secondary indexes and foreign keys get their own episodes. Don't bolt them on here and call it a day. I'll earn those later.
 
 ## Checklist before you migrate
@@ -204,7 +230,7 @@ Steal this for PR review. If you can't check a box, that's the comment to leave:
 - JSON only for sparse shape; filters stay relational
 - Wide columns justified, or moved to `TEXT` / off the hot list path
 - Staging and prod agree on strict SQL mode (silent truncation on your laptop is not a personality trait)
-- The migration SQL matches the types you *think* the ORM model has
+- You looked at the actual SQL (`php artisan migrate --pretend`, or `SHOW CREATE TABLE` after) and it matches the types you *think* your models have
 
 Correct types prevent bugs no cache will fix. Next up: [primary keys and the clustered index](/posts/mysql-primary-keys/). Once the leaf has a shape, you still have to pick what InnoDB sorts the whole table by. That's where "I just used autoincrement" becomes a whole worldview.
 
@@ -299,6 +325,16 @@ Correct types prevent bugs no cache will fix. Next up: [primary keys and the clu
       n: 18,
       title: "MySQL 9.7 Reference Manual — Limits on Table Column Count and Row Size",
       href: "https://dev.mysql.com/doc/refman/9.7/en/column-count-limit.html",
+    },
+    {
+      n: 19,
+      title: "MySQL 9.7 Reference Manual — The Physical Structure of an InnoDB Index",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/innodb-physical-structure.html",
+    },
+    {
+      n: 20,
+      title: "MySQL 9.7 Reference Manual — Unique Indexes (CREATE INDEX Statement)",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/create-index.html#create-index-unique",
     },
   ]}
 />

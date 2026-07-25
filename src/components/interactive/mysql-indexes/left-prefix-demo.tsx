@@ -8,6 +8,7 @@ import {
   PREFIX_PRESETS,
   evaluateLeftPrefix,
   moveCol,
+  predicateSqlLines,
   type PredOp,
   type PredicateMap,
   type TicketCol,
@@ -48,6 +49,11 @@ export function LeftPrefixDemo() {
 
   const verdict = useMemo(
     () => evaluateLeftPrefix(indexCols, predicates),
+    [indexCols, predicates],
+  );
+
+  const sqlLines = useMemo(
+    () => predicateSqlLines(indexCols, predicates),
     [indexCols, predicates],
   );
 
@@ -96,6 +102,23 @@ export function LeftPrefixDemo() {
             {preset.label}
           </Button>
         ))}
+      </div>
+
+      <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] leading-relaxed text-paper sm:text-xs">
+        <div>
+          <span className="text-grey">KEY idx_demo </span>({indexCols.join(", ")}
+          )
+        </div>
+        {sqlLines.length === 0 ? (
+          <div className="text-grey">WHERE (no predicates yet)</div>
+        ) : (
+          sqlLines.map((line, i) => (
+            <div key={line}>
+              <span className="text-grey">{i === 0 ? "WHERE " : "  AND "}</span>
+              {line}
+            </div>
+          ))
+        )}
       </div>
 
       <div>

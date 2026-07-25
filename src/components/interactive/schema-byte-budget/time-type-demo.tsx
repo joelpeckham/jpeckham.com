@@ -72,7 +72,7 @@ export function TimeTypeDemo() {
       return {
         tone: "ok" as const,
         title: "Job sees the wall-clock you stored",
-        detail: `Digits stay ${intended.date} ${intended.time}. You still owe the app an explicit timezone — but the column won’t rewrite midnight.`,
+        detail: `Digits stay ${intended.date} ${intended.time}. You still owe the app an explicit timezone, but the column won’t rewrite midnight.`,
       };
     }
     if (dateShifted) {
@@ -94,7 +94,7 @@ export function TimeTypeDemo() {
     }
     return {
       tone: "ok" as const,
-      title: "Same session TZ — looks fine",
+      title: "Same session TZ, so it looks fine",
       detail:
         "Write and read agree for now. Change the job’s connection timezone later and this becomes a haunted pager.",
     };
@@ -202,7 +202,7 @@ export function TimeTypeDemo() {
         <p className="mt-2 text-xs text-grey">
           {kind === "timestamp"
             ? `Stored as ${sim.storedLabel}. Session TZ converts on the way out.`
-            : "DATETIME stored the digits literally — no conversion step."}
+            : "DATETIME stored the digits literally, with no conversion step."}
         </p>
       </Panel>
 

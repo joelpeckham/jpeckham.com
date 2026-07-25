@@ -11,8 +11,8 @@ import {
 import { SeriesNav } from "@/components/series-nav";
 import {
   allContent,
+  contentLabel,
   contentSectionHref,
-  contentSectionLabel,
   contentSectionName,
   formatDate,
   getAdjacentInSeries,
@@ -101,7 +101,7 @@ export function ArticleShell({
           <CoverArt
             art={item.art}
             u={heroUnit}
-            label={contentSectionLabel(item.kind)}
+            label={contentLabel(item)}
             fontDisplay={webFontDisplay}
             fontMono={webFontMono}
             transitionKey={coverTransitionKey(item.slug)}

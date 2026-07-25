@@ -55,7 +55,7 @@ Bake these into every per-article plan. Plans written before shipping `mysql-sch
 | Status | Meaning |
 | --- | --- |
 | **Shipped draft** | MDX + demos exist; plan updated to match what actually landed |
-| **Plan only** | Stub wired in catalog; plan revised for voice/demo lessons; article not written yet |
+| **Plan only** | Not published (no catalog entry or route); plan revised for voice/demo lessons; article not written yet |
 
 ---
 
@@ -100,7 +100,7 @@ Each article should: (1) orient the reader, (2) deep-dive the mechanism in casua
 | 19 | Replication, Binlogs & Read Replicas | `mysql-replication` | Plan only | Scale reads, replica lag, and read-your-writes after a write on the primary. |
 | 20 | Slow Query Forensics with Performance Schema | `mysql-perf-schema` | Plan only | Capstone diagnostic toolkit — digests, waits, and finding the real bottleneck. |
 
-Stubs and `seriesList.postSlugs` are wired in catalog order above (`src/lib/content.ts` → `/posts/<slug>/`).
+Only shipped articles are wired into the catalog and `seriesList.postSlugs` (`src/lib/content.ts` → `/posts/<slug>/`). Unwritten topics stay out of the catalog entirely (no stubs, no routes) until the article is real; publishing one means adding the catalog entry, the series slug, and the route together.
 
 ---
 

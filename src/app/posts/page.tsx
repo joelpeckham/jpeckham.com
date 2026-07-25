@@ -9,20 +9,20 @@ import { defaultOgImage } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Posts",
   description:
-    "Writing and interactive articles by Joel Peckham — including the Learn MySQL series.",
+    "Writing and interactive articles by Joel Peckham, including the Learn MySQL series.",
   alternates: { canonical: "/posts/" },
   openGraph: {
     url: "/posts/",
     title: "Posts",
     description:
-      "Writing and interactive articles by Joel Peckham — including the Learn MySQL series.",
+      "Writing and interactive articles by Joel Peckham, including the Learn MySQL series.",
     images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "Posts",
     description:
-      "Writing and interactive articles by Joel Peckham — including the Learn MySQL series.",
+      "Writing and interactive articles by Joel Peckham, including the Learn MySQL series.",
     images: [defaultOgImage.url],
   },
 };
@@ -48,7 +48,7 @@ export default function PostsPage() {
           accent="blue"
         />
         <p className="mt-6 max-w-[560px] text-lg leading-normal">
-          Deep dives and interactive articles — including series like Learn
+          Deep dives and interactive articles, including series like Learn
           MySQL.
         </p>
       </Reveal>

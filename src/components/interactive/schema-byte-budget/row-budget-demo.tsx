@@ -45,7 +45,7 @@ export function RowBudgetDemo() {
     if (preset === "wide-soup" || estimate.nearRowLimit) {
       return {
         tone: "bad" as const,
-        title: `~${rpp} rows/page — list endpoint tax`,
+        title: `~${rpp} rows/page (list endpoint tax)`,
         detail: `Fetching ${LIST_LIMIT} rows touches ~${pages} pages. Wide declarations starve the buffer pool for the same answer.`,
       };
     }
@@ -59,7 +59,7 @@ export function RowBudgetDemo() {
     return {
       tone: "ok" as const,
       title: `~${rpp} rows/page, chips green`,
-      detail: `${LIST_LIMIT} listings ≈ ${pages} page${pages === 1 ? "" : "s"}. Dense rows + honest types — this is the strip you want in review.`,
+      detail: `${LIST_LIMIT} listings ≈ ${pages} page${pages === 1 ? "" : "s"}. Dense rows and honest types. This is the strip you want in review.`,
     };
   })();
 
@@ -68,7 +68,7 @@ export function RowBudgetDemo() {
   return (
     <DemoShell
       title="Schema byte budget"
-      blurb="Stack every choice onto one row. Watch how many fit on a page — and how many pages a list endpoint must touch."
+      blurb="Stack every choice onto one row. Watch how many fit on a page, and how many pages a list endpoint must touch."
     >
       <div className="flex flex-wrap gap-2">
         {(Object.keys(PRESET_LABELS) as PresetId[]).map((id) => (

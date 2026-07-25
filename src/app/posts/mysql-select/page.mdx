@@ -42,7 +42,7 @@ WHERE org_id = ?
 LIMIT 50;
 ```
 
-(`ORDER BY` belongs in [article 05](/posts/mysql-pagination/). I'm leaving it off on purpose.)
+(`ORDER BY` belongs in the pagination article, coming later in the series. I'm leaving it off on purpose.)
 
 This is post four of [Learn MySQL](/projects/mysql/). [Types](/posts/mysql-schema-types/) shaped the columns. The [primary key](/posts/mysql-primary-keys/) clustered the table. [Composites](/posts/mysql-indexes/) gave list endpoints a path. Today is whether your `WHERE` and select list let that path get used.
 
@@ -57,6 +57,8 @@ InnoDB still finds rows the way articles 02 and 03 described: clustered descent 
 **Sargable** means the engine can compare an indexed column to a known constant or range without transforming every row's column value first. After you learn it, "index-friendly" is usually enough.
 
 Range-eligible shapes on a B-tree include equality, `IN`, `IS NULL`, inequalities, `BETWEEN`, and `LIKE 'prefix%'` when the pattern is a constant that does not start with `%`.<Cite n={4} /> Leading wildcards (`LIKE '%refund%'`) are not a range driver on that column. Wrapping the column in `YEAR()`, `DATE()`, `LOWER()`, or arithmetic usually isn't either.
+
+The function rule is worth thirty seconds of *why*, because it looks like optimizer pettiness and isn't. The index stores `updated_at` values, sorted. It does not store `YEAR(updated_at)` anywhere. A B-tree can seek to "the first entry ≥ 2026-01-01" because that's a position in the sort order; it cannot seek to "entries whose year is 2026" without computing the function on values it hasn't read yet. So MySQL reads them all. Rewrite the predicate as a range on the stored value and the same sorted tree answers the same product question at index speed.
 
 Constants on the *right* are fine. `WHERE id = POW(2, 3)` can still be a point lookup after constant folding. Nondeterministic junk like `WHERE id = FLOOR(1 + RAND() * 49)` cannot.<Cite n={5} />
 
@@ -83,7 +85,7 @@ Those `ref` / `range` / `ALL` labels are teaching shorthand, not a promise from 
 ->where('updated_at', '<', $end)
 ```
 
-For email lookups, don't `LOWER(email)` on every request if `utf8mb4_0900_ai_ci` already gives you case-insensitive equality (house default from article 01). Canonicalize on write when you need a stricter rule. Generated columns and functional indexes exist; that rabbit hole is [article 17](/posts/mysql-json/) territory. For now: bare column on the left, bind param on the right.
+For email lookups, don't `LOWER(email)` on every request if `utf8mb4_0900_ai_ci` already gives you case-insensitive equality (house default from article 01). Canonicalize on write when you need a stricter rule. Generated columns and functional indexes exist; that rabbit hole comes later in the series. For now: bare column on the left, bind param on the right.
 
 ## Projection: stop selecting the novel
 
@@ -93,7 +95,7 @@ List endpoints want card columns. Detail endpoints can ask for `body`. Same tabl
 
 <ProjectionDemo />
 
-If the select list ever fits entirely inside a secondary index, MySQL may answer from the index without bouncing to the clustered row. That is a covering index.<Cite n={3} /><Cite n={8} /> Design for it in [article 15](/posts/mysql-covering-indexes/). Today, listing columns is how you keep that door open and stop shipping kilobytes of `body` to an inbox table.
+If the select list ever fits entirely inside a secondary index, MySQL may answer from the index without bouncing to the clustered row. That is a covering index.<Cite n={3} /><Cite n={8} /> Designing for it gets a whole article later in the series. Today, listing columns is how you keep that door open and stop shipping kilobytes of `body` to an inbox table.
 
 ## List vs detail
 
@@ -111,17 +113,17 @@ Article 03 taught leftmost prefix on the index you build. Here the index is fixe
 
 <PrefixLengthDemo />
 
-When you peek at `EXPLAIN` later, `key_len` is the rough "how much of this key did we use?" number. Fluency is [article 10](/posts/mysql-explain/). For now, if your filters don't light the prefix you expected, fix the `WHERE` before you add another index.
+When you peek at `EXPLAIN` later, `key_len` is the rough "how much of this key did we use?" number. Fluency comes later in the series. For now, if your filters don't light the prefix you expected, fix the `WHERE` before you add another index.
 
 ## Index condition pushdown (quick)
 
-Sometimes MySQL can test extra conditions on columns that appear in the index *before* it reads the full clustered row. The docs' classic shape is an index on `(zipcode, lastname, …)` with `zipcode = ?` driving access and a awkward `lastname LIKE '%…%'` checked on the index tuple when possible; a filter on `address` still needs the row.<Cite n={9} />
+Sometimes MySQL can test extra conditions on columns that appear in the index *before* it reads the full clustered row. The docs' classic shape is an index on `(zipcode, lastname, …)` with `zipcode = ?` driving access and an awkward `lastname LIKE '%…%'` checked on the index tuple when possible; a filter on `address` still needs the row.<Cite n={9} />
 
-In `EXPLAIN`, `Using index condition` means that pushdown happened. It is not the same as `Using index` (covering / index-only). ICP is a consolation that reduces row reads. Covering is the design where you needed fewer row reads in the first place. We'll design for covering in article 15.
+In `EXPLAIN`, `Using index condition` means that pushdown happened. It is not the same as `Using index` (covering / index-only). ICP is a consolation that reduces row reads. Covering is the design where you needed fewer row reads in the first place. We'll design for covering when that article lands.
 
-## ORM patterns
+## Eloquent patterns
 
-Eloquent, the footgun gallery:
+The footgun gallery:
 
 ```php
 // Bad: function on column + star projection
@@ -142,8 +144,6 @@ Ticket::query()
 
 Log SQL in local (`DB::listen` / Telescope). If you see `date(updated_at)` or a naked `select *`, fix the builder, not the server.
 
-Prisma: `select: { id: true, status: true, … }` and date ranges in `where`. Rails: `select(:id, :status, …)` and ranges, not `where("YEAR(updated_at) = ?", 2026)`. Django: `only()` / `defer('body')` and lookup kwargs that don't wrap the field in `ExtractYear` unless you mean it.
-
 Unsupported filter combos on a public API can be a 400. A table scan is not a product feature.
 
 ## EXPLAIN previews (not fluency)
@@ -159,7 +159,7 @@ WHERE org_id = 42
   AND updated_at >= '2026-01-01';
 ```
 
-Glance at `type` (`ref` / `range` are friends; `ALL` is a dare), `key` (which index), `key_len` (how much prefix), `rows` (estimate), and `Extra` (`Using index condition` vs blank vs filesort later).<Cite n={10} /><Cite n={11} /> We'll read these properly in article 10. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
+Glance at `type` (`ref` / `range` are friends; `ALL` is a dare), `key` (which index), `key_len` (how much prefix), `rows` (estimate), and `Extra` (`Using index condition` vs blank vs filesort later).<Cite n={10} /><Cite n={11} /> We'll read these properly in the EXPLAIN article. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
 
 `ANALYZE TABLE` keeps stats from lying after big loads. One sentence; ops depth later.<Cite n={12} />
 
@@ -221,9 +221,9 @@ WHERE org_id = ?
 - Projection is intentional: no `SELECT *` on list endpoints; `body` stays out
 - OR / `q=` search has a real strategy, not hope
 - You glanced at `EXPLAIN` key/key_len on prod-shaped data
-- You did not "fix" a bad WHERE with `LIMIT` alone (pagination semantics are article 05)
+- You did not "fix" a bad WHERE with `LIMIT` alone (pagination semantics get their own article)
 
-A perfect filter still hurts if you `ORDER BY` something unindexed or `OFFSET` into oblivion. That is next: [sorting, LIMIT, and pagination](/posts/mysql-pagination/). Joins that multiply rows are [article 06](/posts/mysql-joins/).
+A perfect filter still hurts if you `ORDER BY` something unindexed or `OFFSET` into oblivion. That's where the series goes next: sorting, LIMIT, and pagination, then joins that multiply rows. Those articles are in the works; the [series page](/projects/mysql/) is where they'll appear.
 
 <References
   items={[

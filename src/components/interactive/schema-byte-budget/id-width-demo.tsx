@@ -75,7 +75,7 @@ export function IdWidthDemo() {
         ? {
             tone: "warn" as const,
             title: "Nice public id, fat clustered key",
-            detail: `Every secondary index copies ~${estimate.clusteredKeyBytes}B of ULID. Fine for small tables — loud at scale.`,
+            detail: `Every secondary index copies ~${estimate.clusteredKeyBytes}B of ULID. Fine for small tables, loud at scale.`,
           }
         : strategy === "bigint-pk"
           ? {
@@ -88,7 +88,7 @@ export function IdWidthDemo() {
               tone: "warn" as const,
               title: "Guessable URLs, tight ceiling",
               detail:
-                "Great for internal tables. Terrible for /orders/41, /orders/42 scavenger hunts — and signed INT tops out ~2.1B.",
+                "Great for internal tables. Terrible for /orders/41, /orders/42 scavenger hunts, and signed INT tops out ~2.1B.",
             };
 
   return (
@@ -125,7 +125,7 @@ export function IdWidthDemo() {
           <p className="mt-2 text-xs text-grey">
             {scavengerHunt
               ? "Sequential ids in URLs = free enumeration."
-              : "Opaque string — clients never see the clustered integer."}
+              : "Opaque string; clients never see the clustered integer."}
           </p>
         </Panel>
 
@@ -140,7 +140,7 @@ export function IdWidthDemo() {
               />
               {roundTrip.corrupted ? (
                 <p className="pt-1 text-xs text-red">
-                  Silently rounded — off by{" "}
+                  Silently rounded, off by{" "}
                   {(
                     BigInt(roundTrip.afterJson) - BigInt(roundTrip.mysqlId)
                   ).toString()}
@@ -148,14 +148,14 @@ export function IdWidthDemo() {
                 </p>
               ) : (
                 <p className="pt-1 text-xs text-grey">
-                  Still inside Number.MAX_SAFE_INTEGER — for now.
+                  Still inside Number.MAX_SAFE_INTEGER (for now).
                 </p>
               )}
             </div>
           ) : (
             <p className="font-mono text-xs text-grey">
               API ships a string (<code className="text-ink">{SAMPLE_ULID}</code>
-              ). Number never touches it — trap avoided.
+              ). Number never touches it, so the trap never fires.
             </p>
           )}
         </Panel>

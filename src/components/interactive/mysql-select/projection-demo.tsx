@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   TICKET_PROJECT_COLS,
   estimateProjection,
+  projectionSelectSql,
   type ProjectionEstimate,
 } from "./model";
 import { DemoShell, OutcomeBanner, TradeoffRow } from "./shared";
@@ -47,6 +48,17 @@ export function ProjectionDemo() {
         >
           Card columns
         </Button>
+      </div>
+
+      <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] leading-relaxed text-paper sm:text-xs">
+        <div>{projectionSelectSql(mode)}</div>
+        <div>
+          <span className="text-grey">FROM </span>tickets
+        </div>
+        <div>
+          <span className="text-grey">WHERE </span>org_id = ? AND status =
+          &apos;open&apos; AND updated_at &gt;= ?
+        </div>
       </div>
 
       <OutcomeBanner

@@ -55,7 +55,7 @@ export function PrefixLengthDemo() {
   return (
     <DemoShell
       title="Prefix length for this query"
-      blurb="Fixed index from article 03. Toggle predicates — see how much key_len you'd expect to light up."
+      blurb="The composite from the last article, frozen. Toggle predicates and watch how much of the key participates."
       accent="red"
     >
       <div className="flex flex-wrap gap-2">

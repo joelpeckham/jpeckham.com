@@ -98,7 +98,7 @@ export function VarcharCharsetDemo() {
     : nearKb
       ? {
           tone: "warn" as const,
-          title: `~${worst.bytes}B declared — about a kilobyte`,
+          title: `~${worst.bytes}B declared, about a kilobyte`,
           detail: `Only ~${rpp} of these columns fit on a 16KB page. Cargo-cult VARCHAR(255) is how list endpoints get chubby.`,
         }
       : {

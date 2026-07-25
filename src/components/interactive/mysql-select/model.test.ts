@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   estimateProjection,
   evaluatePrefixHighlight,
+  projectionSelectSql,
   sargPreset,
 } from "./model";
 
@@ -29,6 +30,15 @@ describe("estimateProjection", () => {
     expect(star.includesFat).toBe(true);
     expect(list.includesFat).toBe(false);
     expect(star.tone).toBe("bad");
+  });
+});
+
+describe("projectionSelectSql", () => {
+  it("lists the card columns and never the body", () => {
+    expect(projectionSelectSql("star")).toBe("SELECT *");
+    const list = projectionSelectSql("list");
+    expect(list).toContain("subject");
+    expect(list).not.toContain("body");
   });
 });
 

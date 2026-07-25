@@ -44,7 +44,7 @@ export function PkWidthTaxDemo() {
         ? {
             tone: "bad" as const,
             title: "36-byte luggage on every index",
-            detail: `~${luggage.perSecondaryBytes}B per secondary entry × ${secondaryCount} indexes — before multiplying by row count.`,
+            detail: `~${luggage.perSecondaryBytes}B per secondary entry × ${secondaryCount} indexes, before multiplying by row count.`,
           }
         : {
             tone: "warn" as const,

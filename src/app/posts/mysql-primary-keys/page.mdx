@@ -22,7 +22,9 @@ InnoDB indexes (aside from spatial ones) are B-tree structures. Index records li
 
 - **Interior pages** (the root and the branches under it) do *not* hold your row. They hold **separator keys** and child pointers: "keys up through 6 go left; bigger keys go right." Their only job is to steer.
 - **Leaf pages** are the bottom of the tree. They hold the actual index entries, sorted by key.<Cite n={3} />
-- A lookup is a **descent**: start at the root, compare your search key to the separators, follow one child pointer, repeat until you hit a leaf. That is a handful of page reads even when the table has millions of rows. Without a usable index, MySQL starts at the first row and reads through the table to find matches.<Cite n={4} /> Indexes exist so you don't do that.
+- A lookup is a **descent**: start at the root, compare your search key to the separators, follow one child pointer, repeat until you hit a leaf. Without a usable index, MySQL starts at the first row and reads through the table to find matches.<Cite n={4} /> Indexes exist so you don't do that.
+
+The reason a descent is so cheap is fan-out. A 16KB interior page holds hundreds of separator keys, and each of *those* children holds hundreds more, so the tree stays absurdly shallow: three levels already covers millions of rows, four covers more rows than you have. "Look up one order in a hundred-million-row table" is three or four page reads, most of which are probably cached anyway.
 
 When people say InnoDB "walks the index," they mean this root-to-leaf trip. "Leaf" is not poetry. It means the bottom level, where the entries live.
 
@@ -46,7 +48,7 @@ The rest of this article is about protecting that path, and noticing when your r
 
 A clustered key only helps queries that can actually use it. I learned this the unglamorous way at [BetterRX](https://www.betterrx.com/), the hospice pharmacy platform that is my day job.
 
-I deal with a log table for inbound integration messages. Each row carries a big JSON payload with PHI in it. Internal folks often need to find "the message about this patient" or "the message about this file." What they have is a medical record number (MRN) or another id that lives *inside* the JSON. The table has a perfectly fine surrogate primary key. Nobody is querying by that id. Searching means reading millions of rows and poking JSON until something matches. Slow. Painful. "We used BIGINT" does not help, because BIGINT was never invited to the party.
+I deal with a log table for inbound integration messages. Each row carries a big JSON payload with PHI in it. Internal folks often need to find "the message about this patient" or "the message about this file." What they have is a medical record number (MRN) or another id that lives *inside* the JSON. The table has a perfectly fine surrogate primary key. Nobody is querying by that id. Searching means reading millions of rows and poking JSON until something matches, which takes exactly as long as it sounds like it would. "We used BIGINT" does not help, because BIGINT was never invited to the party.
 
 JSON is fine for sparse junk you do not filter on. The problem is the **access path**: how MySQL is supposed to find the row. If support will search by MRN, that value needs to be a real column (or a generated column) with an index. Then MySQL can look up the MRN in a secondary index, read the primary key out of that index entry, and bounce into the clustered leaf for the rest of the row.<Cite n={1} /> Same table. Suddenly usable.
 
@@ -111,11 +113,11 @@ Default for most MySQL web tables:
 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
 ```
 
-Cheap joins. Cheap secondaries. Internal admin URLs like `/orders/42` stay one clustered hop. If there is no natural unique key, MySQL's own guidance is to add an auto-increment column and keep the primary key short, because long primary keys bloat every secondary index.<Cite n={1} /><Cite n={8} />
+Cheap joins. Cheap secondaries. Internal admin URLs like `/orders/42` stay one clustered hop. This is exactly what Laravel's `$table->id()` gives you, and every `$table->foreignId('user_id')` copies the same skinny 8 bytes into the child table, so the whole schema stays cheap to relate. If there is no natural unique key, MySQL's own guidance is to add an auto-increment column and keep the primary key short, because long primary keys bloat every secondary index.<Cite n={1} /><Cite n={8} />
 
 If the API must not leak sequential ids (Stripe-style `cus_…` / `pi_…` vibes): keep the bigint as the clustered key and put a unique `public_id` beside it. URLs and JSON use `public_id`. Joins and FKs use `id`. You already saw this pattern in the types post. The clustered-index reason is the luggage demo above: don't make the wide public string *also* be the thing every secondary copies.
 
-If clients must mint ids (offline mobile, multi-writer ingest): UUIDv7 or ULID. Prefer `BINARY(16)` when you can stand the ergonomics. Avoid `CHAR(36)` just because the ORM printed a string. Time-ordered beats random for the insert-spray reason.
+If clients must mint ids (offline mobile, multi-writer ingest): UUIDv7 or ULID. Time-ordered beats random for the insert-spray reason. Laravel's `HasUuids` trait already mints time-ordered values, so the trap isn't the trait, it's the column: `$table->uuid()` is a `CHAR(36)` string, so every secondary index carries 36 bytes of dashes and hex. Prefer `HasUlids` with `CHAR(26)`, or `BINARY(16)` if you can stand the ergonomics. Avoid `CHAR(36)` just because the ORM printed a string.
 
 Multi-tenant tables: my default is still a global surrogate `id` as the PK, with secondary indexes that *lead* with `tenant_id` so "all rows for this tenant" can use an index. A composite `PRIMARY KEY (tenant_id, id)` packs one tenant's rows together in the clustered index, which helps some scan shapes, but every secondary and every FK pays for both columns. I only reach for composite clustering when tenant locality is the main access pattern and I've stared at the join tax long enough to feel sad about it.
 
@@ -123,7 +125,7 @@ Natural keys (email, slug) as the primary key: I almost never do this. People ch
 
 ## AUTO_INCREMENT for people who ship HTTP handlers
 
-After an insert, get the new id with `LAST_INSERT_ID()` (or your driver's equivalent) on the **same** database connection. That value is connection-specific, so concurrent inserts on other connections don't steal your id.<Cite n={9} />
+After an insert, get the new id with `LAST_INSERT_ID()` (or your driver's equivalent) on the **same** database connection. That value is connection-specific, so concurrent inserts on other connections don't steal your id.<Cite n={9} /> Eloquent handles this for you: `$model->save()` fills `$model->id` from the driver's last-insert-id on that same connection, which is why it works even when your app has fifty requests inserting at once.
 
 Gaps are normal. In all InnoDB auto-increment lock modes, if a transaction generates auto-increment values and then rolls back, those values are lost and not reused.<Cite n={10} /> The sequence is unique, not gapless. Do not use `AUTO_INCREMENT` as an invoice number that finance expects to be contiguous. Finance will notice. Finance always notices. Give invoices their own numbering scheme.
 
@@ -131,7 +133,7 @@ Use an integer type large enough for the sequence you need. When the column hits
 
 ## Forgot a primary key
 
-ORM dumps, import scripts, and "I'll add it later" migrations sometimes create tables with no `PRIMARY KEY`. InnoDB still clusters them somehow: a hidden `GEN_CLUST_INDEX` row id, or (if enabled) a generated invisible PK.<Cite n={1} /><Cite n={6} /> Replication, foreign keys, and "what is the id of this row?" get awkward fast.
+Import scripts, quick dumps, and "I'll add it later" migrations sometimes create tables with no `PRIMARY KEY`. The Laravel classic is the hand-rolled pivot table: `Schema::create('role_user', ...)` with two `foreignId` columns and no key in sight. (`$table->primary(['role_id', 'user_id'])` fixes it and deduplicates attachments as a bonus.) InnoDB still clusters keyless tables somehow: a hidden `GEN_CLUST_INDEX` row id, or (if enabled) a generated invisible PK.<Cite n={1} /><Cite n={6} /> Replication, foreign keys, and "what is the id of this row?" get awkward fast.
 
 If `SHOW CREATE TABLE` does not show a primary key you meant to have, fix it before the table is large. Changing the clustered key later rebuilds the table and every secondary index. That pain is its own article. For v1: choose on purpose.
 

@@ -4,6 +4,7 @@ import {
   estimateSelectivity,
   evaluateLeftPrefix,
   moveCol,
+  predicateSqlLines,
   strategyStory,
 } from "./model";
 
@@ -63,6 +64,38 @@ describe("evaluateLeftPrefix", () => {
     expect(v.status).toBe("partial");
     expect(v.usableCols).toEqual(["org_id"]);
     expect(v.frozenPredCols).toContain("assignee_id");
+  });
+});
+
+describe("predicateSqlLines", () => {
+  it("renders predicates in index order, then leftovers", () => {
+    const lines = predicateSqlLines(DEFAULT_INDEX_COLS, {
+      status: "eq",
+      org_id: "eq",
+      subject: "like_contains",
+    });
+    expect(lines).toEqual([
+      "org_id = ?",
+      "status = ?",
+      "subject LIKE '%refund%'",
+    ]);
+  });
+
+  it("returns no lines when nothing is toggled on", () => {
+    expect(predicateSqlLines(DEFAULT_INDEX_COLS, {})).toEqual([]);
+  });
+
+  it("renders each operator shape", () => {
+    const lines = predicateSqlLines(["org_id", "status", "updated_at"], {
+      org_id: "in",
+      status: "like_prefix",
+      updated_at: "gt",
+    });
+    expect(lines).toEqual([
+      "org_id IN (?, ?, ?)",
+      "status LIKE 'refund%'",
+      "updated_at > ?",
+    ]);
   });
 });
 

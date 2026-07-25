@@ -116,7 +116,7 @@ export function evaluateLeftPrefix(
       title: "Cannot use this index",
       reason: firstOp
         ? `Leading column ${first} has a non-range shape.`
-        : `Missing leading column ${first ?? "?"} — left-prefix needs the front of the key.`,
+        : `Missing leading column ${first ?? "?"}. A left prefix needs the front of the key.`,
     };
   }
 
@@ -139,7 +139,7 @@ export function evaluateLeftPrefix(
       usableIndexes,
       frozenPredCols,
       tone: "warn",
-      title: "Partial prefix — range froze the rest",
+      title: "Partial prefix: range froze the rest",
       reason: `Used ${usableCols.join(", ")}. After a range, ${frozenPredCols.join(", ")} cannot narrow the index walk (filter later / ICP territory).`,
     };
   }
@@ -151,7 +151,7 @@ export function evaluateLeftPrefix(
       usableIndexes,
       frozenPredCols,
       tone: "warn",
-      title: "Partial prefix — gap in the key",
+      title: "Partial prefix: gap in the key",
       reason: `Used ${usableCols.join(", ")}. Skipping a middle column stops the walk; ${frozenPredCols.join(", ")} sits past the gap.`,
     };
   }
@@ -213,6 +213,33 @@ export const DEFAULT_INDEX_COLS: TicketCol[] = [
   "assignee_id",
   "updated_at",
 ];
+
+const OP_SQL: Record<PredOp, (col: TicketCol) => string> = {
+  eq: (col) => `${col} = ?`,
+  gt: (col) => `${col} > ?`,
+  in: (col) => `${col} IN (?, ?, ?)`,
+  like_prefix: (col) => `${col} LIKE 'refund%'`,
+  like_contains: (col) => `${col} LIKE '%refund%'`,
+};
+
+/**
+ * Render the current predicate map as WHERE-clause lines, index columns
+ * first (in key order), then any predicates on columns outside the key.
+ */
+export function predicateSqlLines(
+  indexCols: readonly TicketCol[],
+  predicates: PredicateMap,
+): string[] {
+  const inKey = indexCols.filter((c) => predicates[c] != null);
+  const outsideKey = TICKET_COLS.filter(
+    (c) => predicates[c] != null && !indexCols.includes(c),
+  );
+  return [...inKey, ...outsideKey].map((col) => {
+    const op = predicates[col];
+    if (!op) throw new Error(`Missing predicate for ${col}`);
+    return OP_SQL[op](col);
+  });
+}
 
 export function moveCol(
   cols: readonly TicketCol[],
