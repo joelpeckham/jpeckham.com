@@ -1,0 +1,273 @@
+import { SchemaByteBudget } from "@/components/interactive/schema-byte-budget";
+import { Cite, References } from "@/components/cite";
+
+## Come on in, the water's fine.
+
+This is the first post in [Learn MySQL](/projects/mysql/), a series of interactive articles for web folks who want to actually *understand* MySQL and InnoDB — not just copy a Prisma migration and hope production is in a good mood.
+
+I’m going to walk foundations first (schema, indexes, queries, writes, transactions), then get weird with the deep stuff (MVCC, locks, the buffer pool, replication, forensics). Binge in order or teleport around — your call.
+
+**Today’s topic:** tables, column types, and the boring-looking choices that quietly decide whether your app is correct *and* whether your list endpoints feel snappy six months from now.
+
+Why start here instead of “show me the spicy lock diagrams”? Because every later article assumes a row has a shape. Indexes sit on columns. Transactions mutate typed values. The buffer pool caches pages full of those rows. If you pick `DOUBLE` for money or `TIMESTAMP` for “the user meant Tuesday in Arizona,” no amount of clever caching will save you. Schema is the cheapest place to prevent years of migration regret — and it’s also where ORMs are most confident while being most wrong.
+
+So: hand-holding mode on. If a section doesn’t answer “why should I care?”, I failed. Yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
+
+## What a table actually is (and why that isn’t pedantry)
+
+When you `CREATE TABLE` in modern MySQL, you’re almost certainly getting **InnoDB**.<Cite n={1} /> InnoDB doesn’t store your table like a CSV someone left on a USB stick. It stores it as a **clustered index of rows** — think “the data *is* the primary index,” sorted and packed into pages on disk.
+
+You don’t need the full primary-key deep dive yet (that’s next). You just need this itch in your brain: **the types you put on columns decide what sits in those pages**. Wider, sloppier types → fatter rows → fewer rows per page → every “give me 50 listings” query hauls more junk for the same answer.
+
+A migration isn’t “just SQL.” It’s reshaping the physical thing every request reads. That’s why I’m spending a whole article on `INT` vs `BIGINT` and whether your bio column can survive a 😀.
+
+## Types that keep apps honest
+
+Walkthrough time. For each family of types I want you to leave with: what this is, what breaks if you shrug, and what I’d do on a normal web app.
+
+### Integers and IDs — because “it autoincrements” is not a strategy
+
+MySQL integers come in fixed widths: `TINYINT` (1 byte) up through `BIGINT` (8 bytes).<Cite n={2} /> Signed vs unsigned changes the *range*, not how much space they take. And that `INT(11)` you keep seeing in ancient dumps? Display-width folklore. The parenthetical does **not** constrain how big a value you can store — it’s leftover metadata theater, and MySQL has even deprecated the attribute.<Cite n={3} /> You can stop cargo-culting it now. You’re welcome.
+
+Your primary key (and every foreign key that copies it) is going to show up *everywhere*: joins, URLs if you’re sloppy, JSON payloads, admin tools, that one CSV export finance swears by. Pick too small and you hit a ceiling mid-growth. Pick a wide integer and ship it to the browser as a bare JSON number without a plan, and JavaScript will eventually lie to you.
+
+Here’s the unfun truth: a JS `Number` is an IEEE 754 double. Integers are only guaranteed exact up through `Number.MAX_SAFE_INTEGER` (`2^53 − 1`). Past that, adjacent integers can collapse into the same value.<Cite n={4} /> MDN is blunt about the JSON path too — when a parser coerces an out-of-range JSON integer into `Number`, you should expect corruption.<Cite n={5} /> So “we used `BIGINT` in MySQL” is not the same sentence as “the React app can round-trip this id forever.” A lot of teams dodge the whole mess with a separate public id that’s a string on purpose (`CHAR(26)` ULID-style, or a UUID you stored deliberately), and keep the fat integer as an internal surrogate.
+
+That’s the ID story I’d pick on day one: boring clustered key in the database, stringy stable id at the API boundary, and zero late-night Slack threads titled “why did this id change by one??”
+
+### Money — floats are for physics homework, not invoices
+
+JavaScript’s `Number` (and MySQL’s `FLOAT` / `DOUBLE`) live in approximate binary floating-point land.<Cite n={5} /><Cite n={6} /> That’s fine for “model confidence score” and “how spicy is this recommendation.” It is a deeply unserious place to keep money. Store currency in a float and you are volunteering for a support ticket that says “the total is off by a cent,” plus a finance person who does not care that IEEE 754 is hard.
+
+I like two adult options:
+
+1. **Integer minor units** — `price_cents` as an integer, plus `CHAR(3)` for the currency code. This is the Stripe-shaped universe.<Cite n={7} />
+2. **`DECIMAL(M,D)`** — exact fixed-point if you’d rather keep a decimal scale in the column.<Cite n={8} />
+
+Money bugs rarely announce themselves as money bugs. They show up as “the API is wrong,” “the frontend rounded weird,” or “accounting export is haunted.” Half the time the ghost is the column type.
+
+### Time — where my day job gets involved
+
+MySQL has two main ways to store “a moment,” and they lie differently.<Cite n={9} />
+
+`TIMESTAMP` converts on the way in and out using the session `time_zone`. Change the connection timezone (or move regions and forget to pin it) and the same stored instant can *display* as a different local time. `DATETIME` stores the digits you gave it — no conversion. Great for wall-clock meaning *if* you also know which timezone that clock lives in. Terrible if you assumed “those digits are UTC” and they weren’t.
+
+Here’s the concrete version from my day job. I work at **BetterRx**, a hospice pharmacy platform. Patients sometimes go on **respite care** — temporarily housed somewhere that isn’t home — which means a different pharmacy and delivery location for a while. Users can schedule that location change ahead of time. When the stay starts, the system should order meds from the new pharmacy to the new place so everything’s ready on arrival.
+
+The hair-pulling bit wasn’t the order itself. It was the job that asks: “which respite stays start *now*?” “Now” only makes sense in the patient’s and pharmacy’s timezones. Local midnight in Arizona is not local midnight in New York. Get the stored type + timezone story wrong and you fire early, late, or on the wrong calendar day — which is an especially bad genre of bug when medications are involved.
+
+The mental model that finally stuck for me:
+
+- **Event / schedule time** (“stay starts on this local date”) needs a wall-clock strategy *plus* an explicit timezone (or a UTC instant you convert with a library you trust).
+- **Row mutation time** (`created_at` / `updated_at`) is “when did the database notice this row change?” — often fine as UTC with defaults like `CURRENT_TIMESTAMP(3)`.
+
+Bonus gotcha while we’re here: `TIMESTAMP` still hits a wall in **2038** (the type’s documented range tops out there).<Cite n={9} /> Far-future schedule rows are not a bit in healthcare. I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff.
+
+ORMs will smile through all of this. Prisma maps `DateTime` to whatever the migration shrugged into existence; Rails/`ActiveRecord` historically leans `TIMESTAMP`. Read the SQL. Time bugs feel like flaky jobs. They’re usually typed lies with a timezone on top.
+
+### Strings and utf8mb4 — yes, emoji is a schema decision
+
+`VARCHAR(n)` is *n characters*, but MySQL’s row budget thinks in *bytes*.<Cite n={10} /> Under `utf8mb4`, a character can cost up to 4 bytes. So `VARCHAR(255)` is not “about 255 bytes, probably fine.” It can be closer to a kilobyte of worst-case attitude — which starts to matter when you’ve got a dozen of those “just in case” columns on a hot list query.
+
+Also: the charset formerly known as `utf8` in MySQL is actually `utf8mb3`.<Cite n={11} /> It cannot store emoji and other supplementary-plane characters. Users *will* paste a 😀 into a name field. Your schema should not respond with “lol truncate.”
+
+Collation (modern default vibes: `utf8mb4_0900_ai_ci`) decides equality and sort order. You don’t need a collation PhD today — just don’t inherit `latin1` from a tutorial carved on stone tablets. Pick string lengths from the product (“display name max 80 in the UI”) not from “255 feels traditional.” Charset mistakes show up as weird characters in prod; length mistakes show up later as mysterious row bloat. Both are avoidable in the migration PR, which is a much nicer place to fix them than a war room.
+
+### NULL is a third state (not “empty,” not “zero,” not “the frontend forgot”)
+
+SQL `NULL` means unknown / not applicable.<Cite n={12} /> It is not `''`. It is not `0`. It turns `WHERE` into three-valued logic cosplay, interacts weirdly with unique indexes, and maps to JS `null`/`undefined` depending on which driver is gaslighting you today.
+
+If the domain always has a value, say `NOT NULL` and give a real default. If “missing” is a product concept, keep `NULL` on purpose and teach your API the same story. Half of “why didn’t this row match my filter?” bugs are NULL semantics wearing a trench coat.
+
+### JSON — a deliberate escape hatch, not a junk drawer
+
+Native `JSON` is validated binary storage — better than stuffing a blob into `TEXT` and praying.<Cite n={13} /> I like it for sparse per-tenant attributes, feature-flag bags, “seller added three weird facets” shape that shouldn’t force twenty nullable columns.
+
+I do *not* like it for money, foreign keys, or the fields you filter list endpoints on. If it’s a join key or a `WHERE` you care about, it wants to be a column (I’ll get into generated columns / indexing JSON later in the series). JSON feels flexible until your “flexible” field is the reason you can’t index the query that pays the bills.
+
+## Why the row’s byte budget matters
+
+Remember the “rows live in pages” bit? This is where it gets tactile.
+
+Every column type is a little vote for how wide a row is. Fatter rows → fewer rows per InnoDB page → more I/O and cache pressure for the same “show me a page of results” API. There’s also a shared row-size ceiling floating around ~65KB of column data (long values often spill off-page, which is its own adventure).<Cite n={14} /> `VARCHAR(8000)` on every field “just in case” is how you donate performance to the void.
+
+And width isn’t the only signal. Float money, timezone-shifting event times, and `utf8mb3` text are correctness bugs that CI will cheerfully green-check — which is rude, honestly.
+
+### Meet the schema byte budget toy
+
+Below is an **illustrative** InnoDB DYNAMIC worst-case layout. It is not `INFORMATION_SCHEMA`, it will not submit your migration for you, and pedants should assume I simplified on purpose. It’s here so you can *feel* the tradeoffs before I paste SQL.
+
+How to read it without getting lost:
+
+- **Column list (left):** click a column to tweak width, nullability, money mode, charset, or `DATETIME` vs `TIMESTAMP`. Add from the dropdown; delete the nonsense.
+- **Presets (top):** *ORM defaults (bad)* is “I clicked generate and walked away.” *Marketplace v1 (good)* is something you could defend in PR review. *Wide VARCHAR soup* is the silent tax.
+- **Row byte strip:** colored segments ≈ bytes per column. Click for the short “why these bytes” notes.
+- **Chips:** the product alarms — money exact?, TZ conversion / 2038, utf8mb3 truncation, near the row budget.
+- **Sample string:** leave an emoji in there and flip charset. Watch the warning throw a tiny tantrum.
+
+Things worth poking: change `price` from `DOUBLE` to cents/`DECIMAL` (bytes barely move; honesty does). Flip `starts_at` between `TIMESTAMP` and `DATETIME` (same lesson as the respite job). Drag a `VARCHAR` length like you’re trying to win a bet.
+
+<SchemaByteBudget />
+
+## A marketplace schema that holds up
+
+Healthcare schemas are a paperwork festival, so the worked example is a tiny marketplace instead: users, listings, order lines. Same type decisions, less PHI.
+
+First, the anti-pattern — what a hasty Prisma migration vibes like when nobody reviewed the SQL:
+
+```sql
+-- Bad: looks fine until money, time, emoji, or row width bite
+CREATE TABLE listings_bad (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shop_id INT NOT NULL,
+  title VARCHAR(255),
+  description VARCHAR(8000),
+  price DOUBLE NOT NULL,
+  currency CHAR(3),
+  starts_at TIMESTAMP NULL,
+  attrs TEXT,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL
+) DEFAULT CHARSET = utf8;
+```
+
+Why this is a trap, in plain language: float money, `utf8`→mb3, event time on `TIMESTAMP`, JSON-shaped data stuffed in `TEXT`, nullable everything, and a description column trying to eat the whole row budget for lunch.
+
+Now a version I’d actually defend (load the good preset above and compare the strip):
+
+```sql
+CREATE TABLE users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  public_id CHAR(26) NOT NULL,          -- ULID-style for APIs
+  email VARCHAR(320) NOT NULL,
+  display_name VARCHAR(80) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_users_public_id (public_id),
+  UNIQUE KEY uk_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE listings (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  shop_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(140) NOT NULL,
+  description TEXT NOT NULL,
+  price_cents INT UNSIGNED NOT NULL,
+  currency CHAR(3) NOT NULL,
+  status TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  starts_at DATETIME(0) NOT NULL,       -- event time, not TZ-auto
+  attrs JSON NULL,                      -- sparse facets only
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL
+    DEFAULT CURRENT_TIMESTAMP(3)
+    ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_listings_shop_status (shop_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE order_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NOT NULL,
+  listing_id BIGINT UNSIGNED NOT NULL,
+  quantity SMALLINT UNSIGNED NOT NULL,
+  unit_price_cents INT UNSIGNED NOT NULL,
+  line_total_cents INT UNSIGNED NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_order_items_order (order_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+What I optimized for: exact money, event time that doesn’t shapeshift with session TZ, `utf8mb4`, lengths tied to product reality, JSON only for sparse junk, and description as `TEXT` so it isn’t pretending to be a polite in-row `VARCHAR`.
+
+Secondary indexes and foreign keys get their own episodes. Don’t bolt them on here and call it a day — I’ll earn those later.
+
+## Checklist before you migrate
+
+Steal this for PR review. If you can’t check a box, that’s the comment to leave:
+
+- IDs: width, signedness, and JSON/API round-trip decided together
+- Money: integer cents or `DECIMAL` — never float
+- Event time vs `created_at`/`updated_at` — different jobs; anything a job compares to “now” has an explicit timezone story
+- User text: `utf8mb4`, length tied to the UI
+- `NULL` only where “unknown” is real
+- JSON only for sparse shape; filters stay relational
+- Wide columns justified — or moved to `TEXT` / off the hot list path
+- Staging and prod agree on strict SQL mode (silent truncation on your laptop is not a personality trait)
+- The migration SQL matches the types you *think* the ORM model has
+
+Correct types prevent bugs no cache will fix. Next up: [primary keys and the clustered index](/posts/mysql-primary-keys/) — because once the leaf has a shape, you still have to pick what InnoDB sorts the whole table by. That’s where “I just used autoincrement” becomes a whole worldview.
+
+<References
+  items={[
+    {
+      n: 1,
+      title: "MySQL 9.7 Reference Manual — Introduction to InnoDB",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/innodb-introduction.html",
+    },
+    {
+      n: 2,
+      title: "MySQL 9.7 Reference Manual — Integer Types (Exact Value)",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/integer-types.html",
+    },
+    {
+      n: 3,
+      title: "MySQL 9.7 Reference Manual — Numeric Type Attributes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/numeric-type-attributes.html",
+    },
+    {
+      n: 4,
+      title: "MDN — Number.MAX_SAFE_INTEGER",
+      href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER",
+    },
+    {
+      n: 5,
+      title: "MDN — Number (IEEE 754 doubles, safe integers, JSON coercion)",
+      href: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    },
+    {
+      n: 6,
+      title: "MySQL 9.7 Reference Manual — Floating-Point Types (Approximate Value)",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/floating-point-types.html",
+    },
+    {
+      n: 7,
+      title: "Stripe Docs — Zero-decimal currencies and minor units",
+      href: "https://docs.stripe.com/currencies#zero-decimal",
+    },
+    {
+      n: 8,
+      title: "MySQL 9.7 Reference Manual — Fixed-Point Types (Exact Value)",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/fixed-point-types.html",
+    },
+    {
+      n: 9,
+      title: "MySQL 9.7 Reference Manual — Date and Time Data Types",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/datetime.html",
+    },
+    {
+      n: 10,
+      title: "MySQL 9.7 Reference Manual — The CHAR and VARCHAR Types",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/char.html",
+    },
+    {
+      n: 11,
+      title: "MySQL 9.7 Reference Manual — The utf8mb4 Character Set",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/charset-unicode-utf8mb4.html",
+    },
+    {
+      n: 12,
+      title: "MySQL 9.7 Reference Manual — Working with NULL Values",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/working-with-null.html",
+    },
+    {
+      n: 13,
+      title: "MySQL 9.7 Reference Manual — The JSON Data Type",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/json.html",
+    },
+    {
+      n: 14,
+      title: "MySQL 9.7 Reference Manual — Limits on Table Column Count and Row Size",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/column-count-limit.html",
+    },
+  ]}
+/>

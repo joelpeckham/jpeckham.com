@@ -21,7 +21,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "refman:fetch": "node scripts/fetch-mysql-refman.mjs"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
