@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildSargKeyScene,
   estimateProjection,
-  evaluatePrefixHighlight,
   projectionSelectSql,
   sargPreset,
 } from "./model";
@@ -53,37 +52,5 @@ describe("buildSargKeyScene", () => {
     expect(seek.litEnd - seek.litStart).toBeLessThanOrEqual(
       scan.litEnd - scan.litStart,
     );
-  });
-});
-
-describe("evaluatePrefixHighlight", () => {
-  it("lights the full inbox prefix", () => {
-    const v = evaluatePrefixHighlight({
-      org_id: "eq",
-      status: "eq",
-      updated_at: "gt",
-    });
-    expect(v.litCount).toBe(3);
-    expect(v.access).toBe("range");
-    expect(v.tone).toBe("ok");
-  });
-
-  it("scans when org_id is missing", () => {
-    const v = evaluatePrefixHighlight({
-      org_id: "off",
-      status: "eq",
-    });
-    expect(v.access).toBe("ALL");
-    expect(v.litCount).toBe(0);
-  });
-
-  it("stops at a gap before updated_at", () => {
-    const v = evaluatePrefixHighlight({
-      org_id: "eq",
-      status: "off",
-      updated_at: "gt",
-    });
-    expect(v.litCount).toBe(1);
-    expect(v.tone).toBe("warn");
   });
 });

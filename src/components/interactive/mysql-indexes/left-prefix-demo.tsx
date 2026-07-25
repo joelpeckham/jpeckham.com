@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   SortedKeyStrip,
@@ -12,13 +12,13 @@ import {
   PREFIX_PRESETS,
   buildLeftPrefixKeyScene,
   evaluateLeftPrefix,
-  moveCol,
   predicateSqlLines,
+  reorderCol,
   type PredOp,
   type PredicateMap,
   type TicketCol,
 } from "./model";
-import { Chip, DemoShell, OutcomeBanner } from "./shared";
+import { Chip, DemoShell } from "./shared";
 
 const OP_CYCLE: (PredOp | null)[] = [
   null,
@@ -51,6 +51,8 @@ export function LeftPrefixDemo() {
     status: "eq",
   });
   const [presetId, setPresetId] = useState("inbox-open");
+  const dragFrom = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const verdict = useMemo(
     () => evaluateLeftPrefix(indexCols, predicates),
@@ -101,15 +103,10 @@ export function LeftPrefixDemo() {
     });
   }
 
-  function reorder(index: number, direction: -1 | 1) {
-    setPresetId("custom");
-    setIndexCols((cols) => moveCol(cols, index, direction));
-  }
-
   return (
     <DemoShell
       title="Left-prefix matcher"
-      blurb="Reorder the index. Tap predicates. See which left prefix actually walks."
+      blurb="Drag to reorder the index. Tap predicates. Watch the sorted walk."
       accent="blue"
     >
       <div className="flex flex-wrap gap-2">
@@ -128,8 +125,7 @@ export function LeftPrefixDemo() {
 
       <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] leading-relaxed text-paper sm:text-xs">
         <div>
-          <span className="text-grey">KEY idx_demo </span>({indexCols.join(", ")}
-          )
+          <span className="text-grey">KEY </span>({indexCols.join(", ")})
         </div>
         {sqlLines.length === 0 ? (
           <div className="text-grey">WHERE (no predicates yet)</div>
@@ -145,7 +141,7 @@ export function LeftPrefixDemo() {
 
       <div>
         <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
-          Index column order
+          Index order · drag to reorder
         </p>
         <div className="flex flex-wrap gap-2">
           {indexCols.map((col, i) => {
@@ -153,29 +149,36 @@ export function LeftPrefixDemo() {
             return (
               <div
                 key={`${col}-${i}`}
+                draggable
+                onDragStart={() => {
+                  dragFrom.current = i;
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(i);
+                }}
+                onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const from = dragFrom.current;
+                  if (from == null) return;
+                  setPresetId("custom");
+                  setIndexCols((cols) => reorderCol(cols, from, i));
+                  dragFrom.current = null;
+                  setDragOver(null);
+                }}
+                onDragEnd={() => {
+                  dragFrom.current = null;
+                  setDragOver(null);
+                }}
                 className={cn(
-                  "flex items-center gap-1 border-2 border-ink px-2 py-1 font-mono text-xs transition-colors",
+                  "cursor-grab border-2 border-ink px-3 py-2 font-mono text-xs active:cursor-grabbing",
                   lit ? "bg-blue text-white" : "bg-white text-ink",
+                  dragOver === i && "ring-2 ring-red ring-offset-1",
                 )}
               >
-                <span className="opacity-60">{i + 1}.</span>
+                <span className="mr-1 opacity-50">{i + 1}</span>
                 <span className="font-bold">{col}</span>
-                <button
-                  type="button"
-                  className="ml-1 opacity-70 hover:opacity-100"
-                  aria-label={`Move ${col} left`}
-                  onClick={() => reorder(i, -1)}
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  className="opacity-70 hover:opacity-100"
-                  aria-label={`Move ${col} right`}
-                  onClick={() => reorder(i, 1)}
-                >
-                  →
-                </button>
               </div>
             );
           })}
@@ -184,7 +187,7 @@ export function LeftPrefixDemo() {
 
       <div>
         <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
-          Predicates (tap to cycle)
+          Predicates · tap to cycle
         </p>
         <div className="flex flex-wrap gap-2">
           {indexCols.map((col) => {
@@ -206,16 +209,14 @@ export function LeftPrefixDemo() {
                 <span className="block text-[10px] uppercase tracking-[0.1em] opacity-70">
                   {col}
                 </span>
-                <span className="font-bold">
-                  {op ? OP_LABEL[op] : "off"}
-                </span>
+                <span className="font-bold">{op ? OP_LABEL[op] : "off"}</span>
               </button>
             );
           })}
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <Chip tone="ok">blue = used in walk</Chip>
-          <Chip tone="warn">yellow = predicate frozen</Chip>
+          <Chip tone="ok">blue = used</Chip>
+          <Chip tone="warn">yellow = frozen</Chip>
         </div>
       </div>
 
@@ -225,24 +226,11 @@ export function LeftPrefixDemo() {
         highlight={highlight}
         label={
           keyScene.mode === "interleaved"
-            ? "Sorted keys — range froze status (interleaved)"
+            ? "Interleaved matches — range froze the walk"
             : keyScene.mode === "none"
-              ? "Sorted keys — no usable walk"
-              : "Sorted keys — contiguous left-prefix walk"
+              ? "No usable walk"
+              : "Contiguous left-prefix walk"
         }
-      />
-      {keyScene.mode === "interleaved" ? (
-        <p className="font-mono text-[10px] text-grey">
-          Highlighted rows match status = open, but they are not one contiguous
-          run after the date range — the B-tree cannot walk them as a single
-          interval.
-        </p>
-      ) : null}
-
-      <OutcomeBanner
-        tone={verdict.tone}
-        title={verdict.title}
-        detail={verdict.reason}
       />
     </DemoShell>
   );

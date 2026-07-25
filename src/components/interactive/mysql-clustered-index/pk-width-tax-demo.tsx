@@ -1,144 +1,136 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
+import { AutoLoop } from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
-import {
-  luggageAtScaleMb,
-  pkWidthBytes,
-  secondaryLuggageBytes,
-  type PkShape,
-} from "./model";
-import { DemoShell, OutcomeBanner } from "./shared";
+import { DemoShell } from "./shared";
 
-const SHAPES: { id: PkShape; label: string }[] = [
-  { id: "bigint", label: "BIGINT" },
-  { id: "uuid-v7", label: "UUIDv7" },
-  { id: "uuid-v4-char36", label: "CHAR(36)" },
-  { id: "composite-tenant", label: "tenant+id" },
-];
+const SECONDARIES = ["email", "status", "org_id", "created"] as const;
 
-const SCALE_ROWS = 10_000_000;
+type Bag = "slim" | "fat";
 
+/**
+ * Looping luggage metaphor: one insert stamps a PK copy into every secondary.
+ * Alternates skinny BIGINT briefcase vs fat CHAR(36) trunk.
+ */
 export function PkWidthTaxDemo() {
-  const [shape, setShape] = useState<PkShape>("bigint");
-  const [secondaryCount, setSecondaryCount] = useState(3);
-
-  const luggage = useMemo(
-    () =>
-      secondaryLuggageBytes({
-        pkShape: shape,
-        secondaryCount,
-        indexedColBytesPerSecondary: 8,
-      }),
-    [shape, secondaryCount],
-  );
-
-  const scaleMb = useMemo(
-    () =>
-      luggageAtScaleMb({
-        pkShape: shape,
-        secondaryCount,
-        rowCount: SCALE_ROWS,
-        indexedColBytesPerSecondary: 8,
-      }),
-    [shape, secondaryCount],
-  );
-
-  const maxBar = Math.max(luggage.perSecondaryBytes, 44);
-  const outcome =
-    shape === "bigint"
-      ? {
-          tone: "ok" as const,
-          title: "Skinny PK, skinny secondaries",
-          detail: `Each secondary entry hauls ~${luggage.perSecondaryBytes}B (idx + ${luggage.pkBytes}B PK). At 10M rows ≈ ${scaleMb.toFixed(0)} MB of secondary luggage.`,
-        }
-      : shape === "uuid-v4-char36"
-        ? {
-            tone: "bad" as const,
-            title: "36-byte luggage on every index",
-            detail: `~${luggage.perSecondaryBytes}B per entry × ${secondaryCount} indexes × 10M rows ≈ ${scaleMb.toFixed(0)} MB — before the clustered table itself.`,
-          }
-        : {
-            tone: "warn" as const,
-            title: "Wider key, still workable",
-            detail: `${luggage.pkBytes}B of PK copied into each of ${secondaryCount} secondaries. At 10M rows ≈ ${scaleMb.toFixed(0)} MB.`,
-          };
-
   return (
     <DemoShell
       title="Secondary luggage"
-      blurb="InnoDB copies the primary key into every secondary entry. Fat PKs multiply across indexes and row count."
+      blurb="Every secondary entry carries a copy of the primary key."
       accent="blue"
     >
-      <div className="flex flex-wrap gap-2">
-        {SHAPES.map(({ id, label }) => (
-          <Button
-            key={id}
-            type="button"
-            size="sm"
-            variant={shape === id ? "ink" : "outline"}
-            onClick={() => setShape(id)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      <AutoLoop durationMs={2800} endHoldMs={900} startHoldMs={300}>
+        {({ t }) => {
+          // 0–0.45 BIGINT cycle, 0.45–0.55 switch, 0.55–1 CHAR(36) cycle
+          const bag: Bag = t < 0.5 ? "slim" : "fat";
+          const localT = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+          // Stamp progress: bag appears, then copies fly to each secondary.
+          const stamp = Math.min(1, localT / 0.25);
+          const copyProgress = Math.max(0, (localT - 0.2) / 0.55);
+          const copiesLit = Math.floor(copyProgress * SECONDARIES.length);
 
-      <div>
-        <div className="mb-1 flex items-baseline justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
-          <span>Secondary indexes</span>
-          <span className="tabular-nums text-ink">{secondaryCount}</span>
-        </div>
-        <Slider
-          min={1}
-          max={8}
-          step={1}
-          value={secondaryCount}
-          onValueChange={setSecondaryCount}
-          accent="blue"
-        />
-      </div>
+          return (
+            <div className="border-2 border-ink bg-white p-3">
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+                    Insert one row
+                  </p>
+                  <LuggageBag bag={bag} stamp={stamp} />
+                </div>
+                <p
+                  className={cn(
+                    "font-mono text-xs font-bold tabular-nums",
+                    bag === "slim" ? "text-blue" : "text-red",
+                  )}
+                >
+                  {bag === "slim" ? "BIGINT · 8B" : "CHAR(36) · 36B"}
+                </p>
+              </div>
 
-      <OutcomeBanner {...outcome} />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {SECONDARIES.map((name, i) => {
+                  const lit = i < copiesLit || (i === copiesLit && copyProgress > 0);
+                  const fill =
+                    i < copiesLit
+                      ? 1
+                      : i === copiesLit
+                        ? (copyProgress * SECONDARIES.length) % 1
+                        : 0;
+                  return (
+                    <div
+                      key={name}
+                      className={cn(
+                        "border-2 border-ink p-2 transition-colors duration-200",
+                        lit ? "bg-paper" : "bg-white opacity-50",
+                      )}
+                    >
+                      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-grey">
+                        idx · {name}
+                      </p>
+                      <div className="mt-1.5 flex h-10 items-end gap-0.5">
+                        <div className="h-full w-3 bg-ink" title="indexed col" />
+                        <div
+                          className={cn(
+                            "border-2 border-ink transition-all duration-150",
+                            bag === "slim" ? "bg-blue" : "bg-red",
+                          )}
+                          style={{
+                            width: bag === "slim" ? 14 : 36,
+                            height: `${Math.max(8, fill * 100)}%`,
+                            opacity: fill > 0 ? 1 : 0.15,
+                          }}
+                          title="PK copy"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-      <div className="space-y-2 border-2 border-ink bg-white p-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
-          Each secondary carries the PK
-        </p>
-        {Array.from({ length: secondaryCount }, (_, i) => (
-          <div key={i} className="flex h-8 w-full overflow-hidden border-2 border-ink">
-            <div
-              className="flex items-center justify-center bg-ink font-mono text-[10px] text-white"
-              style={{ width: `${(8 / maxBar) * 100}%` }}
-            >
-              idx{i + 1}
+              <p className="mt-3 font-mono text-[11px] text-grey">
+                {bag === "slim"
+                  ? "Skinny PK → skinny copies in every secondary."
+                  : "Fat PK → every index pays the same tax."}
+              </p>
             </div>
-            <div
-              className={cn(
-                "flex items-center justify-center font-mono text-[10px] transition-all duration-200",
-                shape === "bigint"
-                  ? "bg-blue text-white"
-                  : shape === "uuid-v4-char36"
-                    ? "bg-red text-white"
-                    : "bg-yellow text-ink",
-              )}
-              style={{ width: `${(luggage.pkBytes / maxBar) * 100}%` }}
-            >
-              PK {pkWidthBytes(shape)}B
-            </div>
-          </div>
-        ))}
-        <p className="font-mono text-[11px] font-bold tabular-nums">
-          At {SCALE_ROWS.toLocaleString()} rows ≈ {scaleMb.toFixed(1)} MB
-          secondary luggage
-        </p>
-        <p className="font-mono text-[10px] text-grey">
-          Toy math: (indexed cols + PK) × secondaries × rows. Illustrative, not
-          InnoDB page packing.
-        </p>
-      </div>
+          );
+        }}
+      </AutoLoop>
     </DemoShell>
+  );
+}
+
+function LuggageBag({ bag, stamp }: { bag: Bag; stamp: number }) {
+  const w = bag === "slim" ? 28 : 64;
+  const h = bag === "slim" ? 36 : 44;
+  return (
+    <div
+      className="relative mt-1"
+      style={{
+        width: w + 8,
+        height: h + 8,
+        transform: `scale(${0.85 + stamp * 0.15})`,
+        opacity: 0.35 + stamp * 0.65,
+      }}
+    >
+      <div
+        className={cn(
+          "absolute bottom-0 border-2 border-ink",
+          bag === "slim" ? "bg-blue" : "bg-red",
+        )}
+        style={{ width: w, height: h, left: 4 }}
+      />
+      {/* Handle */}
+      <div
+        className="absolute border-2 border-ink bg-paper"
+        style={{
+          width: bag === "slim" ? 12 : 20,
+          height: 8,
+          left: bag === "slim" ? 12 : 26,
+          top: 0,
+        }}
+      />
+    </div>
   );
 }

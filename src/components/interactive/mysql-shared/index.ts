@@ -16,4 +16,13 @@ export {
 
 export { StepPlayer } from "./step-player";
 
+export { AutoLoop, type AutoLoopRenderArgs } from "./auto-loop";
+
+export {
+  SvgBtree,
+  toSvgBtreeNodes,
+  layoutSvgBtree,
+  type SvgBtreeNode,
+} from "./svg-btree";
+
 export { Takeaway, TryIt } from "./callouts";

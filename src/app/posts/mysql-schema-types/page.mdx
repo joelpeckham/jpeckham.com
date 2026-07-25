@@ -53,12 +53,12 @@ What I reach for on a normal web app with a public API is both: a skinny `BIGINT
 
 If the table is truly internal, a lone `INT` or `BIGINT` is fine. Just size it for growth. If clients need to create the row id themselves, lean on ULID/UUID, ideally as that public id column, or as a time-sortable PK if you really only want one. Day-one goal either way: boring joins in the database, stable strings at the API boundary, and zero Slack threads titled "why did this id change by one??"
 
-Poke the strategies yourself. Watch the URL, the JSON round-trip, and how hard the secondary-index tax hits:
+Poke the strategies yourself. Watch the public URL and how a fatter clustered key packs fewer rows onto a 16KB page:
 
 <IdWidthDemo />
 
 <Takeaway>
-Skinny clustered `BIGINT` + opaque `public_id` for APIs. Never ship huge integers as bare JSON numbers.
+Skinny clustered `BIGINT` + opaque `public_id` for APIs. Never ship huge integers as bare JSON numbers — JavaScript will quietly round them.
 </Takeaway>
 
 ### Money: floats are for physics homework, not invoices
@@ -74,12 +74,12 @@ In migration-builder terms that's `$table->unsignedInteger('price_cents')` with 
 
 Money bugs rarely announce themselves as money bugs. They show up as "the API is wrong," "the frontend rounded weird," or "accounting export is haunted." Half the time the ghost is the column type.
 
-Ring up a cart of dime line items. Bytes barely move. The invoice either balances or sprouts a ghost penny:
+Ring up a cart of dime line items. Watch DOUBLE drift off the ledger rail while INT cents and DECIMAL stay locked:
 
 <MoneyModeDemo />
 
 <Takeaway>
-Integer cents or `DECIMAL` — never `FLOAT`/`DOUBLE`. Watch the drift sparkline grow with line count.
+Integer cents or `DECIMAL` — never `FLOAT`/`DOUBLE`. The gap grows with cart size.
 </Takeaway>
 
 ### Choosing time types
@@ -92,7 +92,7 @@ What finally stuck: treat event / schedule time ("stay starts on this local date
 
 One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future dates are routine in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Laravel's `$table->timestamps()` quietly creates nullable `TIMESTAMP` columns, which is fine for `created_at` bookkeeping and exactly wrong for schedules. When you mean an event time, say `$table->dateTime('starts_at')` and mean it. Time bugs feel like flaky jobs. They're usually typed lies with a timezone on top.
 
-Here's the TZ shapeshift as a job outcome. Write a Phoenix midnight, run the worker from New York, and watch whether meds fire on the right clock:
+One instant, three wall clocks. TIMESTAMP re-renders as the session timezone cycles; DATETIME is a polaroid that never changes:
 
 <TimeTypeDemo />
 
@@ -116,7 +116,7 @@ What I avoid: `latin1` and friends inherited from stone-tablet tutorials, anythi
 
 Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as "why didn't this unique email match?" All of them are cheaper to fix in the migration PR than in a war room.
 
-Drag the length, flip the charset, and watch the kilobyte thermometer plus how many of these fit on a page:
+Type some text. Each character becomes a tile whose width is its byte cost — emoji fatten under utf8mb4 or shatter under utf8mb3:
 
 <VarcharCharsetDemo />
 
@@ -128,7 +128,7 @@ Drag the length, flip the charset, and watch the kilobyte thermometer plus how m
 
 SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. Comparisons against it return neither true nor false but *unknown*, and `WHERE` only keeps rows that are actually true. So `WHERE discount_code != 'BLACKFRIDAY'` silently drops every row where `discount_code` is NULL, which is technically correct three-valued logic and practically a bug report.<Cite n={16} />
 
-Toggle the filter and watch the NULL discount codes disappear under `!=`:
+Rows ride a conveyor into `payment_type != 'card'`. TRUE passes, FALSE drops left, NULL falls through a trapdoor — filtered out of both branches:
 
 <NullSemanticsDemo />
 

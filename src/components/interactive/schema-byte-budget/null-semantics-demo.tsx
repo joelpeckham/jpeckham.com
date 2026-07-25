@@ -1,180 +1,134 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AutoLoop } from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
-import { Chip, DemoShell, OutcomeBanner } from "./shared";
+import { DemoShell } from "./shared";
 
-type Row = {
-  id: number;
-  order: string;
-  discount: string | null;
-};
+type Kind = "true" | "false" | "null";
 
-const ROWS: Row[] = [
-  { id: 1, order: "ord_a1", discount: "BLACKFRIDAY" },
-  { id: 2, order: "ord_a2", discount: "SAVE10" },
-  { id: 3, order: "ord_a3", discount: null },
-  { id: 4, order: "ord_a4", discount: "BLACKFRIDAY" },
-  { id: 5, order: "ord_a5", discount: null },
-  { id: 6, order: "ord_a6", discount: "WELCOME" },
+const ROWS: { id: string; kind: Kind; label: string }[] = [
+  { id: "r1", kind: "false", label: "card" },
+  { id: "r2", kind: "true", label: "cash" },
+  { id: "r3", kind: "null", label: "NULL" },
+  { id: "r4", kind: "true", label: "check" },
+  { id: "r5", kind: "false", label: "card" },
+  { id: "r6", kind: "null", label: "NULL" },
 ];
 
-type FilterMode = "neq" | "neq-or-null" | "is-null";
-
-const FILTERS: { id: FilterMode; label: string; sql: string }[] = [
-  {
-    id: "neq",
-    label: "!= 'X'",
-    sql: "WHERE discount_code != 'BLACKFRIDAY'",
-  },
-  {
-    id: "neq-or-null",
-    label: "!= OR IS NULL",
-    sql: "WHERE discount_code != 'BLACKFRIDAY' OR discount_code IS NULL",
-  },
-  {
-    id: "is-null",
-    label: "IS NULL",
-    sql: "WHERE discount_code IS NULL",
-  },
-];
-
-function matches(row: Row, mode: FilterMode): boolean {
-  if (mode === "is-null") return row.discount === null;
-  if (mode === "neq") {
-    // Three-valued: NULL != 'X' is unknown → dropped by WHERE
-    if (row.discount === null) return false;
-    return row.discount !== "BLACKFRIDAY";
-  }
-  // neq-or-null
-  if (row.discount === null) return true;
-  return row.discount !== "BLACKFRIDAY";
-}
-
-function truthCell(discount: string | null): {
-  label: string;
-  tone: "ok" | "warn" | "bad";
-} {
-  if (discount === null) {
-    return { label: "UNKNOWN", tone: "warn" };
-  }
-  if (discount !== "BLACKFRIDAY") {
-    return { label: "TRUE", tone: "ok" };
-  }
-  return { label: "FALSE", tone: "bad" };
-}
-
+/**
+ * Rows ride a conveyor into `payment_type != 'card'`.
+ * FALSE drops left, TRUE passes right, NULL falls through a trapdoor.
+ */
 export function NullSemanticsDemo() {
-  const [mode, setMode] = useState<FilterMode>("neq");
-  const filter = FILTERS.find((f) => f.id === mode) ?? FILTERS[0];
-
-  const kept = useMemo(
-    () => ROWS.filter((r) => matches(r, mode)),
-    [mode],
-  );
-  const droppedNulls =
-    mode === "neq" && ROWS.some((r) => r.discount === null);
-
-  const outcome =
-    mode === "neq"
-      ? {
-          tone: "bad" as const,
-          title: "NULL rows silently vanish",
-          detail: `WHERE only keeps TRUE. ${ROWS.filter((r) => r.discount === null).length} rows with NULL discount_code are not "not BLACKFRIDAY" — the comparison is UNKNOWN, so they drop.`,
-        }
-      : mode === "neq-or-null"
-        ? {
-            tone: "ok" as const,
-            title: "Say the NULL case out loud",
-            detail:
-              "OR discount_code IS NULL keeps the unknown rows when that is what the product means.",
-          }
-        : {
-            tone: "ok" as const,
-            title: "IS NULL is the only NULL test",
-            detail:
-              "= NULL and != NULL never match. Use IS NULL / IS NOT NULL.",
-          };
-
   return (
     <DemoShell
-      title="NULL three-valued logic"
-      blurb="Tap a filter. Watch which rows survive — and which NULL discount codes disappear."
-      accent="yellow"
+      title="NULL ≠ anything"
+      blurb={`WHERE payment_type != 'card' — NULL is UNKNOWN, so it falls through.`}
     >
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <Button
-            key={f.id}
-            type="button"
-            size="sm"
-            variant={mode === f.id ? "ink" : "outline"}
-            onClick={() => setMode(f.id)}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
+      <AutoLoop durationMs={4800} endHoldMs={500} startHoldMs={200}>
+        {({ t }) => {
+          // Stagger rows across the loop
+          return (
+            <div className="border-2 border-ink bg-white p-3 overflow-hidden">
+              <p className="mb-2 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+                payment_type != &apos;card&apos;
+              </p>
 
-      <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] text-paper sm:text-xs">
-        <span className="text-grey">SELECT </span>*{" "}
-        <span className="text-grey">FROM </span>orders
-        <br />
-        {filter.sql}
-      </div>
+              <div className="relative mx-auto h-48 max-w-md">
+                {/* Conveyor belt */}
+                <div className="absolute left-2 right-2 top-10 h-3 border-2 border-ink bg-paper" />
 
-      <OutcomeBanner {...outcome} />
+                {/* Gate */}
+                <div className="absolute left-1/2 top-4 z-10 w-24 -translate-x-1/2 border-2 border-ink bg-ink px-1 py-0.5 text-center font-mono text-[9px] text-white">
+                  != gate
+                </div>
 
-      <div className="overflow-x-auto border-2 border-ink bg-white">
-        <table className="w-full min-w-[320px] border-collapse font-mono text-xs">
-          <thead>
-            <tr className="border-b-2 border-ink bg-paper text-left text-[10px] uppercase tracking-[0.1em] text-grey">
-              <th className="px-2 py-1.5">order</th>
-              <th className="px-2 py-1.5">discount_code</th>
-              <th className="px-2 py-1.5">!= &apos;BF&apos;</th>
-              <th className="px-2 py-1.5">kept?</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ROWS.map((row) => {
-              const truth = truthCell(row.discount);
-              const keep = matches(row, mode);
-              return (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "border-b border-ink/15 transition-colors duration-200",
-                    keep ? "bg-blue/10" : "bg-white opacity-45",
-                  )}
-                >
-                  <td className="px-2 py-1.5">{row.order}</td>
-                  <td className="px-2 py-1.5">
-                    {row.discount === null ? (
-                      <span className="text-grey">NULL</span>
-                    ) : (
-                      row.discount
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <Chip tone={truth.tone}>{truth.label}</Chip>
-                  </td>
-                  <td className="px-2 py-1.5 font-bold">
-                    {keep ? "yes" : "no"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                {/* Trapdoor under gate */}
+                <div className="absolute left-1/2 top-[4.5rem] z-0 flex w-20 -translate-x-1/2 flex-col items-center">
+                  <div className="h-8 w-16 border-2 border-dashed border-red bg-red/10" />
+                  <p className="mt-1 font-mono text-[9px] uppercase text-red">
+                    UNKNOWN
+                  </p>
+                </div>
 
-      <p className="font-mono text-[10px] text-grey">
-        Kept {kept.length}/{ROWS.length} rows.
-        {droppedNulls
-          ? " The NULL discount codes are the silent bug report."
-          : null}
-      </p>
+                {/* FALSE bin */}
+                <div className="absolute bottom-2 left-2 border-2 border-ink bg-red/20 px-2 py-1 font-mono text-[9px] uppercase">
+                  FALSE
+                </div>
+                {/* TRUE bin */}
+                <div className="absolute bottom-2 right-2 border-2 border-ink bg-blue/20 px-2 py-1 font-mono text-[9px] uppercase">
+                  TRUE
+                </div>
+
+                {ROWS.map((row, i) => {
+                  const start = i / ROWS.length;
+                  const local = (t - start + 1) % 1;
+                  // 0–0.45: approach gate from left
+                  // 0.45–0.7: branch
+                  // 0.7–1: settle in bin / pit
+                  let x = 8;
+                  let y = 32;
+                  let opacity = 1;
+
+                  if (local < 0.4) {
+                    x = 8 + (local / 0.4) * 42;
+                    y = 32;
+                  } else if (local < 0.65) {
+                    const b = (local - 0.4) / 0.25;
+                    if (row.kind === "null") {
+                      x = 50;
+                      y = 32 + b * 55;
+                    } else if (row.kind === "false") {
+                      x = 50 - b * 38;
+                      y = 32 + b * 50;
+                    } else {
+                      x = 50 + b * 38;
+                      y = 32 + b * 50;
+                    }
+                  } else {
+                    const b = (local - 0.65) / 0.35;
+                    opacity = 1 - b * 0.3;
+                    if (row.kind === "null") {
+                      x = 50;
+                      y = 88;
+                      opacity = 0.5 + Math.sin(b * Math.PI) * 0.3;
+                    } else if (row.kind === "false") {
+                      x = 12;
+                      y = 88;
+                    } else {
+                      x = 88;
+                      y = 88;
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={row.id}
+                      className={cn(
+                        "absolute -translate-x-1/2 -translate-y-1/2 border-2 border-ink px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                        row.kind === "null" && "bg-yellow",
+                        row.kind === "true" && "bg-blue text-white",
+                        row.kind === "false" && "bg-red text-white",
+                      )}
+                      style={{
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        opacity,
+                      }}
+                    >
+                      {row.label}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="mt-2 text-center font-mono text-[11px] text-grey">
+                NULL never takes TRUE or FALSE — it drops out of both branches.
+              </p>
+            </div>
+          );
+        }}
+      </AutoLoop>
     </DemoShell>
   );
 }

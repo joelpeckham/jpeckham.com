@@ -34,7 +34,7 @@ Pick a key and watch the path light up. Interior pages only steer. The value sho
 <BtreeDescentDemo />
 
 <Takeaway>
-Play the descent: interior pages only steer. In a clustered index the leaf holds the whole row — that is the punchline for `WHERE id = ?`.
+Click a leaf key: interior pages only steer. In a clustered index the leaf holds the whole row — that is the punchline for `WHERE id = ?`.
 </Takeaway>
 
 Secondary indexes (next article) are also B-trees. Same descent. Different stuff sitting in the leaf. We'll get there.
@@ -120,6 +120,8 @@ CREATE TABLE orders (
 ) ENGINE=InnoDB;
 ```
 
+Watch one insert stamp a PK copy into every secondary — skinny BIGINT briefcase vs fat CHAR(36) trunk:
+
 <PkWidthTaxDemo />
 
 <Takeaway>
@@ -146,7 +148,7 @@ Toggle the shapes. BIGINT hugs the right edge. UUIDv4 paints the whole tree like
 <InsertLocalityDemo />
 
 <Takeaway>
-Play inserts: BIGINT appends; UUIDv4 sprays and splits. Random clustered keys on write-heavy tables are expensive before `EXPLAIN` ever enters the chat.
+Watch inserts land: BIGINT appends; UUIDv4 sprays and splits. Random clustered keys on write-heavy tables are expensive before `EXPLAIN` ever enters the chat.
 </Takeaway>
 
 Those fills are a teaching toy, not `INFORMATION_SCHEMA`. The qualitative point is real: random clustered keys on a write-heavy table make inserts weirdly expensive long before anyone opens `EXPLAIN`.

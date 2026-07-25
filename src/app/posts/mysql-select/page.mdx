@@ -1,5 +1,4 @@
 import {
-  PrefixLengthDemo,
   ProjectionDemo,
   SargabilityDemo,
 } from "@/components/interactive/mysql-select";
@@ -63,12 +62,12 @@ The function rule is worth thirty seconds of *why*, because it looks like optimi
 
 Constants on the *right* are fine. `WHERE id = POW(2, 3)` can still be a point lookup after constant folding. Nondeterministic junk like `WHERE id = FLOOR(1 + RAND() * 49)` cannot.<Cite n={5} />
 
-One nuance before you poke the demo: `YEAR(updated_at)` on a composite that already has `org_id` and `status` equalities often still shows `ref` on those two parts — the date column is what freezes. Play the scan pointer: it walks every open leaf entry instead of seeking a 2026 range. That is the footgun, not a full table scan.
+One nuance before you poke the demo: `YEAR(updated_at)` on a composite that already has `org_id` and `status` equalities often still shows `ref` on those two parts — the date column is what freezes. Flip the switch and watch the beam grind through every open leaf instead of seeking a 2026 range. That is the footgun, not a full table scan. Same idea as article 03's left-prefix freeze: the predicates decide how much of a fixed index lights up.
 
 <SargabilityDemo />
 
 <Takeaway>
-Bare column on the left. Play seek vs scan: a function on the column forces the pointer to visit every candidate leaf.
+Bare column on the left. A function on the column forces a scan of every candidate leaf; a bare range seeks and stops.
 </Takeaway>
 
 Those `ref` / `range` / `ALL` labels are teaching shorthand, not a promise from `EXPLAIN`. Steal the rewrite table:
@@ -96,7 +95,7 @@ For email lookups, don't `LOWER(email)` on every request if `utf8mb4_0900_ai_ci`
 
 `SELECT *` is fine in a scratch session. In a list handler it couples your JSON to every future column and hauls `TEXT` / `JSON` / secrets you never render.<Cite n={6} /><Cite n={7} /> Wider rows mean fewer rows per InnoDB page, so the same filter touches more I/O even when the index match is perfect.
 
-List endpoints want card columns. Detail endpoints can ask for `body`. Same table. Two jobs.
+List endpoints want card columns. Detail endpoints can ask for `body`. Same table. Two jobs. Watch both lanes haul pages for the same `LIMIT 50` — the fat one keeps fetching:
 
 <ProjectionDemo />
 
@@ -118,13 +117,7 @@ Detail can afford a wider row. List should not silently be detail. In Eloquent t
 
 ## Prefix length for *this* query
 
-Article 03 taught leftmost prefix on the index you build. Here the index is fixed; the predicates move. Equality on left parts, then one range; skip a middle column and the walk stops.<Cite n={4} />
-
-<PrefixLengthDemo />
-
-<Takeaway>
-With the index fixed, predicates decide how much left prefix lights. Gaps and mid-key ranges stop the walk.
-</Takeaway>
+Article 03 taught leftmost prefix on the index you build. Here the index is fixed; the predicates move. Equality on left parts, then one range; skip a middle column and the walk stops.<Cite n={4} /> The sargability switch above is the same story from the query side: wrap the trailing column and that segment goes dark even though `org_id` and `status` still light.
 
 When you peek at `EXPLAIN` later, `key_len` is the rough "how much of this key did we use?" number. Fluency comes later in the series. For now, if your filters don't light the prefix you expected, fix the `WHERE` before you add another index.
 

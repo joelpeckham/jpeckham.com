@@ -3,130 +3,136 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  AutoLoop,
   SortedKeyStrip,
-  StepPlayer,
 } from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
-import {
-  SARG_PRESETS,
-  TICKETS_INDEX,
-  buildSargKeyScene,
-  sargPreset,
-  type SargPresetId,
-} from "./model";
-import { Chip, DemoShell, OutcomeBanner } from "./shared";
+import { buildSargKeyScene, sargPreset } from "./model";
+import { DemoShell } from "./shared";
 
+/**
+ * One switch: wrap updated_at in YEAR() or use a bare range.
+ * Scanning beam vs seek-and-stop over the sorted key strip.
+ */
 export function SargabilityDemo() {
-  const [id, setId] = useState<SargPresetId>("year-fn");
-  const [step, setStep] = useState(-1);
+  const [wrapped, setWrapped] = useState(true);
+  const id = wrapped ? "year-fn" : "sargable-year";
   const preset = useMemo(() => sargPreset(id), [id]);
   const scene = useMemo(() => buildSargKeyScene(id), [id]);
 
-  useEffect(() => {
-    setStep(-1);
-  }, [id]);
-
-  const pointerIndex =
-    step >= 0 && step < scene.pointerPath.length
-      ? scene.pointerPath[step]
-      : -1;
-
-  const caption =
-    step < 0
-      ? scene.pointerMode === "scan"
-        ? "Play: pointer visits every open row (YEAR can't seek)"
-        : "Play: pointer seeks to the matching range"
-      : scene.pointerMode === "scan"
-        ? `Scanning open leaf ${step + 1}/${scene.pointerPath.length} — filter YEAR after`
-        : `Range walk ${step + 1}/${scene.pointerPath.length}`;
-
   return (
     <DemoShell
-      title="Sargability toggles"
-      blurb="Same inbox intent, different WHERE shapes. Watch the pointer seek a range — or scan every leaf."
+      title="Sargability"
+      blurb="Flip the switch. YEAR() forces a scan; a bare range seeks."
       accent="blue"
     >
-      <div className="flex flex-wrap gap-2">
-        {SARG_PRESETS.map((p) => (
-          <Button
-            key={p.id}
-            type="button"
-            size="sm"
-            variant={id === p.id ? "ink" : "outline"}
-            onClick={() => setId(p.id)}
-          >
-            {p.label}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          size="sm"
+          variant={wrapped ? "red" : "outline"}
+          onClick={() => setWrapped(true)}
+        >
+          YEAR(updated_at)
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={!wrapped ? "ink" : "outline"}
+          onClick={() => setWrapped(false)}
+        >
+          Bare date range
+        </Button>
       </div>
 
-      <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] leading-relaxed text-paper sm:text-xs">
+      <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] text-paper">
         <span className="text-grey">WHERE </span>
         {preset.whereSql}
       </div>
 
-      <div>
-        <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
-          Index ({TICKETS_INDEX.join(", ")})
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {TICKETS_INDEX.map((col, i) => {
-            const lit = i < preset.litSegments;
-            return (
-              <div
-                key={col}
-                className={cn(
-                  "border-2 border-ink px-2 py-1.5 font-mono text-xs transition-colors duration-300",
-                  lit ? "bg-blue text-white" : "bg-paper text-ink/50",
-                )}
-              >
-                {col}
-              </div>
-            );
-          })}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {(["org_id", "status", "updated_at"] as const).map((col, i) => {
+          const lit = i < preset.litSegments;
+          return (
+            <div
+              key={col}
+              className={cn(
+                "border-2 border-ink px-2 py-1 font-mono text-xs transition-colors",
+                lit ? "bg-blue text-white" : "bg-paper text-ink/40",
+              )}
+            >
+              {col}
+            </div>
+          );
+        })}
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        <Chip tone={preset.access === "ALL" ? "bad" : "ok"}>
-          access ≈ {preset.access}
-        </Chip>
-        <Chip tone="ink">{preset.litSegments}/3 prefix lit</Chip>
-        <Chip tone={scene.pointerMode === "scan" ? "warn" : "ok"}>
-          {scene.pointerMode === "scan" ? "scan pointer" : "seek pointer"}
-        </Chip>
-      </div>
+      <AutoLoop
+        key={id}
+        durationMs={scene.pointerMode === "scan" ? 2800 : 1600}
+        endHoldMs={700}
+        startHoldMs={200}
+      >
+        {({ t }) => {
+          const path = scene.pointerPath;
+          const idx =
+            path.length === 0
+              ? -1
+              : path[Math.min(path.length - 1, Math.floor(t * path.length))];
 
-      <StepPlayer
-        stepCount={scene.pointerPath.length}
-        step={step}
-        onStepChange={setStep}
-        intervalMs={scene.pointerMode === "scan" ? 380 : 500}
-        caption={caption}
-      />
-
-      <SortedKeyStrip
-        keys={scene.keys}
-        columns={scene.columns}
-        highlight={{
-          kind: "contiguous",
-          start: scene.litStart,
-          end: scene.litEnd,
+          return (
+            <div className="relative">
+              {/* Scanning beam overlay for YEAR() mode */}
+              {scene.pointerMode === "scan" ? (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-10 h-8 bg-red/25 mix-blend-multiply transition-none"
+                  style={{
+                    top: `${12 + t * 72}%`,
+                  }}
+                  aria-hidden
+                />
+              ) : null}
+              <SortedKeyStrip
+                keys={scene.keys}
+                columns={scene.columns}
+                highlight={{
+                  kind: "contiguous",
+                  start: scene.litStart,
+                  end: scene.litEnd,
+                }}
+                pointerIndex={idx}
+                pointerMode={scene.pointerMode}
+                label={
+                  scene.pointerMode === "scan"
+                    ? "Scanning every open leaf — YEAR() can't seek"
+                    : "Seek to range, then stop"
+                }
+              />
+            </div>
+          );
         }}
-        pointerIndex={pointerIndex}
-        pointerMode={scene.pointerMode}
-        label={
-          scene.pointerMode === "scan"
-            ? "Sorted keys — YEAR() forces a scan of the open run"
-            : "Sorted keys — sargable range seek"
-        }
-      />
+      </AutoLoop>
 
-      <OutcomeBanner
-        tone={preset.tone}
-        title={preset.title}
-        detail={preset.reason}
-      />
+      <BeamSync wrapped={wrapped} />
+
+      <p className="font-mono text-[11px] text-grey">
+        {wrapped
+          ? "Function on the column freezes the date segment — same idea as a broken left prefix."
+          : "Equalities then a bare range: the B-tree walks one interval."}
+      </p>
     </DemoShell>
+  );
+}
+
+/** Forces AutoLoop remount key already handles reset; placeholder for a11y live region. */
+function BeamSync({ wrapped }: { wrapped: boolean }) {
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    setMsg(wrapped ? "Scanning mode" : "Seek mode");
+  }, [wrapped]);
+  return (
+    <span className="sr-only" aria-live="polite">
+      {msg}
+    </span>
   );
 }

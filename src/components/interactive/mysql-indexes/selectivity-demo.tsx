@@ -50,7 +50,7 @@ function Haystack({
           <div
             key={i}
             className={cn(
-              "aspect-square transition-colors duration-200",
+              "aspect-square",
               i < lit
                 ? tone === "bad"
                   ? "bg-red"
@@ -59,6 +59,12 @@ function Haystack({
                     : "bg-blue"
                 : "bg-ink/10",
             )}
+            style={{
+              // Sweep: delay scales with column so lit region appears left→right
+              transitionProperty: "background-color",
+              transitionDuration: "280ms",
+              transitionDelay: `${(i % 50) * 4}ms`,
+            }}
           />
         ))}
       </div>

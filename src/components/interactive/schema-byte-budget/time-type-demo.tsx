@@ -1,308 +1,167 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AutoLoop } from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
-import {
-  SESSION_TZ_LABELS,
-  simulateTimeDisplay,
-  type SessionTz,
-} from "./budget";
-import {
-  Chip,
-  DemoShell,
-  OutcomeBanner,
-  Panel,
-  TradeoffRow,
-  controlSelect,
-} from "./shared";
+import { DemoShell } from "./shared";
 
-const ZONES: SessionTz[] = ["UTC", "America/Phoenix", "America/New_York"];
+const ZONES = [
+  { id: "UTC", label: "UTC", offset: 0 },
+  { id: "NY", label: "New York", offset: -4 },
+  { id: "Boise", label: "Boise", offset: -6 },
+] as const;
 
-const CITY: Record<SessionTz, { short: string; vibe: string }> = {
-  UTC: { short: "UTC", vibe: "Server default" },
-  "America/Phoenix": { short: "Phoenix", vibe: "Patient / hospice" },
-  "America/New_York": { short: "New York", vibe: "Job runner region" },
-};
+/** Fixed instant: 2026-03-15 00:00:00 America/Phoenix (MST = UTC-7) → 07:00 UTC */
+const UTC_HOUR = 7;
+const UTC_DATE = "Mar 15";
 
-/** Respite stay starts at local midnight — the digits the user meant. */
-const WRITTEN = "2026-03-15T00:00:00";
-const INTENDED_DATE = "2026-03-15";
-
-function clockDigits(local: string): { date: string; time: string } {
-  const [date, time = "00:00:00"] = local.split(" ");
-  return { date, time: time.slice(0, 5) };
-}
-
-function hoursDelta(fromLocal: string, toLocal: string): number {
-  // Compare same calendar interpretation as hours difference of displayed clocks
-  const a = Date.parse(fromLocal.replace(" ", "T") + "Z");
-  const b = Date.parse(toLocal.replace(" ", "T") + "Z");
-  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
-  return Math.round((b - a) / 3_600_000);
-}
-
-export function TimeTypeDemo() {
-  const [kind, setKind] = useState<"timestamp" | "datetime">("timestamp");
-  const [writeTz, setWriteTz] = useState<SessionTz>("America/Phoenix");
-  const [readTz, setReadTz] = useState<SessionTz>("America/New_York");
-
-  const sim = useMemo(
-    () =>
-      simulateTimeDisplay({
-        kind,
-        writtenLocal: WRITTEN,
-        writeSessionTz: writeTz,
-        readSessionTz: readTz,
-      }),
-    [kind, writeTz, readTz],
-  );
-
-  const intended = clockDigits(WRITTEN.replace("T", " "));
-  const displayed = clockDigits(sim.displayedLocal);
-  const dateShifted = displayed.date !== INTENDED_DATE;
-  const hourShift = hoursDelta(
-    WRITTEN.replace("T", " "),
-    sim.displayedLocal,
-  );
-  const shifted = kind === "timestamp" && (dateShifted || hourShift !== 0);
-
-  const outcome = (() => {
-    if (kind === "datetime") {
-      return {
-        tone: "ok" as const,
-        title: "Job sees the wall-clock you stored",
-        detail: `Digits stay ${intended.date} ${intended.time}. You still owe the app an explicit timezone, but the column won’t rewrite midnight.`,
-      };
-    }
-    if (dateShifted) {
-      return {
-        tone: "bad" as const,
-        title: "Wrong calendar day",
-        detail: `Stay was meant for ${INTENDED_DATE}. Session in ${CITY[readTz].short} reads ${displayed.date}. Meds job fires on the wrong day.`,
-      };
-    }
-    if (hourShift !== 0) {
-      return {
-        tone: "bad" as const,
-        title:
-          hourShift > 0
-            ? `Job fires ${hourShift}h late`
-            : `Job fires ${Math.abs(hourShift)}h early`,
-        detail: `Phoenix midnight became ${displayed.time} in ${CITY[readTz].short}. “Starts now?” answered with the wrong clock.`,
-      };
-    }
-    return {
-      tone: "ok" as const,
-      title: "Same session TZ, so it looks fine",
-      detail:
-        "Write and read agree for now. Change the job’s connection timezone later and this becomes a haunted pager.",
-    };
-  })();
-
-  // Timeline: two midnight markers
-  const writeOffsetPct = 20;
-  const readOffsetPct = shifted
-    ? Math.min(85, Math.max(15, writeOffsetPct + hourShift * 8))
-    : writeOffsetPct;
-
-  return (
-    <DemoShell
-      title="TIMESTAMP vs DATETIME"
-      blurb="Schedule a Phoenix midnight respite start, then run the job from another region. Watch whether “now” is still midnight."
-      accent="yellow"
-    >
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={kind === "datetime" ? "ink" : "outline"}
-          onClick={() => setKind("datetime")}
-        >
-          DATETIME
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={kind === "timestamp" ? "ink" : "outline"}
-          onClick={() => setKind("timestamp")}
-        >
-          TIMESTAMP
-        </Button>
-      </div>
-
-      <OutcomeBanner {...outcome} />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-grey">
-            Write session ({CITY[writeTz].vibe})
-          </span>
-          <select
-            className={controlSelect + " w-full"}
-            value={writeTz}
-            onChange={(e) => setWriteTz(e.target.value as SessionTz)}
-          >
-            {ZONES.map((z) => (
-              <option key={z} value={z}>
-                {SESSION_TZ_LABELS[z]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-grey">
-            Job session ({CITY[readTz].vibe})
-          </span>
-          <select
-            className={controlSelect + " w-full"}
-            value={readTz}
-            onChange={(e) => setReadTz(e.target.value as SessionTz)}
-          >
-            {ZONES.map((z) => (
-              <option key={z} value={z}>
-                {SESSION_TZ_LABELS[z]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <CityClock
-          city={CITY[writeTz].short}
-          date={intended.date}
-          time={intended.time}
-          caption="User meant"
-          tone="ok"
-        />
-        <CityClock
-          city={CITY[readTz].short}
-          date={displayed.date}
-          time={displayed.time}
-          caption="Job reads"
-          tone={shifted ? "bad" : "ok"}
-        />
-      </div>
-
-      <Panel label="Day boundary">
-        <div className="relative mt-1 h-14 border-2 border-ink bg-paper">
-          <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-ink/30" />
-          <Marker
-            pct={writeOffsetPct}
-            label="Meant"
-            tone="ok"
-          />
-          <Marker
-            pct={readOffsetPct}
-            label="Job"
-            tone={shifted ? "bad" : "ok"}
-          />
-        </div>
-        <p className="mt-2 text-xs text-grey">
-          {kind === "timestamp"
-            ? `Stored as ${sim.storedLabel}. Session TZ converts on the way out.`
-            : "DATETIME stored the digits literally, with no conversion step."}
-        </p>
-      </Panel>
-
-      <Panel label="Tradeoffs">
-        <TradeoffRow
-          label="TZ conversion"
-          value={sim.converts ? "On read/write" : "None"}
-          tone={sim.converts ? "warn" : "ok"}
-        />
-        <TradeoffRow
-          label="2038 ceiling"
-          value={sim.timestamp2038Risk ? "Hits the wall" : "Not a TIMESTAMP issue"}
-          tone={sim.timestamp2038Risk ? "bad" : "ok"}
-        />
-        <TradeoffRow
-          label="Calendar day"
-          value={dateShifted ? `Shifted to ${displayed.date}` : "Stable"}
-          tone={dateShifted ? "bad" : "ok"}
-        />
-      </Panel>
-
-      <div className="flex flex-wrap gap-2">
-        {sim.converts ? (
-          <Chip tone="warn">TZ converts on read</Chip>
-        ) : (
-          <Chip tone="ok">Event time stable</Chip>
-        )}
-        {sim.timestamp2038Risk ? (
-          <Chip tone="bad">2038 TIMESTAMP risk</Chip>
-        ) : null}
-        {dateShifted ? <Chip tone="bad">Wrong calendar day</Chip> : null}
-      </div>
-    </DemoShell>
-  );
-}
-
-function CityClock({
-  city,
-  date,
-  time,
-  caption,
-  tone,
-}: {
-  city: string;
+function wallClock(utcHour: number, offset: number): {
+  hour: number;
   date: string;
-  time: string;
-  caption: string;
-  tone: "ok" | "bad";
+} {
+  let h = utcHour + offset;
+  let date = UTC_DATE;
+  if (h < 0) {
+    h += 24;
+    date = "Mar 14";
+  } else if (h >= 24) {
+    h -= 24;
+    date = "Mar 16";
+  }
+  return { hour: h, date };
+}
+
+function ClockFace({
+  hour,
+  label,
+  muted,
+  polaroid,
+}: {
+  hour: number;
+  label: string;
+  muted?: boolean;
+  polaroid?: boolean;
 }) {
+  // 12-hour face; minute fixed at 0 for the teaching instant
+  const angle = ((hour % 12) / 12) * 360;
   return (
     <div
       className={cn(
-        "border-2 border-ink p-3 transition-colors duration-200",
-        tone === "bad" ? "bg-red text-white" : "bg-white text-ink",
+        "flex flex-col items-center",
+        polaroid && "border-2 border-ink bg-white p-2 shadow-hard",
+        muted && "opacity-60",
       )}
     >
-      <p
-        className={cn(
-          "font-mono text-[10px] uppercase tracking-[0.12em]",
-          tone === "bad" ? "text-white/80" : "text-grey",
-        )}
-      >
-        {caption} · {city}
+      <svg viewBox="0 0 64 64" className="h-16 w-16" aria-hidden>
+        <circle
+          cx="32"
+          cy="32"
+          r="30"
+          className="fill-paper stroke-ink"
+          strokeWidth="2"
+        />
+        {[0, 3, 6, 9].map((h) => {
+          const a = ((h / 12) * 360 - 90) * (Math.PI / 180);
+          const x = 32 + Math.cos(a) * 22;
+          const y = 32 + Math.sin(a) * 22;
+          return (
+            <circle key={h} cx={x} cy={y} r="1.5" className="fill-ink" />
+          );
+        })}
+        <line
+          x1="32"
+          y1="32"
+          x2={32 + Math.sin((angle * Math.PI) / 180) * 16}
+          y2={32 - Math.cos((angle * Math.PI) / 180) * 16}
+          className="stroke-ink"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <circle cx="32" cy="32" r="2" className="fill-ink" />
+      </svg>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-grey">
+        {label}
       </p>
-      <p className="mt-2 font-display text-4xl leading-none tracking-tight tabular-nums">
-        {time}
+      <p className="font-mono text-xs font-bold tabular-nums">
+        {String(hour).padStart(2, "0")}:00
       </p>
-      <p className="mt-1 font-mono text-sm tabular-nums">{date}</p>
     </div>
   );
 }
 
-function Marker({
-  pct,
-  label,
-  tone,
-}: {
-  pct: number;
-  label: string;
-  tone: "ok" | "bad";
-}) {
+/**
+ * Looping: TIMESTAMP re-renders as session TZ cycles; DATETIME is a polaroid
+ * that never changes.
+ */
+export function TimeTypeDemo() {
   return (
-    <div
-      className="absolute top-1 flex -translate-x-1/2 flex-col items-center transition-[left] duration-300 ease-out"
-      style={{ left: `${pct}%` }}
+    <DemoShell
+      title="TIMESTAMP vs DATETIME"
+      blurb="One instant. TIMESTAMP shapeshifts with the session; DATETIME is a photo of a clock."
     >
-      <span
-        className={cn(
-          "border-2 border-ink px-1.5 py-0.5 font-mono text-[9px] uppercase",
-          tone === "bad" ? "bg-red text-white" : "bg-blue text-white",
-        )}
-      >
-        {label}
-      </span>
-      <span
-        className={cn(
-          "mt-1 size-2.5 border-2 border-ink",
-          tone === "bad" ? "bg-red" : "bg-blue",
-        )}
-      />
-    </div>
+      <AutoLoop durationMs={3600} frameCount={ZONES.length} endHoldMs={700}>
+        {({ frame }) => {
+          const zone = ZONES[frame] ?? ZONES[0];
+          const ts = wallClock(UTC_HOUR, zone.offset);
+          // DATETIME stored as Phoenix local midnight digits — never moves
+          const dt = { hour: 0, date: "Mar 15" };
+
+          return (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="border-2 border-ink bg-white p-3">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+                  TIMESTAMP · session = {zone.label}
+                </p>
+                <div className="flex justify-around gap-2">
+                  {ZONES.map((z) => {
+                    const c = wallClock(UTC_HOUR, z.offset);
+                    const active = z.id === zone.id;
+                    return (
+                      <div
+                        key={z.id}
+                        className={cn(
+                          "transition-all duration-300",
+                          active ? "scale-110" : "scale-90 opacity-40",
+                        )}
+                      >
+                        <ClockFace
+                          hour={c.hour}
+                          label={z.label}
+                          muted={!active}
+                        />
+                        {active ? (
+                          <p className="mt-1 text-center font-mono text-[10px] text-red">
+                            {c.date}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 font-mono text-[11px] text-grey">
+                  Reads as {ts.date} {String(ts.hour).padStart(2, "0")}:00 in{" "}
+                  {zone.label}
+                </p>
+              </div>
+
+              <div className="border-2 border-ink bg-yellow/40 p-3">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+                  DATETIME · polaroid
+                </p>
+                <div className="flex justify-center">
+                  <ClockFace
+                    hour={dt.hour}
+                    label="stored digits"
+                    polaroid
+                  />
+                </div>
+                <p className="mt-3 text-center font-mono text-[11px] text-grey">
+                  Always {dt.date} 00:00 — session TZ never rewrites it
+                </p>
+              </div>
+            </div>
+          );
+        }}
+      </AutoLoop>
+    </DemoShell>
   );
 }

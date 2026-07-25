@@ -255,6 +255,21 @@ export function moveCol(
   return next;
 }
 
+/** Move an index column from `from` to `to` (drag-reorder). */
+export function reorderCol(
+  cols: readonly TicketCol[],
+  from: number,
+  to: number,
+): TicketCol[] {
+  if (from === to || from < 0 || to < 0 || from >= cols.length || to >= cols.length) {
+    return [...cols];
+  }
+  const next = [...cols];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
 /** Toy selectivity — not histograms, not the cost-based optimizer. */
 export type SelectivityEstimate = {
   tableRows: number;

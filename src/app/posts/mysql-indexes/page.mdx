@@ -74,7 +74,7 @@ If the rule feels arbitrary, picture a phone book. It's sorted by last name, the
 
 Equalities (and `IN`, and prefix `LIKE`) can stack from the left. A range on a middle column uses that column, then freezes the suffix for the index *range walk*. The freeze isn't spite; it's the same sort order doing its job. Within one `(org_id, status)` pair the entries are sorted by `assignee_id`, but across a *range* of statuses those `assignee_id` values are many interleaved runs, not one sorted one, so the walk can't use them to narrow further. Later columns may still get filtered after the fact, but they do not tighten the walk the way people hope.<Cite n={5} /> Heuristic for web list queries: equalities first, range last.
 
-Reorder the index. Cycle the predicates. Try the "Range freezes status" preset — the sorted key strip shows why status becomes interleaved runs the walk cannot span.
+Drag to reorder the index. Cycle the predicates. Try the "Range freezes status" preset — the sorted key strip shows why status becomes interleaved runs the walk cannot span.
 
 <LeftPrefixDemo />
 
@@ -119,7 +119,7 @@ Back to the inbox. Three singles give MySQL a chance at Index Merge: intersect r
 
 One composite that matches the left prefix of the query is usually the design you wanted. Column order is which filters are always present vs optional. That call belongs to the product shape of the API, not to DBA folklore.
 
-Toggle the cartoon, play the staged plan, and notice the write tax: one INSERT maintains every secondary.
+Watch the race: one composite seeks and finishes; three singles merge, sort, and bounce — and pay more write tax per INSERT.
 
 <CompositeVsSinglesDemo />
 

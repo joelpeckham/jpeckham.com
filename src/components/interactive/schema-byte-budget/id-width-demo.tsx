@@ -2,99 +2,68 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
+import {
+  PageGrid,
+  makePageSlots,
+  rowsPerPage as sharedRowsPerPage,
+} from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
-import {
-  estimateColumn,
-  idStrategyEstimate,
-  jsonNumberRoundTrip,
-  type IdStrategy,
-} from "./budget";
-import {
-  ByteStrip,
-  Chip,
-  DemoShell,
-  OutcomeBanner,
-  Panel,
-  TradeoffRow,
-} from "./shared";
+import { idStrategyEstimate, type IdStrategy } from "./budget";
+import { DemoShell } from "./shared";
 
 const STRATEGIES: { id: IdStrategy; label: string }[] = [
-  { id: "int-pk", label: "INT PK" },
-  { id: "bigint-pk", label: "BIGINT PK" },
-  { id: "ulid-pk", label: "ULID as PK" },
+  { id: "int-pk", label: "INT" },
+  { id: "bigint-pk", label: "BIGINT" },
+  { id: "ulid-pk", label: "ULID PK" },
   { id: "bigint-plus-public", label: "BIGINT + public_id" },
 ];
 
-/** Past Number.MAX_SAFE_INTEGER — rounds if shipped as a JSON number. */
-const BIG_ID = BigInt("9007199254740993");
-const SAFE_INT_ID = BigInt(42);
 const SAMPLE_ULID = "01JEXAMPLE000000000000ULID";
+/** Fixed payload beside the key — keeps the page-reflow story honest. */
+const PAYLOAD_BYTES = 48;
+const PAGE_SLOTS = 24;
 
 function publicUrl(strategy: IdStrategy): string {
   switch (strategy) {
     case "int-pk":
       return "/orders/42";
     case "bigint-pk":
-      return `/orders/${BIG_ID.toString()}`;
+      return "/orders/9007199254740993";
     case "ulid-pk":
     case "bigint-plus-public":
       return `/orders/${SAMPLE_ULID}`;
   }
 }
 
+/**
+ * Choosing an ID strategy reflows rows on a 16KB page.
+ * Key column literally widens; rows-per-page drops.
+ */
 export function IdWidthDemo() {
   const [strategy, setStrategy] = useState<IdStrategy>("bigint-plus-public");
-  const [secondaryIndexes, setSecondaryIndexes] = useState(3);
-
   const estimate = useMemo(() => idStrategyEstimate(strategy), [strategy]);
-  const columns = useMemo(
-    () => estimate.columns.map((c) => estimateColumn(c)),
-    [estimate],
+
+  // Clustered key width drives packing; public_id sits in the row payload.
+  const keyBytes = estimate.clusteredKeyBytes;
+  const rowBytes =
+    strategy === "bigint-plus-public"
+      ? keyBytes + 26 * 4 + PAYLOAD_BYTES
+      : keyBytes + PAYLOAD_BYTES;
+  const rpp = sharedRowsPerPage(rowBytes);
+  const filled = Math.min(PAGE_SLOTS, rpp);
+  const slots = useMemo(
+    () => makePageSlots(PAGE_SLOTS, filled),
+    [filled],
   );
 
-  const indexTax = estimate.clusteredKeyBytes * secondaryIndexes;
   const url = publicUrl(strategy);
   const scavengerHunt = strategy === "int-pk" || strategy === "bigint-pk";
-
-  const roundTrip = useMemo(() => {
-    if (strategy === "bigint-pk") return jsonNumberRoundTrip(BIG_ID);
-    if (strategy === "int-pk") return jsonNumberRoundTrip(SAFE_INT_ID);
-    return null;
-  }, [strategy]);
-
-  const outcome =
-    strategy === "bigint-plus-public"
-      ? {
-          tone: "ok" as const,
-          title: "Boring joins, opaque URLs",
-          detail:
-            "Clustered key stays skinny; the API only ever sees a string. This is the day-one pick I’d defend.",
-        }
-      : strategy === "ulid-pk"
-        ? {
-            tone: "warn" as const,
-            title: "Nice public id, fat clustered key",
-            detail: `Every secondary index copies ~${estimate.clusteredKeyBytes}B of ULID. Fine for small tables, loud at scale.`,
-          }
-        : strategy === "bigint-pk"
-          ? {
-              tone: "bad" as const,
-              title: "JSON just rounded your id",
-              detail:
-                "The number in React is no longer the number in MySQL. Your support ticket writes itself.",
-            }
-          : {
-              tone: "warn" as const,
-              title: "Guessable URLs, tight ceiling",
-              detail:
-                "Great for internal tables. Terrible for /orders/41, /orders/42 scavenger hunts, and signed INT tops out ~2.1B.",
-            };
+  const keyWidthPct = Math.min(100, (keyBytes / 104) * 100);
 
   return (
     <DemoShell
-      title="ID width picker"
-      blurb="Watch the URL, the JSON round-trip, and the secondary-index tax change with each strategy."
+      title="ID width"
+      blurb="Pick a key shape. Watch the clustered column widen and rows-per-page fall."
     >
       <div className="flex flex-wrap gap-2">
         {STRATEGIES.map(({ id, label }) => (
@@ -110,144 +79,46 @@ export function IdWidthDemo() {
         ))}
       </div>
 
-      <OutcomeBanner {...outcome} />
+      <p
+        className={cn(
+          "break-all border-2 border-ink bg-white px-3 py-2 font-mono text-sm font-bold",
+          scavengerHunt ? "text-red" : "text-ink",
+        )}
+      >
+        {url}
+      </p>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Panel label="Public URL">
-          <p
-            className={cn(
-              "break-all font-mono text-sm font-bold",
-              scavengerHunt ? "text-red" : "text-ink",
-            )}
-          >
-            {url}
+      <div className="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
+        <div className="border-2 border-ink bg-white p-3">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+            Clustered key
           </p>
-          <p className="mt-2 text-xs text-grey">
-            {scavengerHunt
-              ? "Sequential ids in URLs = free enumeration."
-              : "Opaque string; clients never see the clustered integer."}
-          </p>
-        </Panel>
-
-        <Panel label="JSON → JavaScript Number">
-          {roundTrip ? (
-            <div className="space-y-1 font-mono text-xs">
-              <TradeoffRow label="MySQL id" value={roundTrip.mysqlId} />
-              <TradeoffRow
-                label="After JSON number"
-                value={roundTrip.afterJson}
-                tone={roundTrip.corrupted ? "bad" : "ok"}
-              />
-              {roundTrip.corrupted ? (
-                <p className="pt-1 text-xs text-red">
-                  Silently rounded, off by{" "}
-                  {(
-                    BigInt(roundTrip.afterJson) - BigInt(roundTrip.mysqlId)
-                  ).toString()}
-                  .
-                </p>
-              ) : (
-                <p className="pt-1 text-xs text-grey">
-                  Still inside Number.MAX_SAFE_INTEGER (for now).
-                </p>
+          <div className="flex h-12 w-full items-stretch border-2 border-ink">
+            <div
+              className={cn(
+                "flex items-center justify-center font-mono text-[10px] text-white transition-all duration-300",
+                keyBytes >= 26 ? "bg-red" : keyBytes > 8 ? "bg-yellow text-ink" : "bg-blue",
               )}
+              style={{ width: `${Math.max(12, keyWidthPct)}%` }}
+            >
+              {keyBytes}B
             </div>
-          ) : (
-            <p className="font-mono text-xs text-grey">
-              API ships a string (<code className="text-ink">{SAMPLE_ULID}</code>
-              ). Number never touches it, so the trap never fires.
-            </p>
-          )}
-        </Panel>
-      </div>
-
-      <ByteStrip columns={columns} />
-
-      <label className="block">
-        <span className="mb-1 flex items-baseline justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-grey">
-          <span>Secondary indexes copying the PK</span>
-          <span className="tabular-nums text-ink">{secondaryIndexes}</span>
-        </span>
-        <Slider
-          accent="red"
-          min={0}
-          max={8}
-          step={1}
-          value={secondaryIndexes}
-          onValueChange={setSecondaryIndexes}
-        />
-      </label>
-
-      <Panel label="PK copied into each secondary">
-        {secondaryIndexes === 0 ? (
-          <p className="font-mono text-xs text-grey">
-            No secondaries — no luggage tax yet.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            {Array.from({ length: secondaryIndexes }, (_, i) => {
-              const maxBar = Math.max(estimate.clusteredKeyBytes + 8, 44);
-              return (
-                <div
-                  key={i}
-                  className="flex h-7 w-full overflow-hidden border-2 border-ink"
-                >
-                  <div
-                    className="flex items-center justify-center bg-ink font-mono text-[9px] text-white"
-                    style={{ width: `${(8 / maxBar) * 100}%` }}
-                  >
-                    idx{i + 1}
-                  </div>
-                  <div
-                    className={cn(
-                      "flex items-center justify-center font-mono text-[9px] transition-all duration-200",
-                      estimate.clusteredKeyBytes >= 26
-                        ? "bg-red text-white"
-                        : estimate.clusteredKeyBytes > 8
-                          ? "bg-yellow text-ink"
-                          : "bg-blue text-white",
-                    )}
-                    style={{
-                      width: `${(estimate.clusteredKeyBytes / maxBar) * 100}%`,
-                    }}
-                  >
-                    PK {estimate.clusteredKeyBytes}B
-                  </div>
-                </div>
-              );
-            })}
-            <TradeoffRow
-              label="Copied per row (toy)"
-              value={`~${indexTax.toLocaleString()}B`}
-              tone={indexTax > 200 ? "bad" : indexTax > 40 ? "warn" : "ok"}
-            />
-            <TradeoffRow
-              label="URL guessability"
-              value={scavengerHunt ? "Easy scavenger hunt" : "Opaque"}
-              tone={scavengerHunt ? "bad" : "ok"}
-            />
-            <TradeoffRow
-              label="Frontend precision"
-              value={
-                estimate.jsPrecisionRisk
-                  ? "Can silently round"
-                  : "Safe as string / small int"
-              }
-              tone={estimate.jsPrecisionRisk ? "bad" : "ok"}
-            />
+            <div className="flex flex-1 items-center justify-center bg-paper font-mono text-[10px] text-grey">
+              + payload
+            </div>
           </div>
-        )}
-      </Panel>
+          <p className="mt-2 font-mono text-[11px] tabular-nums text-ink">
+            ~{rowBytes}B / row · {rpp} rows / 16KB page
+          </p>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        {strategy === "bigint-plus-public" ? (
-          <Chip tone="ok">Recommended for public APIs</Chip>
-        ) : null}
-        {estimate.jsPrecisionRisk ? (
-          <Chip tone="bad">JS Number precision risk</Chip>
-        ) : (
-          <Chip tone="ok">API-safe</Chip>
-        )}
+        <PageGrid
+          slots={slots}
+          cols={6}
+          label="16KB leaf"
+          tone={rpp < 40 ? "bad" : rpp < 80 ? "warn" : "ok"}
+          caption={`${filled} of ${PAGE_SLOTS} slots shown · denser = fewer pages`}
+        />
       </div>
     </DemoShell>
   );

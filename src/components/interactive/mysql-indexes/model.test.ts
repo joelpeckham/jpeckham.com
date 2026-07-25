@@ -5,6 +5,7 @@ import {
   estimateSelectivity,
   evaluateLeftPrefix,
   moveCol,
+  reorderCol,
   predicateSqlLines,
   strategyStory,
 } from "./model";
@@ -105,6 +106,22 @@ describe("moveCol", () => {
     expect(moveCol(DEFAULT_INDEX_COLS, 0, -1)).toEqual(DEFAULT_INDEX_COLS);
     expect(moveCol(DEFAULT_INDEX_COLS, 1, -1)[0]).toBe("status");
     expect(moveCol(DEFAULT_INDEX_COLS, 0, 1)[1]).toBe("org_id");
+  });
+});
+
+describe("reorderCol", () => {
+  it("moves a column to a new index", () => {
+    const cols = ["org_id", "status", "updated_at"] as const;
+    expect(reorderCol(cols, 0, 2)).toEqual([
+      "status",
+      "updated_at",
+      "org_id",
+    ]);
+    expect(reorderCol(cols, 2, 0)).toEqual([
+      "updated_at",
+      "org_id",
+      "status",
+    ]);
   });
 });
 
