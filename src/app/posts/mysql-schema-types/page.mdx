@@ -15,25 +15,25 @@ This is the first post in [Learn MySQL](/projects/mysql/), a series of interacti
 
 I'll cover foundations first (schema, indexes, queries, writes, transactions), then the deep stuff (MVCC, locks, the buffer pool, replication, forensics). Read in order or skip around. Your call.
 
-Today: tables, column types, and the boring choices that decide whether your app is correct and whether list endpoints still feel snappy six months from now.
+Today is tables and column types: the boring choices that decide whether your app stores correct data, and whether your list endpoints still feel snappy six months from now.
 
-I know the spicy lock diagrams are waiting, but everything later assumes a row already has a shape. Indexes hang off columns. Transactions flip typed values. The buffer pool caches pages stuffed with those rows. Get the type wrong (`DOUBLE` for money, `TIMESTAMP` for "the user meant Tuesday in Arizona") and clever caching will not save you. Schema is the cheapest place to avoid a miserable migration two years from now. It is also where the ORM sounds most confident while quietly making decisions you never reviewed.
+I know the spicy lock diagrams are waiting, but everything later in the series assumes a row already has a shape. Indexes hang off columns. Transactions flip typed values. The buffer pool caches pages full of those rows. Get a type wrong (`DOUBLE` for money, `TIMESTAMP` for "the user meant Tuesday in Arizona") and no amount of clever caching will save you. Fixing a type in a migration review takes five minutes. Fixing it two years later takes a weekend, a maintenance window, and an apology. The migration file is also where the ORM sounds most confident while it quietly makes decisions you never reviewed.
 
 The app examples in this series are Laravel and Eloquent, because that's what I ship at my day job. Don't bail if you're on something else. Every footgun here is really a MySQL footgun wearing a PHP accent, and the fix is always in the SQL.
 
-Even if this is the only post you read, I want you leaving with a radar for the footguns hiding in your ORM migrations. If a section never answers "why should I care?", I failed. Yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
+Even if this is the only post you read, I want you to walk away with a radar for the footguns hiding in your ORM migrations. If a section never answers "why should I care?", I failed. Yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
 
 ## What a table actually is (and why that isn't pedantry)
 
-When you `CREATE TABLE` in modern MySQL, you're almost certainly getting InnoDB.<Cite n={1} /> InnoDB does not stash your table like a CSV on a USB stick, a bag of rows in whatever order they showed up. It builds a clustered index: the whole table is physically sorted by the primary key and packed into fixed-size pages on disk. Looking up a row by PK is not "find a pointer, then hop somewhere else." The leaf of that index *is* the row. (We'll unpack the primary-key side of this next. For now, just remember your columns live inside those pages.)
+When you `CREATE TABLE` in modern MySQL, you're almost certainly getting InnoDB.<Cite n={1} /> InnoDB does not store your table as a loose bag of rows in whatever order they showed up, like a CSV on a USB stick. It builds a clustered index: it sorts the whole table by the primary key and packs it into fixed-size pages on disk. Looking up a row by primary key is not "find a pointer, then hop somewhere else." The bottom level of that index *is* the row. (The next post unpacks the primary-key side of this. For now, just remember that your columns live inside those pages.)
 
-The itch I want in your brain today: the types you put on columns decide what sits in those pages. The arithmetic is blunt. An InnoDB page is 16KB by default,<Cite n={19} /> so a table of tidy ~160-byte rows packs roughly a hundred rows into every page it reads, while the same table with sloppy 1.6KB rows fits about ten. Same query, same answer, ten times the pages touched and ten times the cache eaten.
+Here's the itch I want in your brain today: the types you put on columns decide what sits in those pages. The arithmetic is blunt. An InnoDB page is 16KB by default.<Cite n={19} /> Keep rows to a tidy ~160 bytes and about a hundred of them fit in every page MySQL reads. Let them sprawl to 1.6KB and about ten fit. Same query, same answer, ten times the pages touched and ten times the cache eaten.
 
 A migration is not "just SQL." It reshapes the physical thing every request reads. That is why I'm spending a whole article on `INT` vs `BIGINT` and whether your bio column can survive a `😀` emoji.
 
 ## Types matter
 
-Types are how you vote on that page budget. There is even a shared row-size ceiling around ~65KB of column data (long values often spill off-page, which is its own adventure).<Cite n={18} /> `VARCHAR(8000)` on every field "just in case" is how you donate performance to the void.
+Every type you pick is a vote on that page budget. There's even a hard ceiling: all the columns in a row share roughly ~65KB of space (long values often spill off-page, which is its own adventure).<Cite n={18} /> `VARCHAR(8000)` on every field "just in case" is how you donate performance to the void.
 
 Width is not the only vote. Float money, timezone-shifting event times, and `utf8mb3` text are correctness bugs that CI will cheerfully green-check, which is rude.
 
@@ -43,7 +43,7 @@ For each type family below: what it is, what breaks if you shrug, and what I'd p
 
 MySQL integers come in fixed widths, from `TINYINT` (1 byte) up through `BIGINT` (8 bytes). Signed vs unsigned only changes the *range*, not how much space they take.<Cite n={2} /> That's useful background, but the real decision is what you put on the primary key (and every foreign key that copies it). That value shows up in joins, indexes, exports, and often right in your URLs.
 
-The classic default is an autoincrementing `INT`. It's skinny, fast, and everyone gets it. Perfect for internal tables that never leave the database. The catch is the ceiling (signed `INT` tops out around 2.1 billion) and the fact that `/orders/41`, `/orders/42` is a scavenger hunt waiting to happen if those ids ever hit a public URL.
+The classic default is an autoincrementing `INT`. It's skinny, fast, and everyone gets it. Perfect for internal tables that never leave the database. There are two catches. Signed `INT` tops out around 2.1 billion, and sequential ids in public URLs are an invitation: anyone who sees `/orders/42` will try `/orders/41` just to see what happens.
 
 Stepping up to `BIGINT` mostly solves the "will I run out?" anxiety and stays cheap to join on. Laravel already voted here: `$table->id()` has meant `BIGINT UNSIGNED AUTO_INCREMENT` for years, and it's one of the framework defaults I'd actually defend in court. The new footgun is the frontend: ship a huge integer as a bare JSON number and JavaScript can quietly round it, so the id in the UI is no longer the id in MySQL.<Cite n={3} /> "Big integer in the database" and "safe number in React" are different problems.
 
@@ -58,7 +58,7 @@ Poke the strategies yourself. Watch the public URL and how a fatter clustered ke
 <IdWidthDemo />
 
 <Takeaway>
-Skinny clustered `BIGINT` + opaque `public_id` for APIs. Never ship huge integers as bare JSON numbers — JavaScript will quietly round them.
+Skinny clustered `BIGINT` plus an opaque `public_id` for APIs. Never ship huge integers as bare JSON numbers, because JavaScript will quietly round them.
 </Takeaway>
 
 ### Money: floats are for physics homework, not invoices
@@ -74,12 +74,12 @@ In migration-builder terms that's `$table->unsignedInteger('price_cents')` with 
 
 Money bugs rarely announce themselves as money bugs. They show up as "the API is wrong," "the frontend rounded weird," or "accounting export is haunted." Half the time the ghost is the column type.
 
-Ring up a cart of dime line items. Watch DOUBLE drift off the ledger rail while INT cents and DECIMAL stay locked:
+Ring up a cart of ten-cent line items. Watch DOUBLE drift away from the true total while INT cents and DECIMAL stay exact:
 
 <MoneyModeDemo />
 
 <Takeaway>
-Integer cents or `DECIMAL` — never `FLOAT`/`DOUBLE`. The gap grows with cart size.
+Integer cents or `DECIMAL`, never `FLOAT` or `DOUBLE`. The gap grows with cart size.
 </Takeaway>
 
 ### Choosing time types
@@ -90,14 +90,14 @@ I learned this the hard way at [BetterRX](https://www.betterrx.com/), the hospic
 
 What finally stuck: treat event / schedule time ("stay starts on this local date") as a wall-clock problem that needs an explicit timezone, or a UTC instant you convert with a library you trust. Treat row mutation time (`created_at` / `updated_at`) as "when did the database notice this row change?", usually fine as UTC with something like `CURRENT_TIMESTAMP(3)`.
 
-One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future dates are routine in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Laravel's `$table->timestamps()` quietly creates nullable `TIMESTAMP` columns, which is fine for `created_at` bookkeeping and exactly wrong for schedules. When you mean an event time, say `$table->dateTime('starts_at')` and mean it. Time bugs feel like flaky jobs. They're usually typed lies with a timezone on top.
+One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future dates are routine in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Laravel's `$table->timestamps()` quietly creates nullable `TIMESTAMP` columns, which is fine for `created_at` bookkeeping and exactly wrong for schedules. When you mean an event time, say `$table->dateTime('starts_at')` and mean it. Time bugs masquerade as flaky jobs. Underneath, it's usually a column type lying about timezones.
 
 One instant, three wall clocks. TIMESTAMP re-renders as the session timezone cycles; DATETIME is a polaroid that never changes:
 
 <TimeTypeDemo />
 
 <Takeaway>
-Event time → `DATETIME`. Audit stamps can be `TIMESTAMP` if you want session-TZ conversion — know which job the column has.
+Event time gets `DATETIME`. Audit stamps can be `TIMESTAMP` if you want session-timezone conversion. Know which job each column has.
 </Takeaway>
 
 ### Choosing string types
@@ -106,7 +106,7 @@ Two knobs decide how text behaves in MySQL: the character set (which symbols exi
 
 A character set is literally "here are the symbols, and here's the byte pattern for each one." `latin1` is an old single-byte Western European set, fine for a 1998 guestbook and hostile to most of the modern internet. `utf8mb4` is real UTF-8: every Unicode character, up to four bytes per character.<Cite n={10} /> The trap is historical naming. For years MySQL's charset called `utf8` was actually `utf8mb3`, a deprecated 3-byte subset that only covers the Basic Multilingual Plane.<Cite n={11} /><Cite n={12} /> Emoji and other supplementary-plane characters simply don't fit, which is why MySQL now tells you to use `utf8mb4` for new apps. Users *will* paste a 😀 into a display name. Your schema should not respond with "lol truncate."
 
-Lengths are where the byte math gets sneaky. `VARCHAR(n)` is *n characters*, but storage and row-size budgets think in *bytes*.<Cite n={13} /><Cite n={14} /> Under `utf8mb4`, one character can cost up to 4 bytes, so a full `VARCHAR(255)` is not "about 255 bytes." Worst case it's `255 × 4 = 1020` bytes of payload. MySQL also stores a length prefix: 1 byte if the column can never exceed 255 bytes, 2 bytes once the max might be bigger, which `utf8mb4` `VARCHAR(255)` always might (`1020 > 255`).<Cite n={14} /> So the declared budget is roughly 1022 bytes, about 1KB, for a single "probably fine" column. Actual rows only pay for the bytes you use, but indexes, row-size limits, and "how many of these fit on a page" care about that worst-case declaration. Stack a dozen `VARCHAR(255)` "just in case" fields on a hot list query and you've donated a lot of cache to empty aspiration.
+Lengths are where the byte math gets sneaky. `VARCHAR(n)` is *n characters*, but storage and row-size budgets think in *bytes*.<Cite n={13} /><Cite n={14} /> Under `utf8mb4`, one character can cost up to 4 bytes, so a full `VARCHAR(255)` is not "about 255 bytes." Worst case it's `255 × 4 = 1020` bytes of payload. MySQL also stores a length prefix in front of the value: 1 byte if the column's maximum can never pass 255 bytes, 2 bytes otherwise. A `utf8mb4` `VARCHAR(255)` can always pass it (`1020 > 255`), so it pays the 2 bytes.<Cite n={14} /> That puts the declared budget around 1022 bytes, about 1KB, for a single "probably fine" column. Actual rows only pay for the bytes you use, but indexes, row-size limits, and "how many of these fit on a page" care about that worst-case declaration. Stack a dozen `VARCHAR(255)` "just in case" fields on a hot list query and you've donated a lot of cache to empty aspiration.
 
 This exact math is why a generation of Laravel developers has `Schema::defaultStringLength(191)` memorized without knowing what it does. When the framework switched its default charset to `utf8mb4`, indexes on `VARCHAR(255)` columns blew past an old 767-byte index-key limit and migrations started failing with `1071: Specified key was too long`. The fix everyone pasted from Stack Overflow works because `191 × 4 = 764` bytes just barely squeaks under. The bytes were always there. The emoji just sent the bill.
 
@@ -116,19 +116,19 @@ What I avoid: `latin1` and friends inherited from stone-tablet tutorials, anythi
 
 Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as "why didn't this unique email match?" All of them are cheaper to fix in the migration PR than in a war room.
 
-Type some text. Each character becomes a tile whose width is its byte cost — emoji fatten under utf8mb4 or shatter under utf8mb3:
+Type some text below. Each character becomes a tile as wide as its byte cost. Emoji fatten under utf8mb4 and shatter under utf8mb3:
 
 <VarcharCharsetDemo />
 
 <Takeaway>
-`utf8mb4` for user text. `VARCHAR(n)` is characters; worst-case bytes are `n ×` charset width. Lengths come from the product, not folklore.
+`utf8mb4` for user text. `VARCHAR(n)` counts characters; the worst-case byte cost is `n` times the charset width. Lengths come from the product, not folklore.
 </Takeaway>
 
 ### NULL is a third state (not "empty," not "zero," not "the frontend forgot")
 
 SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. Comparisons against it return neither true nor false but *unknown*, and `WHERE` only keeps rows that are actually true. So `WHERE discount_code != 'BLACKFRIDAY'` silently drops every row where `discount_code` is NULL, which is technically correct three-valued logic and practically a bug report.<Cite n={16} />
 
-Rows ride a conveyor into `payment_type != 'card'`. TRUE passes, FALSE drops left, NULL falls through a trapdoor — filtered out of both branches:
+Rows ride a conveyor into `payment_type != 'card'`. TRUE passes, FALSE drops left, and NULL falls through a trapdoor, filtered out of both branches:
 
 <NullSemanticsDemo />
 
@@ -151,7 +151,7 @@ Every column type is a little vote for how wide a row is. Fatter rows mean fewer
 <RowBudgetDemo />
 
 <Takeaway>
-Fatter rows → fewer rows per 16KB page → more I/O for the same `LIMIT`. Stack type choices with the list endpoint in mind.
+Fatter rows mean fewer rows per 16KB page, which means more I/O for the same `LIMIT`. Stack type choices with the list endpoint in mind.
 </Takeaway>
 
 ## A marketplace schema that holds up

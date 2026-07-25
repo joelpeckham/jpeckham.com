@@ -42,7 +42,7 @@ By the end you should be able to sketch a composite for a multi-filter list endp
 
 ## Clustered vs secondary, thirty seconds
 
-Clustered index leaf = the row. Secondary leaf = indexed cols + PK columns for that row.<Cite n={1} /> Lookup by email, public id, or org+status usually means: walk the secondary tree, read the PK, walk the clustered tree. Selecting `*` on a wide tickets row makes that bounce more expensive. Sometimes the index can answer without visiting the row at all (covering indexes, later in the series). Today, design the path into the row.
+The clustered index leaf holds the row. A secondary leaf holds the indexed columns plus the PK columns for that row.<Cite n={1} /> A lookup by email, public id, or org+status usually means: walk the secondary tree, read the PK, walk the clustered tree. Selecting `*` on a wide tickets row makes that bounce more expensive. Sometimes the index can answer without visiting the row at all (covering indexes, later in the series). Today, design the path into the row.
 
 InnoDB can also silently append PK columns onto a secondary key (`index extensions`), so an index on `(status)` is a bit like `(status, id)` internally.<Cite n={2} /> Neat for `WHERE status = ? AND id = ?`. Do not design your API indexes around the append. Write the composite you mean.
 
@@ -57,7 +57,7 @@ B-tree indexes help when MySQL can walk a sorted range of keys:<Cite n={3} /><Ci
 - Not: `LIKE '%refund%'` (leading wildcard, so no range)
 - Not: wrapping the column in a function (`DATE(updated_at) = ?`, `LOWER(email) = ?`)
 
-If `ORDER BY` matches a usable index prefix (the direction story gets finer in the pagination post), MySQL can often avoid a filesort and just read in order.<Cite n={3} /> One example later. Keyset pagination gets its own article later in the series.
+If `ORDER BY` matches a usable index prefix (the direction story gets finer in the pagination post), MySQL can often skip the sort and just read in order.<Cite n={3} /> You'll see one example below. Keyset pagination gets its own article later in the series.
 
 ## Leftmost prefix
 
@@ -72,21 +72,21 @@ It cannot jump to `status` or `assignee_id` while skipping `org_id`. "Any subset
 
 If the rule feels arbitrary, picture a phone book. It's sorted by last name, then first name. Finding every Peckham is easy. Finding "Peckham, Joel" is easy. Finding everyone named Joel means reading the whole book, because first names have no useful order until a last name pins them down. A `status` filter with no `org_id` in front is "everyone named Joel."
 
-Equalities (and `IN`, and prefix `LIKE`) can stack from the left. A range on a middle column uses that column, then freezes the suffix for the index *range walk*. The freeze isn't spite; it's the same sort order doing its job. Within one `(org_id, status)` pair the entries are sorted by `assignee_id`, but across a *range* of statuses those `assignee_id` values are many interleaved runs, not one sorted one, so the walk can't use them to narrow further. Later columns may still get filtered after the fact, but they do not tighten the walk the way people hope.<Cite n={5} /> Heuristic for web list queries: equalities first, range last.
+Equalities (plus `IN` and prefix `LIKE`) stack from the left. A range on a middle column uses that column, then freezes every column after it for the index *range walk*. The freeze isn't spite. It's the same sort order doing its job: within one `(org_id, status)` pair the entries are sorted by `assignee_id`, but across a *range* of statuses those `assignee_id` values are a bunch of interleaved runs, not one sorted list, so the walk can't use them to narrow further. MySQL may still filter on the later columns after the fact, but they don't tighten the walk the way people hope.<Cite n={5} /> The heuristic for web list queries: equalities first, range last.
 
-Drag to reorder the index. Cycle the predicates. Try the "Range freezes status" preset — the sorted key strip shows why status becomes interleaved runs the walk cannot span.
+Drag to reorder the index. Cycle the predicates. Try the "Range freezes status" preset: the sorted key strip shows why status turns into interleaved runs the walk cannot span.
 
 <LeftPrefixDemo />
 
 <Takeaway>
-Composite = one sorted phone book. Leftmost prefix only. A range in the middle freezes the suffix for the index walk.
+A composite is one sorted phone book. Leftmost prefix only. A range in the middle freezes the columns after it for the index walk.
 </Takeaway>
 
 These are illustrative rules, not a promise the optimizer will never table-scan anyway (stats, `LIMIT`, buffering). You want the muscle memory.
 
 ## Optional filters without lying to yourself
 
-Real inbox APIs have optional query-string junk. `assigneeId` might be absent. `q=` might appear on Tuesdays. One composite will not perfect every combination, and that is fine.
+Real inbox APIs have optional query-string junk. `assigneeId` might be absent. `q=` might appear on Tuesdays. One composite will not serve every combination perfectly, and that is fine.
 
 Design for the common path. If ninety percent of requests are "open tickets for this org, newest first," make `(org_id, status, updated_at)` the workhorse, even when that means `assignee_id` is a filter applied after the range, or you add a second index with a clear job:
 
@@ -101,7 +101,7 @@ Two indexes with roles beat five indexes that are vibes. Optional filters are a 
 
 Selectivity is "how many rows share this value?" relative to the query you run, not a magic percentage you memorize.<Cite n={6} /> On a 5M-row tickets table, `status = 'open'` might be hundreds of thousands of rows. Inside one org, it might be a few thousand. Same predicate, different haystack.
 
-Old folklore about "indexes only help under 30% of the table" is obsolete. The optimizer decides with estimates and cost, not that rule of thumb.<Cite n={7} /> Your job in foundations is a gut check: low-cardinality flags (`status`, `is_active`, booleans) make weak *leading* keys. High-cardinality lookups (`token_hash`, `email`, `public_id`) make fine single-column uniques. Multi-tenant list endpoints want the tenant id first almost always.
+Old folklore about "indexes only help under 30% of the table" is obsolete. The optimizer decides with estimates and cost, not that rule of thumb.<Cite n={7} /> Your job at this stage is the gut check: low-cardinality flags (`status`, `is_active`, booleans) make weak *leading* keys. High-cardinality lookups (`token_hash`, `email`, `public_id`) make fine single-column uniques. Multi-tenant list endpoints almost always want the tenant id first.
 
 Drag the sliders. Watch "status alone" stay huge until you scope the org.
 
@@ -117,9 +117,9 @@ Toy math. Production wants realistic volumes in staging. Twenty-row fixtures wil
 
 Back to the inbox. Three singles give MySQL a chance at Index Merge: intersect row ids from each index, then fetch.<Cite n={8} /> Sometimes that wins. Often it is a consolation prize: extra random lookups, maybe a sort for `ORDER BY updated_at`, and you still paid write amplification on every update.
 
-One composite that matches the left prefix of the query is usually the design you wanted. Column order is which filters are always present vs optional. That call belongs to the product shape of the API, not to DBA folklore.
+One composite that matches the left prefix of the query is usually the design you wanted. Column order comes from which filters are always present and which are optional. That call belongs to the product shape of the API, not to DBA folklore.
 
-Watch the race: one composite seeks and finishes; three singles merge, sort, and bounce — and pay more write tax per INSERT.
+Watch the race: one composite seeks and finishes, while three singles merge, sort, and bounce, then pay more write tax on every INSERT.
 
 <CompositeVsSinglesDemo />
 
@@ -133,7 +133,7 @@ Every secondary index is another B-tree to update on `INSERT` and on `UPDATE` of
 
 Before you `DROP INDEX` in prod, mark it invisible and watch whether anything regresses. The optimizer ignores invisible indexes, but they still get maintained, so you are testing plan choice safely.<Cite n={9} /> Adding an index is also `ALTER TABLE` territory. Online DDL cost is its own article later in the series. Do not promise "just add it on the primary at noon" without that caveat.
 
-After you add indexes, `ANALYZE TABLE` helps when you rely on persistent stats. One practical ops sentence, then move on.<Cite n={10} />
+After you add indexes, run `ANALYZE TABLE` if you rely on persistent stats. That's the whole ops sermon for today.<Cite n={10} />
 
 ## How Eloquent helps you ship bad indexes
 
@@ -253,7 +253,7 @@ LIMIT 20;
 Equality then range on the trailing column. Indexing only `created_at` helps nobody's "my orders" page.
 
 <TryIt>
-Paste your hottest list query into a scratch file. Write the composite that matches its left prefix (equalities first, range last). Open the left-prefix demo, rebuild that key order, and confirm the walk lights what you expect — especially if you put a date range in the middle.
+Paste your hottest list query into a scratch file. Write the composite that matches its left prefix (equalities first, range last). Open the left-prefix demo, rebuild that key order, and confirm the walk lights what you expect, especially if you put a date range in the middle.
 </TryIt>
 
 ## Checklist before you merge the migration

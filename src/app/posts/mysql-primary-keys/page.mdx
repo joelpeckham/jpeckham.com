@@ -13,7 +13,7 @@ This is post two of [Learn MySQL](/projects/mysql/). Last time I picked column t
 
 That sounds like trivia until you notice what rides on it. Detail endpoints that look up by id get cheap. Every secondary index you add copies the primary key into its own entries.<Cite n={1} /> Foreign keys store matching parent key values in the child table too.<Cite n={2} /> Write-heavy tables care whether new ids land next to each other or spray all over the B-tree. And if the thing your teammates actually search for is buried inside a JSON blob, a perfect PK will sit there unused while support waits on a full table scan. I have a work story about that last one.
 
-Quick recap from [tables and types](/posts/mysql-schema-types/), so I don't re-shop IDs for three pages. On a normal web table I want a skinny `BIGINT UNSIGNED AUTO_INCREMENT` as the clustered primary key, plus a unique `public_id` (ULID-style string) for URLs and JSON when the API is public. If clients must mint ids themselves, prefer time-ordered UUIDv7 / ULID over random UUIDv4 as the clustered key. The rest of this post assumes that menu and explains *why* the clustered side cares.
+Quick recap from [tables and types](/posts/mysql-schema-types/), so I don't spend three pages shopping for IDs again. On a normal web table I want a skinny `BIGINT UNSIGNED AUTO_INCREMENT` as the clustered primary key, plus a unique `public_id` (ULID-style string) for URLs and JSON when the API is public. If clients must mint ids themselves, prefer time-ordered UUIDv7 / ULID over random UUIDv4 as the clustered key. The rest of this post assumes that menu and explains *why* the clustered side cares.
 
 ## A B-tree in one coffee
 
@@ -25,7 +25,7 @@ InnoDB indexes (aside from spatial ones) are B-tree structures. Index records li
 - **Leaf pages** are the bottom of the tree. They hold the actual index entries, sorted by key.<Cite n={3} />
 - A lookup is a **descent**: start at the root, compare your search key to the separators, follow one child pointer, repeat until you hit a leaf. Without a usable index, MySQL starts at the first row and reads through the table to find matches.<Cite n={4} /> Indexes exist so you don't do that.
 
-The reason a descent is so cheap is fan-out. A 16KB interior page holds hundreds of separator keys, and each of *those* children holds hundreds more, so the tree stays absurdly shallow: three levels already covers millions of rows, four covers more rows than you have. "Look up one order in a hundred-million-row table" is three or four page reads, most of which are probably cached anyway.
+The reason a descent is so cheap is fan-out. A 16KB interior page holds hundreds of separator keys, and each of *those* children holds hundreds more, so the tree stays absurdly shallow. Three levels already cover millions of rows. Four cover more rows than you have. "Look up one order in a hundred-million-row table" is three or four page reads, most of which are probably cached anyway.
 
 When people say InnoDB "walks the index," they mean this root-to-leaf trip. "Leaf" is not poetry. It means the bottom level, where the entries live.
 
@@ -34,7 +34,7 @@ Pick a key and watch the path light up. Interior pages only steer. The value sho
 <BtreeDescentDemo />
 
 <Takeaway>
-Click a leaf key: interior pages only steer. In a clustered index the leaf holds the whole row — that is the punchline for `WHERE id = ?`.
+Click a leaf key: interior pages only steer. In a clustered index the leaf holds the whole row. That is the punchline for `WHERE id = ?`.
 </Takeaway>
 
 Secondary indexes (next article) are also B-trees. Same descent. Different stuff sitting in the leaf. We'll get there.
@@ -86,12 +86,12 @@ People call step 2 the **bounce** (or PK lookup). Click an email below. Two hops
 <SecondaryBounceDemo />
 
 <Takeaway>
-Secondary lookup = two hops: indexed cols → PK, then PK → row. Your MRN/email/`public_id` filters take this path.
+A secondary lookup is two hops: the secondary index gives you the PK, and the PK finds the row. Your MRN, email, and `public_id` filters take this path.
 </Takeaway>
 
 Because every secondary entry carries a copy of the PK, a long primary key makes every secondary index use more space.<Cite n={1} /> A `CHAR(36)` UUIDv4 as the clustered key is not just 36 bytes on the table row. It is 36 bytes stuffed into `idx_orders_account`, `idx_orders_status`, and every child-table foreign key column that stores the parent id.<Cite n={2} /> Skinny PKs are a kindness to every index you haven't written yet.
 
-Worked luggage: `CHAR(36)` PK × 3 secondaries × ~44B per secondary entry × 10M rows ≈ **1.2 GB** of secondary index before you count the clustered table. Same shape with `BIGINT` (8B PK + 8B idx ≈ 16B) is roughly **480 MB**. The slider in the demo multiplies it live.
+Luggage math: a `CHAR(36)` PK, times 3 secondaries at ~44 bytes per entry, times 10M rows, is roughly **1.2 GB** of secondary index before you count the clustered table itself. The same shape with a `BIGINT` (8-byte PK plus 8-byte indexed column, about 16 bytes per entry) is roughly **480 MB**. The slider in the demo multiplies it live.
 
 ```sql
 -- Anti-pattern: wide clustered key copied into every secondary
@@ -120,15 +120,15 @@ CREATE TABLE orders (
 ) ENGINE=InnoDB;
 ```
 
-Watch one insert stamp a PK copy into every secondary — skinny BIGINT briefcase vs fat CHAR(36) trunk:
+Watch one insert stamp a copy of the PK into every secondary index. BIGINT packs a briefcase; CHAR(36) hauls a steamer trunk:
 
 <PkWidthTaxDemo />
 
 <Takeaway>
-Fat PK × every secondary × row count. Prefer 8-byte bigint clustering unless clients must mint ids (then UUIDv7/ULID, not random `CHAR(36)`).
+The tax is PK width times secondary count times row count. Prefer 8-byte bigint clustering unless clients must mint ids (then UUIDv7/ULID, not random `CHAR(36)`).
 </Takeaway>
 
-Sometimes a secondary index already contains every column your query needs, so MySQL can retrieve values from the index tree without consulting the data rows. That is a covering index.<Cite n={4} /> Later article. Today you just need the setup burned in: secondary → PK → row.
+Sometimes a secondary index already contains every column your query needs, so MySQL can answer from the index tree without consulting the data rows. That is a covering index.<Cite n={4} /> It gets its own article later. Today you just need the setup burned in: secondary index first, then PK, then row.
 
 ## Insert locality (why random UUIDs as PK feel haunted)
 
@@ -140,7 +140,7 @@ New rows have to land somewhere in those leaf pages. When InnoDB inserts into a 
 | --- | --- | --- | --- |
 | `BIGINT AUTO_INCREMENT` | Appends to the hot end | 8 bytes | Default for almost everything |
 | UUIDv7 / ULID | Mostly sequential (time-ordered) | 16 bytes | Clients must mint ids |
-| UUIDv4 | Random spray | 16–36 bytes | Almost never as the *clustered* key |
+| UUIDv4 | Random spray | 16 to 36 bytes | Almost never as the *clustered* key |
 | `(tenant_id, id)` | Good within a tenant | Width of both | Sometimes, for tenant-packed scans |
 
 Toggle the shapes. BIGINT hugs the right edge. UUIDv4 paints the whole tree like a toddler with a marker.
