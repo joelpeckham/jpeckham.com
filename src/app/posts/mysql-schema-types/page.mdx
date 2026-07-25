@@ -9,116 +9,114 @@ import { Cite, References } from "@/components/cite";
 
 ## Come on in, the water's fine.
 
-This is the first post in [Learn MySQL](/projects/mysql/), a series of interactive articles for web folks who want to actually *understand* MySQL and InnoDB — not just copy a Prisma migration and hope production is in a good mood.
+This is the first post in [Learn MySQL](/projects/mysql/), a series of interactive articles for web folks who want to actually *understand* MySQL and InnoDB, not just copy a Prisma migration and hope production is in a good mood.
 
-I’m going to walk foundations first (schema, indexes, queries, writes, transactions), then get weird with the deep stuff (MVCC, locks, the buffer pool, replication, forensics). Binge in order or teleport around — your call.
+I'll cover foundations first (schema, indexes, queries, writes, transactions), then the deep stuff (MVCC, locks, the buffer pool, replication, forensics). Read in order or skip around. Your call.
 
-**Today’s topic:** tables, column types, and the boring-looking choices that quietly decide whether your app is correct *and* whether your list endpoints feel snappy six months from now.
+Today: tables, column types, and the boring choices that decide whether your app is correct and whether list endpoints still feel snappy six months from now.
 
-I know the spicy lock diagrams are waiting, but everything later assumes a row already has a shape: indexes hang off columns, transactions flip typed values, and the buffer pool is just caching pages stuffed with those rows. Get the type wrong — `DOUBLE` for money, `TIMESTAMP` for “the user meant Tuesday in Arizona” — and no amount of clever caching will save you. Schema is the cheapest place to avoid a miserable migration two years from now, and also the place where ORMs sound the most sure while being the most wrong.
+I know the spicy lock diagrams are waiting, but everything later assumes a row already has a shape. Indexes hang off columns. Transactions flip typed values. The buffer pool caches pages stuffed with those rows. Get the type wrong (`DOUBLE` for money, `TIMESTAMP` for "the user meant Tuesday in Arizona") and clever caching will not save you. Schema is the cheapest place to avoid a miserable migration two years from now. It is also where ORMs sound the most sure while being the most wrong.
 
-So let’s get the basics solid. Even if this is the only post you read, I want you leaving with a radar for the foot-guns hiding in your ORM migrations. And if a section never answers “why should I care?”, I failed — yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
+Even if this is the only post you read, I want you leaving with a radar for the footguns hiding in your ORM migrations. If a section never answers "why should I care?", I failed. Yell at future-me in the comments. (There are no comments. Yell into the void. Same energy.)
 
-## What a table actually is (and why that isn’t pedantry)
+## What a table actually is (and why that isn't pedantry)
 
-When you `CREATE TABLE` in modern MySQL, you’re almost certainly getting **InnoDB**.<Cite n={1} /> And InnoDB doesn’t stash your table like a CSV on a USB stick — a bag of rows in whatever order they showed up. It builds a **clustered index**: the whole table is physically sorted by the primary key and packed into fixed-size pages on disk. Looking up a row by PK isn’t “find a pointer, then hop somewhere else”; the leaf of that index *is* the row. (We’ll unpack the primary-key side of this next. For now, just remember: your columns live inside those pages.)
+When you `CREATE TABLE` in modern MySQL, you're almost certainly getting InnoDB.<Cite n={1} /> InnoDB does not stash your table like a CSV on a USB stick, a bag of rows in whatever order they showed up. It builds a clustered index: the whole table is physically sorted by the primary key and packed into fixed-size pages on disk. Looking up a row by PK is not "find a pointer, then hop somewhere else." The leaf of that index *is* the row. (We'll unpack the primary-key side of this next. For now, just remember your columns live inside those pages.)
 
-The itch I want in your brain today: **the types you put on columns decide what sits in those pages**. Wider, sloppier types → fatter rows → fewer rows per page → every “give me 50 listings” query hauls more junk for the same answer.
+The itch I want in your brain today: the types you put on columns decide what sits in those pages. Wider, sloppier types mean fatter rows, fewer rows per page, and every "give me 50 listings" query hauling more junk for the same answer.
 
-A migration isn’t “just SQL.” It’s reshaping the physical thing every request reads. That’s why I’m spending a whole article on `INT` vs `BIGINT` and whether your bio column can survive a `😀` emoji.
+A migration is not "just SQL." It reshapes the physical thing every request reads. That is why I'm spending a whole article on `INT` vs `BIGINT` and whether your bio column can survive a `😀` emoji.
 
-## Types matter (and picking the right ones is a big deal)
+## Types matter
 
-Types are how you vote on that page budget — there’s even a shared row-size ceiling around ~65KB of column data (long values often spill off-page, which is its own adventure).<Cite n={18} /> `VARCHAR(8000)` on every field “just in case” is how you donate performance to the void.
+Types are how you vote on that page budget. There is even a shared row-size ceiling around ~65KB of column data (long values often spill off-page, which is its own adventure).<Cite n={18} /> `VARCHAR(8000)` on every field "just in case" is how you donate performance to the void.
 
-Width isn’t the only vote, either. Float money, timezone-shifting event times, and `utf8mb3` text are correctness bugs that CI will cheerfully green-check — which is rude, honestly.
+Width is not the only vote. Float money, timezone-shifting event times, and `utf8mb3` text are correctness bugs that CI will cheerfully green-check, which is rude.
 
-Walkthrough time. For each type family: what it is, what breaks if you shrug, and what I’d pick on a normal web app.
+For each type family below: what it is, what breaks if you shrug, and what I'd pick on a normal web app.
 
 ### Choosing IDs
 
-MySQL integers come in fixed widths — `TINYINT` (1 byte) up through `BIGINT` (8 bytes) — and signed vs unsigned only changes the *range*, not how much space they take.<Cite n={2} /> That’s useful background, but the real decision is what you put on the primary key (and every foreign key that copies it). That value shows up in joins, indexes, exports, and often right in your URLs.
+MySQL integers come in fixed widths, from `TINYINT` (1 byte) up through `BIGINT` (8 bytes). Signed vs unsigned only changes the *range*, not how much space they take.<Cite n={2} /> That's useful background, but the real decision is what you put on the primary key (and every foreign key that copies it). That value shows up in joins, indexes, exports, and often right in your URLs.
 
-The default most of us reach for is an autoincrementing `INT`. It’s skinny, fast, and everyone gets it — perfect for internal tables that never leave the database. The catch is the ceiling (signed `INT` tops out around 2.1 billion) and the fact that `/orders/41`, `/orders/42` is a scavenger hunt waiting to happen if those ids ever hit a public URL.
+The default most of us reach for is an autoincrementing `INT`. It's skinny, fast, and everyone gets it. Perfect for internal tables that never leave the database. The catch is the ceiling (signed `INT` tops out around 2.1 billion) and the fact that `/orders/41`, `/orders/42` is a scavenger hunt waiting to happen if those ids ever hit a public URL.
 
-Stepping up to `BIGINT` mostly solves the “will I run out?” anxiety and stays cheap to join on. The new footgun is the frontend: ship a huge integer as a bare JSON number and JavaScript can quietly round it, so the id in the UI is no longer the id in MySQL.<Cite n={3} /> “Big integer in the database” and “safe number in React” are different problems.
+Stepping up to `BIGINT` mostly solves the "will I run out?" anxiety and stays cheap to join on. The new footgun is the frontend: ship a huge integer as a bare JSON number and JavaScript can quietly round it, so the id in the UI is no longer the id in MySQL.<Cite n={3} /> "Big integer in the database" and "safe number in React" are different problems.
 
-Sometimes you don’t want a sequence at all. UUIDs and ULIDs let clients or other services mint ids without asking MySQL first, and they make nicer opaque public identifiers. The cost is width — those keys get copied into every secondary index — and random UUIDs as the *clustered* primary key scatter inserts across the table (more on that in the primary-key post). If this *is* your PK, prefer something time-sortable like a ULID or `uuid_v7`.
+Sometimes you don't want a sequence at all. UUIDs and ULIDs let clients or other services mint ids without asking MySQL first, and they make nicer opaque public identifiers. The cost is width. Those keys get copied into every secondary index, and random UUIDs as the *clustered* primary key scatter inserts across the table (more on that in the primary-key post). If this *is* your PK, prefer something time-sortable like a ULID or `uuid_v7`.
 
-What I reach for on a normal web app with a public API is both: a skinny `BIGINT UNSIGNED AUTO_INCREMENT` (or plain `INT` if I’m sure) as the clustered key for joins, plus a unique `CHAR(26)` ULID-style `public_id` for URLs and JSON. The database keeps the cheap integer; the frontend only ever sees a string, so the Number-precision trap never shows up. Two columns to generate and index, sure — almost always worth it. That’s what the marketplace schema below uses.
+What I reach for on a normal web app with a public API is both: a skinny `BIGINT UNSIGNED AUTO_INCREMENT` (or plain `INT` if I'm sure) as the clustered key for joins, plus a unique `CHAR(26)` ULID-style `public_id` for URLs and JSON. The database keeps the cheap integer. The frontend only ever sees a string, so the Number-precision trap never shows up. Two columns to generate and index, sure. Almost always worth it. That's what the marketplace schema below uses.
 
-If the table is truly internal, a lone `INT` or `BIGINT` is fine — just size it for growth. If clients need to create the row id themselves, lean on ULID/UUID, ideally as that public id column, or as a time-sortable PK if you really only want one. Day-one goal either way: boring joins in the database, stable strings at the API boundary, and zero Slack threads titled “why did this id change by one??”
+If the table is truly internal, a lone `INT` or `BIGINT` is fine. Just size it for growth. If clients need to create the row id themselves, lean on ULID/UUID, ideally as that public id column, or as a time-sortable PK if you really only want one. Day-one goal either way: boring joins in the database, stable strings at the API boundary, and zero Slack threads titled "why did this id change by one??"
 
-Poke the strategies yourself — watch the URL, the JSON round-trip, and how hard the secondary-index tax hits:
+Poke the strategies yourself. Watch the URL, the JSON round-trip, and how hard the secondary-index tax hits:
 
 <IdWidthDemo />
 
-### Money — floats are for physics homework, not invoices
+### Money: floats are for physics homework, not invoices
 
-JavaScript’s `Number` (and MySQL’s `FLOAT` / `DOUBLE`) live in approximate binary floating-point land.<Cite n={4} /><Cite n={5} /> That’s fine for “model confidence score” and “how spicy is this recommendation.” It is a deeply unserious place to keep money. Store currency in a float and you are volunteering for a support ticket that says “the total is off by a cent,” plus a finance person who does not care that IEEE 754 is hard.
+JavaScript's `Number` (and MySQL's `FLOAT` / `DOUBLE`) live in approximate binary floating-point land.<Cite n={4} /><Cite n={5} /> That's fine for "model confidence score" and "how spicy is this recommendation." It is a deeply unserious place to keep money. Store currency in a float and you are volunteering for a support ticket that says "the total is off by a cent," plus a finance person who does not care that IEEE 754 is hard.
 
 I like two adult options:
 
-1. **Integer minor units** — `price_cents` as an integer, plus `CHAR(3)` for the currency code. This is the Stripe-shaped universe.<Cite n={6} />
-2. **`DECIMAL(M,D)`** — exact fixed-point if you’d rather keep a decimal scale in the column.<Cite n={7} />
+1. Integer minor units: `price_cents` as an integer, plus `CHAR(3)` for the currency code. This is the Stripe-shaped universe.<Cite n={6} />
+2. `DECIMAL(M,D)`: exact fixed-point if you'd rather keep a decimal scale in the column.<Cite n={7} />
 
-Money bugs rarely announce themselves as money bugs. They show up as “the API is wrong,” “the frontend rounded weird,” or “accounting export is haunted.” Half the time the ghost is the column type.
+Money bugs rarely announce themselves as money bugs. They show up as "the API is wrong," "the frontend rounded weird," or "accounting export is haunted." Half the time the ghost is the column type.
 
-Ring up a cart of dime line items. Bytes barely move — the invoice either balances or sprouts a ghost penny:
+Ring up a cart of dime line items. Bytes barely move. The invoice either balances or sprouts a ghost penny:
 
 <MoneyModeDemo />
 
 ### Choosing time types
 
-MySQL mostly gives you two ways to store “a moment,” and they lie differently.<Cite n={8} /> `TIMESTAMP` converts on the way in and out using the session `time_zone` — change the connection timezone (or move regions and forget to pin it) and the same stored instant can *display* as a different local time. `DATETIME` just keeps the digits you gave it, no conversion. That’s great for wall-clock meaning *if* you also know which timezone that clock lives in, and terrible if you assumed “those digits are UTC” when they weren’t.
+MySQL mostly gives you two ways to store "a moment," and they lie differently.<Cite n={8} /> `TIMESTAMP` converts on the way in and out using the session `time_zone`. Change the connection timezone (or move regions and forget to pin it) and the same stored instant can *display* as a different local time. `DATETIME` just keeps the digits you gave it, no conversion. That's great for wall-clock meaning if you also know which timezone that clock lives in, and terrible if you assumed "those digits are UTC" when they weren't.
 
-I learned this the hard way at [BetterRX](https://www.betterrx.com/), the hospice pharmacy platform I work on. Patients sometimes go on **respite care** — temporarily housed somewhere that isn’t home — which means a different pharmacy and delivery location for a while. Users schedule that location change ahead of time, and when the stay starts the system should order meds from the new pharmacy to the new place so everything’s ready on arrival. The hair-pulling part wasn’t the order itself. It was the job that asks “which respite stays start *now*?” “Now” only makes sense in the patient’s and pharmacy’s timezones. Local midnight in Arizona is not local midnight in New York. Get the stored type and timezone story wrong and you fire early, late, or on the wrong calendar day — an especially bad genre of bug when medications are involved.
+I learned this the hard way at [BetterRX](https://www.betterrx.com/), the hospice pharmacy platform I work on. Patients sometimes go on respite care: temporarily housed somewhere that isn't home, which means a different pharmacy and delivery location for a while. Users schedule that location change ahead of time, and when the stay starts the system should order meds from the new pharmacy to the new place so everything's ready on arrival. The hair-pulling part wasn't the order itself. It was the job that asks "which respite stays start *now*?" "Now" only makes sense in the patient's and pharmacy's timezones. Local midnight in Arizona is not local midnight in New York. Get the stored type and timezone story wrong and you fire early, late, or on the wrong calendar day. That is an especially bad genre of bug when medications are involved.
 
-What finally stuck: treat **event / schedule time** (“stay starts on this local date”) as a wall-clock problem that needs an explicit timezone, or a UTC instant you convert with a library you trust. Treat **row mutation time** (`created_at` / `updated_at`) as “when did the database notice this row change?” — usually fine as UTC with something like `CURRENT_TIMESTAMP(3)`.
+What finally stuck: treat event / schedule time ("stay starts on this local date") as a wall-clock problem that needs an explicit timezone, or a UTC instant you convert with a library you trust. Treat row mutation time (`created_at` / `updated_at`) as "when did the database notice this row change?", usually fine as UTC with something like `CURRENT_TIMESTAMP(3)`.
 
-One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in **2038**.<Cite n={8} /> Far-future rows are not a bit in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don’t trust the ORM to make the choice for you — Prisma maps `DateTime` to whatever the migration shrugged into existence, and Rails/`ActiveRecord` has historically leaned `TIMESTAMP`. Read the SQL. Time bugs feel like flaky jobs; they’re usually typed lies with a timezone on top.
+One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall in 2038.<Cite n={8} /> Far-future rows are not a bit in healthcare, so I prefer `DATETIME` (or a deliberate UTC approach) when the calendar can look past that cliff. And don't trust the ORM to make the choice for you. Prisma maps `DateTime` to whatever the migration shrugged into existence, and Rails/`ActiveRecord` has historically leaned `TIMESTAMP`. Read the SQL. Time bugs feel like flaky jobs. They're usually typed lies with a timezone on top.
 
-Here’s the TZ shapeshift as a job outcome — write a Phoenix midnight, run the worker from New York, watch whether meds fire on the right clock:
+Here's the TZ shapeshift as a job outcome. Write a Phoenix midnight, run the worker from New York, and watch whether meds fire on the right clock:
 
 <TimeTypeDemo />
 
 ### Choosing string types
 
-Two knobs decide how text behaves in MySQL: the **character set** (which symbols exist and how they’re encoded as bytes) and the **collation** (the rules for comparing and sorting those symbols).<Cite n={9} /> Get either wrong and you don’t just get “weird characters” — you get wrong equality, wrong `ORDER BY`, and rows that refuse to store the emoji your users pasted into a name field.
+Two knobs decide how text behaves in MySQL: the character set (which symbols exist and how they're encoded as bytes) and the collation (the rules for comparing and sorting those symbols).<Cite n={9} /> Get either wrong and you don't just get "weird characters." You get wrong equality, wrong `ORDER BY`, and rows that refuse to store the emoji your users pasted into a name field.
 
-A character set is literally “here are the symbols, and here’s the byte pattern for each one.” `latin1` is an old single-byte Western European set — fine for a 1998 guestbook, hostile to most of the modern internet. `utf8mb4` is real UTF-8: every Unicode character, up to **four bytes per character**.<Cite n={10} /> The trap is historical naming. For years MySQL’s charset called `utf8` was actually `utf8mb3` — a deprecated 3-byte subset that only covers the Basic Multilingual Plane.<Cite n={11} /><Cite n={12} /> Emoji and other supplementary-plane characters simply don’t fit, which is why MySQL now tells you to use `utf8mb4` for new apps. Users *will* paste a 😀 into a display name. Your schema should not respond with “lol truncate.”
+A character set is literally "here are the symbols, and here's the byte pattern for each one." `latin1` is an old single-byte Western European set, fine for a 1998 guestbook and hostile to most of the modern internet. `utf8mb4` is real UTF-8: every Unicode character, up to four bytes per character.<Cite n={10} /> The trap is historical naming. For years MySQL's charset called `utf8` was actually `utf8mb3`, a deprecated 3-byte subset that only covers the Basic Multilingual Plane.<Cite n={11} /><Cite n={12} /> Emoji and other supplementary-plane characters simply don't fit, which is why MySQL now tells you to use `utf8mb4` for new apps. Users *will* paste a 😀 into a display name. Your schema should not respond with "lol truncate."
 
-Lengths are where the byte math gets sneaky. `VARCHAR(n)` is *n characters*, but storage and row-size budgets think in *bytes*.<Cite n={13} /><Cite n={14} /> Under `utf8mb4`, one character can cost up to 4 bytes, so a full `VARCHAR(255)` is not “about 255 bytes.” Worst case it’s `255 × 4 = 1020` bytes of payload. MySQL also stores a length prefix: 1 byte if the column can never exceed 255 bytes, **2 bytes** once the max might be bigger — which `utf8mb4` `VARCHAR(255)` always might (`1020 > 255`).<Cite n={14} /> So the declared budget is roughly **1022 bytes ≈ 1KB** for a single “probably fine” column. Actual rows only pay for the bytes you use, but indexes, row-size limits, and “how many of these fit on a page” care about that worst-case declaration. Stack a dozen `VARCHAR(255)` “just in case” fields on a hot list query and you’ve donated a lot of cache to empty aspiration.
+Lengths are where the byte math gets sneaky. `VARCHAR(n)` is *n characters*, but storage and row-size budgets think in *bytes*.<Cite n={13} /><Cite n={14} /> Under `utf8mb4`, one character can cost up to 4 bytes, so a full `VARCHAR(255)` is not "about 255 bytes." Worst case it's `255 × 4 = 1020` bytes of payload. MySQL also stores a length prefix: 1 byte if the column can never exceed 255 bytes, 2 bytes once the max might be bigger, which `utf8mb4` `VARCHAR(255)` always might (`1020 > 255`).<Cite n={14} /> So the declared budget is roughly 1022 bytes, about 1KB, for a single "probably fine" column. Actual rows only pay for the bytes you use, but indexes, row-size limits, and "how many of these fit on a page" care about that worst-case declaration. Stack a dozen `VARCHAR(255)` "just in case" fields on a hot list query and you've donated a lot of cache to empty aspiration.
 
-What I pick for normal app text: `utf8mb4` with `utf8mb4_0900_ai_ci` (or whatever your MySQL 8+/9.x default already is). The name is less mystical than it looks — collation suffixes are a little cheat sheet.<Cite n={15} /> `_ci` / `_cs` mean case-insensitive vs case-sensitive. `_ai` / `_as` mean accent-insensitive vs accent-sensitive. `0900` means the collation is based on Unicode Collation Algorithm 9.0.0. So `utf8mb4_0900_ai_ci` says: compare as Unicode text, ignore case, ignore accents — which is usually what you want for names, emails, and search-ish equality. Reach for `_bin` when you need raw byte identity (tokens, case-sensitive codes). Reach for a language-specific collation (`utf8mb4_tr_0900_ai_ci`, etc.) when a locale’s sort rules are a product requirement, not before.
+What I pick for normal app text: `utf8mb4` with `utf8mb4_0900_ai_ci` (or whatever your MySQL 8+/9.x default already is). The name is less mystical than it looks. Collation suffixes are a little cheat sheet.<Cite n={15} /> `_ci` / `_cs` mean case-insensitive vs case-sensitive. `_ai` / `_as` mean accent-insensitive vs accent-sensitive. `0900` means the collation is based on Unicode Collation Algorithm 9.0.0. So `utf8mb4_0900_ai_ci` says: compare as Unicode text, ignore case, ignore accents. That is usually what you want for names, emails, and search-ish equality. Reach for `_bin` when you need raw byte identity (tokens, case-sensitive codes). Reach for a language-specific collation (`utf8mb4_tr_0900_ai_ci`, etc.) when a locale's sort rules are a product requirement, not before.
 
-What I avoid: `latin1` and friends inherited from stone-tablet tutorials; anything still declaring `CHARSET utf8` / `utf8mb3` for user-facing text; and cargo-cult `VARCHAR(255)` on every column. Prefer lengths from the product — “display name max 80 in the UI” — not from “255 feels traditional.” Fixed-ish identifiers (`CHAR(26)` ULIDs, `CHAR(3)` currency codes) can stay `CHAR`/`VARCHAR` at the real width. Long blobs of prose belong in `TEXT` (or JSON, if the shape is sparse), not a comically wide `VARCHAR` pretending it’s a memo field.
+What I avoid: `latin1` and friends inherited from stone-tablet tutorials, anything still declaring `CHARSET utf8` / `utf8mb3` for user-facing text, and cargo-cult `VARCHAR(255)` on every column. Prefer lengths from the product ("display name max 80 in the UI"), not from "255 feels traditional." Fixed-ish identifiers (`CHAR(26)` ULIDs, `CHAR(3)` currency codes) can stay `CHAR`/`VARCHAR` at the real width. Long blobs of prose belong in `TEXT` (or JSON, if the shape is sparse), not a comically wide `VARCHAR` pretending it's a memo field.
 
-Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as “why didn’t this unique email match?” Both are cheaper to fix in the migration PR than in a war room.
+Charset mistakes show up as weird characters (or hard errors) in prod. Length mistakes show up later as mysterious row bloat. Collation mistakes show up as "why didn't this unique email match?" Both are cheaper to fix in the migration PR than in a war room.
 
-Drag the length, flip the charset, and watch the kilobyte thermometer + how many of these fit on a page:
+Drag the length, flip the charset, and watch the kilobyte thermometer plus how many of these fit on a page:
 
 <VarcharCharsetDemo />
 
-### NULL is a third state (not “empty,” not “zero,” not “the frontend forgot”)
+### NULL is a third state (not "empty," not "zero," not "the frontend forgot")
 
 SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. It turns `WHERE` into three-valued logic cosplay, interacts weirdly with unique indexes, and maps to JS `null`/`undefined` depending on which driver is gaslighting you today.
 
-If the domain always has a value, say `NOT NULL` and give a real default. If “missing” is a product concept, keep `NULL` on purpose and teach your API the same story. Half of “why didn’t this row match my filter?” bugs are NULL semantics wearing a trench coat.
+If the domain always has a value, say `NOT NULL` and give a real default. If "missing" is a product concept, keep `NULL` on purpose and teach your API the same story. Half of "why didn't this row match my filter?" bugs are NULL semantics wearing a trench coat.
 
-### JSON — a deliberate escape hatch, not a junk drawer
+### JSON: a deliberate escape hatch, not a junk drawer
 
-Native `JSON` is validated binary storage — better than stuffing a blob into `TEXT` and praying.<Cite n={17} /> I like it for sparse per-tenant attributes, feature-flag bags, “seller added three weird facets” shape that shouldn’t force twenty nullable columns.
+Native `JSON` is validated binary storage, better than stuffing a blob into `TEXT` and praying.<Cite n={17} /> I like it for sparse per-tenant attributes, feature-flag bags, and "seller added three weird facets" shape that shouldn't force twenty nullable columns.
 
-I do *not* like it for money, foreign keys, or the fields you filter list endpoints on. If it’s a join key or a `WHERE` you care about, it wants to be a column (I’ll get into generated columns / indexing JSON later in the series). JSON feels flexible until your “flexible” field is the reason you can’t index the query that pays the bills.
+I do *not* like it for money, foreign keys, or the fields you filter list endpoints on. If it's a join key or a `WHERE` you care about, it wants to be a column (I'll get into generated columns / indexing JSON later in the series). JSON feels flexible until your "flexible" field is the reason you can't index the query that pays the bills.
 
-## Why the row’s byte budget matters
+## Why the row's byte budget matters
 
-Remember the “rows live in pages” bit? Now stack the choices.
+Remember the "rows live in pages" bit? Now stack the choices.
 
-Every column type is a little vote for how wide a row is. Fatter rows → fewer rows per InnoDB page → more I/O and cache pressure for the same “show me a page of results” API. There’s also a shared row-size ceiling floating around ~65KB of column data (long values often spill off-page, which is its own adventure).<Cite n={18} /> `VARCHAR(8000)` on every field “just in case” is how you donate performance to the void.
-
-And width isn’t the only signal. Float money, timezone-shifting event times, and `utf8mb3` text are correctness bugs that CI will cheerfully green-check — which is rude, honestly. Flip the presets and watch rows-per-page (and pages touched for a `LIMIT 50`) jump:
+Every column type is a little vote for how wide a row is. Fatter rows mean fewer rows per InnoDB page, which means more I/O and cache pressure for the same "show me a page of results" API. Flip the presets and watch rows-per-page (and pages touched for a `LIMIT 50`) jump:
 
 <RowBudgetDemo />
 
@@ -126,7 +124,7 @@ And width isn’t the only signal. Float money, timezone-shifting event times, a
 
 Healthcare schemas are a paperwork festival, so the worked example is a tiny marketplace instead: users, listings, order lines. Same type decisions, less PHI.
 
-First, the anti-pattern — what a hasty Prisma migration vibes like when nobody reviewed the SQL:
+First, the anti-pattern. What a hasty Prisma migration vibes like when nobody reviewed the SQL:
 
 ```sql
 -- Bad: looks fine until money, time, emoji, or row width bite
@@ -144,9 +142,9 @@ CREATE TABLE listings_bad (
 ) DEFAULT CHARSET = utf8;
 ```
 
-Why this is a trap, in plain language: float money, `utf8`→mb3, event time on `TIMESTAMP`, JSON-shaped data stuffed in `TEXT`, nullable everything, and a description column trying to eat the whole row budget for lunch.
+Why this is a trap, in plain language: float money, `utf8` becoming mb3, event time on `TIMESTAMP`, JSON-shaped data stuffed in `TEXT`, nullable everything, and a description column trying to eat the whole row budget for lunch.
 
-Now a version I’d actually defend (load *Marketplace v1* in the row-budget demo above and compare the strip):
+Now a version I'd actually defend (load *Marketplace v1* in the row-budget demo above and compare the strip):
 
 ```sql
 CREATE TABLE users (
@@ -190,25 +188,25 @@ CREATE TABLE order_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
-What I optimized for: exact money, event time that doesn’t shapeshift with session TZ, `utf8mb4`, lengths tied to product reality, JSON only for sparse junk, and description as `TEXT` so it isn’t pretending to be a polite in-row `VARCHAR`.
+What I optimized for: exact money, event time that doesn't shapeshift with session TZ, `utf8mb4`, lengths tied to product reality, JSON only for sparse junk, and description as `TEXT` so it isn't pretending to be a polite in-row `VARCHAR`.
 
-Secondary indexes and foreign keys get their own episodes. Don’t bolt them on here and call it a day — I’ll earn those later.
+Secondary indexes and foreign keys get their own episodes. Don't bolt them on here and call it a day. I'll earn those later.
 
 ## Checklist before you migrate
 
-Steal this for PR review. If you can’t check a box, that’s the comment to leave:
+Steal this for PR review. If you can't check a box, that's the comment to leave:
 
 - IDs: width, signedness, and JSON/API round-trip decided together
-- Money: integer cents or `DECIMAL` — never float
-- Event time vs `created_at`/`updated_at` — different jobs; anything a job compares to “now” has an explicit timezone story
+- Money: integer cents or `DECIMAL`, never float
+- Event time vs `created_at`/`updated_at`: different jobs; anything a job compares to "now" has an explicit timezone story
 - User text: `utf8mb4`, length tied to the UI
-- `NULL` only where “unknown” is real
+- `NULL` only where "unknown" is real
 - JSON only for sparse shape; filters stay relational
-- Wide columns justified — or moved to `TEXT` / off the hot list path
+- Wide columns justified, or moved to `TEXT` / off the hot list path
 - Staging and prod agree on strict SQL mode (silent truncation on your laptop is not a personality trait)
 - The migration SQL matches the types you *think* the ORM model has
 
-Correct types prevent bugs no cache will fix. Next up: [primary keys and the clustered index](/posts/mysql-primary-keys/) — because once the leaf has a shape, you still have to pick what InnoDB sorts the whole table by. That’s where “I just used autoincrement” becomes a whole worldview.
+Correct types prevent bugs no cache will fix. Next up: [primary keys and the clustered index](/posts/mysql-primary-keys/). Once the leaf has a shape, you still have to pick what InnoDB sorts the whole table by. That's where "I just used autoincrement" becomes a whole worldview.
 
 <References
   items={[
