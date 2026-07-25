@@ -9,7 +9,19 @@
 | **Series hub** | `/projects/mysql/` |
 | **Post path** | `/posts/mysql-foreign-keys/` |
 | **Prev / next** | 15 Covering Indexes → **16** → 17 JSON Columns |
-| **Interactive** | Yes — cascade graph stepper (delete parent → child actions under each `ON DELETE` rule; lock/order callouts) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article; split cascade graph into focused steppers. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B — skimmable prose over encyclopedia.
 
 ---
 
@@ -87,54 +99,30 @@ Optional while drafting (may appear as footnotes): `restrict_fk_on_non_standard_
 - Vitess: historically no / limited cross-shard FK enforcement; modern Vitess has been adding managed FK support in stages — teach the *shard-boundary* reason, not a frozen product claim. Verify current Vitess docs when drafting the published post.
 - Soft-delete patterns in Rails/Prisma/Laravel communities as the dominant alternative to hard `ON DELETE CASCADE` for user-facing entities.
 
-**Citation style in the published post:** inline links like `[FOREIGN KEY Constraints](https://dev.mysql.com/doc/refman/9.7/en/create-table-foreign-keys.html)` plus a short Sources list at the bottom. Paraphrase only; never paste Oracle refman prose into MDX.
+**Citation rule:** paraphrase only; cite with `<Cite />` / `<References />`; never paste Oracle refman prose into MDX.
 
 ---
 
 ## Article structure
 
-Spoon-fed progression. Interactive at top (series pattern). Each major section ends with a one-line “app consequence.”
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; no mega cascade graph at top.
 
-1. **Interactive: Cascade graph stepper**  
-   Delete a parent node; watch children under RESTRICT / CASCADE / SET NULL / (NO ACTION≈RESTRICT). Call out lock/order surprises. (Details below.)
+1. **Part B opener + what today covers** — wrong-org delete hook in §2 or §7, not forced cold open.
+2. **What a foreign key actually is** — child-side constraint; not an ORM arrow.
+3. **Syntax and mental model** — composite keys; named constraints.
+4. **Referential actions** — RESTRICT / CASCADE / SET NULL. *(Embed **Cascade stepper** — pick ON DELETE, step delete.)*
+5. **DB-enforced vs app-only** — GitHub/Vitess lore vs monolith SaaS.
+6. **Cascade gotchas** — no triggers; DFS order; audit tables. *(Embed **RESTRICT block** + **DFS order chips**.)*
+7. **Locks and slow parent deletes** — shared locks; MDL; callback 12.
+8. **`foreign_key_checks` traps** — restore; re-enable doesn’t repair.
+9. **Soft deletes vs hard deletes** — `deleted_at` ≠ `ON DELETE`. *(Embed **Soft-delete non-event**.)*
+10. **Restrictions checklist** — InnoDB rules.
+11. **Worked marketplace schema** — deliberate FK choices.
+12. **Diagnostics** — 1451/1452; I_S.
+13. **Tie-back checklist** + preview 17/18.
+14. **References** — IEEE list.
 
-2. **Hook** — Wrong-org hard delete + cascade wipe; contrast orphan listing without FKs.
-
-3. **What a foreign key actually is**  
-   Parent holds the referenced key; constraint lives on the **child**. Not the same as “a join column” or an ORM `belongs_to`. App consequence: if only the app knows the relationship, the database will happily store lies.
-
-4. **Syntax & mental model**  
-   `CONSTRAINT … FOREIGN KEY (cols) REFERENCES parent(cols) ON DELETE … ON UPDATE …`. Composite keys. MySQL 9.7 inline `REFERENCES parent` (implicit PK). Naming via `CONSTRAINT symbol` vs generated `tablename_ibfk_N`. App consequence: name constraints you plan to drop in migrations.
-
-5. **Referential actions deep dive**  
-   Table + worked examples for `RESTRICT` / `NO ACTION`, `CASCADE`, `SET NULL`, and why `SET DEFAULT` is a parser trap on InnoDB. Default when omitted = `NO ACTION` ≡ InnoDB `RESTRICT`. App consequence: pick the action that matches the *product* delete story, not “cascade for convenience.”
-
-6. **DB-enforced vs app-only integrity**  
-   Decision framework: who can write (one service vs many), shard topology, online DDL pain, orphan cost, team discipline. GitHub/Vitess-shaped reasons to skip vs when FKs save a small/medium SaaS. App consequence: “no FKs” is a distributed-systems choice, not a style preference.
-
-7. **Cascade gotchas that burn production**  
-   Cascades skip triggers; depth-first cascade; 15-level nest limit; self-referential update cascades blocked; cascade across “immutable” audit/billing tables; multi-path / dual-parent graphs. App consequence: prefer explicit app deletes in a transaction for anything compliance-shaped.
-
-8. **Locks, checks, and why parent deletes get slow**  
-   Immediate row-by-row checks; shared row locks on examined parent/child records; MDL extended to related tables; `LOCK TABLES` implicit related locks; hot parent row contention. Point back to Article 12. App consequence: cascading a popular parent under concurrency is a lock amplifier.
-
-9. **`foreign_key_checks` and load/restore traps**  
-   When dumps disable checks; re-enable does **not** validate existing rows; errno 150 on malformed defs. App consequence: never leave checks off in app sessions; treat restore as a consistency audit step.
-
-10. **Soft deletes vs hard deletes**  
-    `deleted_at` means the parent row still exists — FKs stay satisfied; `ON DELETE` never runs. Cascades and soft deletes don’t compose. Unique keys + soft delete. App consequence: soft delete is an app protocol; design queries and unique indexes for it explicitly.
-
-11. **Restrictions checklist (InnoDB)**  
-    Type/sign/charset match; indexes required (auto-created on child); no index prefixes / no TEXT/BLOB FKs; no partitioned InnoDB FKs; no virtual generated column FKs; same engine; `REFERENCES` privilege. App consequence: FK add failures in migrations are usually type or missing unique parent key bugs.
-
-12. **Worked schema: marketplace with deliberate FK choices**  
-    Enforce org→membership, order→order_items; *don’t* cascade audit; discuss listing→order_items policy (RESTRICT vs app soft-delete). Side-by-side “all CASCADE” anti-pattern.
-
-13. **Diagnostics**  
-    Errors 1451/1452; privilege-sanitized vs detailed messages; `SHOW CREATE TABLE`; I_S queries; `SHOW ENGINE INNODB STATUS` → `LATEST FOREIGN KEY ERROR`.
-
-14. **Tie-back checklist + preview**  
-    Close → Article 17 (JSON) and 18 (online DDL — dropping/adding FKs during migrations).
+Do not end sections with “App consequence:” stamps.
 
 ---
 
@@ -178,54 +166,40 @@ Mechanisms and pitfalls that keep this from being a `FOREIGN KEY` cheat sheet:
 
 ## Interactive feature
 
-**Working title:** `CascadeGraphStepper` (or `FkDeleteSimulator`)  
-**Path (planned):** `src/components/interactive/cascade-graph-stepper/`  
-**MDX pattern:** import at top of `/posts/mysql-foreign-keys/`, render demo, then `## Things to Play With` bullets, then essay (same as RAID / neural-net / 8-puzzle).
+Scatter **4–5 small demos** under `src/components/interactive/mysql-foreign-keys/` (shared chrome from `schema-byte-budget/shared.tsx`). Split the old mega graph.
 
-### UI concept
+### 1. Cascade stepper
 
-One composition: a small **entity graph** (org → projects → tasks; plus a side edge org → audit_events; plus memberships). User picks an `ON DELETE` rule per edge (or loads presets), clicks **Delete parent**, and the demo **steps** through InnoDB-ish outcomes: blocked, cascaded delete, set null — with a side panel narrating **lock/order surprises**.
+- **Goal:** Delete parent under CASCADE / RESTRICT / SET NULL — watch child outcomes step by step.
+- **Placement:** Referential actions (§4).
+- **UX:** Small org → projects → tasks graph; per-edge ON DELETE picker; step/delete.
 
-Visual language: node-link diagram (not a dashboard of cards). Highlight the active edge; animate child nodes (fade out = deleted, hollow = SET NULL, shake/red = RESTRICT block). Stepper scrubber for “statement progress” (row-by-row / DFS depth), not a SQL sandbox.
+### 2. RESTRICT block
 
-### Controls
+- **Goal:** Parent delete fails while children exist (1451); contrast with CASCADE wipe.
+- **Placement:** Cascade gotchas (§6) or §4.
+- **UX:** Single edge to orders/audit; shake/red on block.
 
-| Control | Effect |
-| --- | --- |
-| Preset graphs | “Org wipe (all CASCADE)”, “Safe SaaS (RESTRICT + no audit FK cascade)”, “SET NULL memberships”, “Self-referential tree” |
-| Per-edge `ON DELETE` | RESTRICT / CASCADE / SET NULL (disable SET DEFAULT; tooltip: InnoDB rejects) |
-| Soft-delete toggle | Parent gets `deleted_at` UPDATE instead of DELETE — show that children **unchanged** and cascades **don’t run** |
-| `foreign_key_checks` toggle | Allow orphan-creating parent delete when off; banner: “re-enable does not scan” |
-| Hot concurrency toggle | Overlay: “shared lock on child index rows” + second session waiting (illustrative, not a real lock manager) |
-| Step / Play | Advance DFS cascade one node at a time; Back to rewind |
+### 3. Soft-delete non-event
 
-### User actions → insight
+- **Goal:** `UPDATE deleted_at` does not fire `ON DELETE`; children unchanged.
+- **Placement:** Soft deletes section (§9).
+- **UX:** Toggle soft vs hard delete on same graph.
 
-1. Load **Org wipe (all CASCADE)** → delete org → watch projects, tasks, **and audit_events** vanish. Insight: cascades are product behavior.  
-2. Switch audit edge to **RESTRICT** (or remove FK) → delete blocked or audit retained — contrast.  
-3. Set memberships to **SET NULL** with `user_id NULL`-able → parent delete nulls FKs; flip membership `NOT NULL` → explain why SET NULL fails.  
-4. Enable **soft-delete** → “delete” org → nothing cascades; children still reference org id. Insight: soft delete is not `ON DELETE`.  
-5. Multi-level CASCADE → stepper shows **depth-first** order; callout max depth 15.  
-6. Self-referential tree + `ON UPDATE CASCADE` → show block / RESTRICT-like behavior.  
-7. Turn on **concurrency overlay** during CASCADE → “parent delete holds / examines child locks; concurrent insert into child waits.”  
-8. `foreign_key_checks=0` → parent disappears, orphans remain, re-enable warning.
+### 4. DFS cascade order
 
-Insight produced: **referential actions are a delete protocol the database will run without your app’s consent** — and they interact with locks and soft-delete designs in ways ORMs don’t visualize.
+- **Goal:** Multi-level CASCADE walks depth-first; 15-level limit callout.
+- **Placement:** Cascade gotchas (§6).
+- **UX:** Stepper highlights visit order on three-level tree.
 
-### Mapping to site patterns
+### 5. foreign_key_checks trap *(optional)*
 
-- Client component, self-contained state, no backend.  
-- Presets + scrubbing (neural-net style).  
-- Click node → explanation panel (RAID-style).  
-- Label honesty: “Illustrative InnoDB behavior (immediate checks, DFS cascades, no trigger firing); not a full lock simulator.” Link essay sections for `ansi-diff-foreign-keys` + locking paragraphs in `create-table-foreign-keys`.
+- **Goal:** Checks off → orphan parent delete; re-enable warning banner.
+- **Placement:** `foreign_key_checks` section (§8).
 
-### Things to Play With (MDX bullets after demo)
+**Non-goals:** full lock simulator — point to 12.
 
-- Delete an org under all-CASCADE vs RESTRICT-on-audit.  
-- Toggle soft-delete and watch cascades refuse to run.  
-- Step a three-level CASCADE and note DFS order.  
-- Try SET NULL on a NOT NULL child column (should error in the narrator).  
-- Flip `foreign_key_checks` and leave orphans on purpose, then read the warning.
+Remove any “Things to Play With” MDX laundry list; motivation lives in prose before each embed.
 
 ---
 
@@ -415,7 +389,7 @@ Close the essay by stating: **foreign keys are optional in MySQL the same way se
 
 - **House style for the series marketplace:** Recommend `ON DELETE RESTRICT` (or default) for money/history edges; `ON DELETE CASCADE` only for pure ownership children (`order_items` → `orders`, maybe `memberships` → `orgs` with an explicit product callout). Never cascade into `audit_events` / invoices. Stay consistent with Arts. 01, 07, 08 schemas.
 - **GitHub / Vitess citations:** Before publish, pull one primary public source each (GitHub engineering post if available; current Vitess FK docs). Avoid undated “everyone knows” claims; separate *sharding impossibility* from *monolith folklore*.
-- **Interactive fidelity:** Simulate DFS order, RESTRICT/CASCADE/SET NULL, soft-delete non-event, and a simplified “shared lock” overlay. Do **not** claim accurate deadlock reproduction—point to Article 12 for real lock graphs.
+- **Interactive scope** — Ship cascade stepper + soft-delete + RESTRICT as separate embeds; concurrency overlay optional prose-only.
 - **Triggers:** Mention “cascades don’t fire triggers” once with a cite; don’t teach trigger design here.
 - **ORM examples:** Pick Prisma *or* Rails for migration snippets showing `onDelete: Cascade` vs `Restrict`; one contrast sentence for the other. Show how easy it is to get CASCADE from generator defaults.
 - **Soft-delete unique keys:** Decide whether examples use partial uniqueness patterns (e.g. generated column “active email”) or simple `deleted_at` + app checks — mention the MySQL unique-null / soft-delete tension without derailing into Art. 17.
@@ -424,4 +398,12 @@ Close the essay by stating: **foreign keys are optional in MySQL the same way se
 - **Cross-links:** Back to 02 (referenced keys should be PK/unique), 03 (FK indexes), 07 (DELETE semantics), 08 (explicit delete transactions), 12 (row/gap locks), forward to 18 (DDL + FK drop/add during migrations).
 - **Scope guardrails:** Do not deep-dive CHECK constraints, polymorphic associations (`likeable_id`/`likeable_type` — note that FKs can’t express them cleanly), or distributed sagas beyond “FK is local to one MySQL primary.”
 - **Series glue:** Hub `/projects/mysql/` + post `/posts/mysql-foreign-keys/`; ensure `seriesList.postSlugs` includes this slug in Part B order.
-- **License/citation:** Paraphrase only; never paste Oracle refman prose into the MDX. Link node URLs.
+- **License/citation:** Paraphrase only; `<Cite />` / `<References />`; never paste Oracle refman prose into the MDX.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Scatter FK demos mid-article; no top mega-graph or “Things to Play With” list
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Soft delete vs CASCADE clearly separated; forward to 18 for DDL/FK migrations

@@ -10,7 +10,21 @@
 | **Post** | `/posts/mysql-mvcc/` |
 | **Depends on** | 08 — Transactions (`mysql-transactions`); 09 — Isolation (`mysql-isolation`) |
 | **Feeds into** | 12 — Locks (`mysql-locks`); 14 — Durability (`mysql-durability`); 20 — Perf Schema (`mysql-perf-schema`) |
-| **Interactive** | Version-chain / snapshot visualizer (scrub time → which row version a reader gets; undo growth with uncommitted reader) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff. Prefer shared chrome from `schema-byte-budget/shared.tsx` (re-export per article folder). Client-only; label illustrative math.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; clustered PK `BIGINT UNSIGNED` unless teaching exception; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** Part B can run longer than 10m if every section earns it; still prefer skimmable prose over encyclopedia.
+
+**Series division (09 / 11 / 12):** 09 = what you see at each isolation level; **11 = how InnoDB versions rows so consistent reads work**; 12 = row/gap locks and deadlocks when writers block each other. Say that once in the opener; don’t re-teach the anomaly catalog from 09 or gap-lock matrices from 12.
 
 ---
 
@@ -37,6 +51,8 @@ One-liner shared with 09/12: **09 = what you see; 11 = how InnoDB versions rows 
 ---
 
 ## Real-world hook
+
+Place the idle-in-transaction story in the section on long transactions / history list — it earns its place there, not as a forced cold open unless it’s the best hook after the series beat.
 
 **Opening scenario — “idle in transaction” on a hot primary**
 
@@ -87,28 +103,28 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link public HTML in
 | `show-engine` | https://dev.mysql.com/doc/refman/9.7/en/show-engine.html | Where to find InnoDB status / TRANSACTIONS section (if citing the command formally). |
 | `mysqldump` | https://dev.mysql.com/doc/refman/9.7/en/mysqldump.html | `--single-transaction` as intentional long consistent read (ops callout). |
 
-**Citation style:** inline links like `[InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/9.7/en/innodb-multi-versioning.html)` plus a short Sources list at the bottom.
+**Citation rule:** paraphrase mechanisms; cite with `<Cite />` / `<References />`; never paste Oracle manual prose.
 
 ---
 
 ## Article structure
 
-Suggested MDX flow (interactive at top, per series pattern):
+Suggested H2 spine — sentence-case, conversational. Scatter **named mini-demos** mid-article (see Interactive feature); no mega-lab at the top. Teach prerequisite mental models (version chain, read view) before jargon-heavy ops sections — same lesson as the B-tree overview in article 02.
 
-1. **Interactive** — Version-chain / snapshot visualizer (see below).
-2. **Hook** — Idle-in-transaction / undo growth story (GitHub/Shopify-scale hygiene).
-3. **Bridge from 09** — You know RR pins a view and RC refreshes; this article is the undo engine under that contract.
-4. **What MVCC means in one picture** — writers create new versions; readers reconstruct old ones; no shared lock on plain `SELECT`.
-5. **Row anatomy** — `DB_TRX_ID`, `DB_ROLL_PTR`, (and when `DB_ROW_ID` appears); roll pointer → undo.
-6. **Consistent nonlocking reads** — snapshot rule; walk the version chain until the row is visible to the read view.
-7. **Insert undo vs update undo** — why commits free inserts fast but updates stick around for open snapshots.
-8. **History list & purge** — committed undo waiting for cleanup; `History list length`; purge threads; dead rows.
-9. **Long transactions hurt** — idle in transaction; ORM/request patterns; dump; read-only still counts.
-10. **Undo tablespaces (ops lite)** — where space goes; truncate needs inactive segments + finished dependents.
-11. **App patterns / checklist** — short txns; never hold across external I/O; monitor history length; forward to 12.
-12. **Further reading** — refman links.
+1. **Part B opener + what today covers** — welcome; recap 09’s visibility contract in one paragraph; state 09/11/12 split; promise the undo engine under consistent reads.
+2. **What MVCC means in one picture** — writers create versions; readers reconstruct; plain `SELECT` doesn’t lock writers. One running `items.qty` story through prose + demos.
+3. **Row anatomy (before you say “roll pointer”)** — `DB_TRX_ID`, `DB_ROLL_PTR`, light `DB_ROW_ID`; where undo lives. *(Embed **Version chain walker**.)*
+4. **Consistent nonlocking reads** — snapshot rule; walk the chain; RR pin vs RC refresh (callback 09, don’t re-teach anomalies). *(Embed **RR vs RC snapshot toggle**.)*
+5. **Insert undo vs update undo** — why long readers pin update undo; read-only still counts. *(Embed **Undo lifetime chips**.)*
+6. **History list and purge** — `History list length`; purge lag; dead rows. Idle-in-transaction hook lands here with GitHub/Shopify hygiene. *(Embed **History list meter**.)*
+7. **Long transactions in web stacks** — ORM unit-of-work, Stripe-across-txn, dump `--single-transaction`; fix the txn before tuning purge threads.
+8. **Undo tablespaces (ops lite)** — growth, truncate awareness; adding tablespaces doesn’t excuse open transactions.
+9. **Secondary indexes (one honest paragraph)** — delete-mark + clustered lookup; tease 15; don’t steal covering/ICP.
+10. **Boundary with article 12** — consistent read ≠ `FOR UPDATE`; one sentence on locking reads → 12.
+11. **Tie-back checklist** — practical review questions.
+12. **References** — IEEE list; bridge to 12 (locks) and 20 (open-trx forensics).
 
-Tone: mechanism + production pain, still spoon-fed. Prefer one running “row id=1 qty=…” story through the interactive and prose. Avoid academic concurrency proofs and deep DBA capacity planning.
+Tone: mechanism + production pain, still spoon-fed. Avoid academic concurrency proofs and deep DBA capacity planning.
 
 ---
 
@@ -211,54 +227,41 @@ Positive patterns:
 
 ## Interactive feature
 
-### Name
+Scatter **3–5 small client demos** under `src/components/interactive/mysql-mvcc/` (re-export shared chrome from `schema-byte-budget/shared.tsx`). Import each in MDX **next to the section it teaches** — motivate in prose, explain the UI, embed, move on. If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Pure client simulation; label as illustrative (≠ live `INFORMATION_SCHEMA`).
 
-**MVCC Version-Chain / Snapshot Visualizer**  
-Suggested component path: `src/components/interactive/mysql-mvcc-versions/` (client component, imported at top of MDX — same pattern as RAID / neural-net / isolation race).
+### 1. Version chain walker
 
-### Goal
+- **Goal:** See `DB_TRX_ID` / roll pointer → undo nodes for one hot row (`items.id = 1`).
+- **Placement:** After row anatomy (§3).
+- **UX:** Horizontal chain (oldest ← … ← tip); highlight which node a reader reconstructs; mono event log. Keep one row, no gap locks.
 
-Let the reader scrub a timeline and see **which physical version** a reader transaction reconstructs for one hot row, while a side panel shows **undo / history retention growing** when an old reader stays open.
+### 2. RR vs RC snapshot toggle
 
-### UX sketch
+- **Goal:** Same writer script; RR pins first-read qty; RC refreshes each `SELECT`.
+- **Placement:** After consistent nonlocking reads (§4).
+- **UX:** Isolation toggle + `SELECT` / `COMMIT` buttons; badge “Read view @ t1” vs “Fresh each SELECT.” Reuse chain walker data, don’t duplicate full timeline scrubber.
 
-- **Stage:** one clustered row card (`items.id = 1`) showing current `qty`, `DB_TRX_ID`, and a chain of undo nodes behind it (oldest ← … ← newest tip).
-- **Time scrubber:** horizontal scrub across discrete events (commits of writers + optional reader actions). Moving the scrubber updates “what Reader R sees” and highlights the chain node used.
-- **Reader panel:**  
-  - Isolation toggle: `REPEATABLE READ` (default) vs `READ COMMITTED`.  
-  - Buttons: `START` (or first `SELECT` to pin under RR), `SELECT`, `COMMIT`.  
-  - Badge: “Read view @ t3” / “Fresh view each SELECT (RC)”.
-- **Writer track (auto or step):** scripted `UPDATE qty` commits that push new tip versions + undo nodes.
-- **Undo / history meter:** bar or counter that grows while Reader R remains open *and* writers keep committing; drops (animated purge) only after R commits **and** purge is allowed to run (simple “Purge” tick or auto after R ends).
-- **Caption:** one sentence per scrub position (“R still needs undo #2, so purge cannot free it yet”).
+### 3. Undo lifetime chips
 
-### Teaching script (data-driven)
+- **Goal:** Contrast insert undo (discardable at commit) vs update undo (pinned while any read view needs it).
+- **Placement:** After insert vs update undo (§5).
+- **UX:** Two labeled chips on a timeline; writer commits; show which undo frees when reader commits. One sentence caption per step.
 
-| t | Event | Tip qty | Reader RR (started SELECT at t1) | Undo retained for R? |
-| --- | --- | --- | --- | --- |
-| 0 | baseline committed | 5 | — | — |
-| 1 | R: `START` + `SELECT` → 5; pin view | 5 | 5 | pins history from here |
-| 2 | W1: `UPDATE qty=4; COMMIT` | 4 | still 5 (walk undo) | yes — update undo for 5→4 |
-| 3 | W2: `UPDATE qty=3; COMMIT` | 3 | still 5 | yes — chain lengthens |
-| 4 | R: `SELECT` again | 3 tip / R sees 5 | yes | meter high |
-| 5 | R: `COMMIT` | 3 | — | purge eligible |
-| 6 | Purge tick | 3 | — | meter drops; old undo freed |
+### 4. History list meter
 
-**RC contrast mode:** same writer script, but each R `SELECT` after W commits sees the new tip without retaining the old pin — meter still shows short-lived retention per statement, but the “forgotten open txn” demo is RR-centric (and matches prod footguns).
+- **Goal:** Open RR reader + ongoing writers → history/undo retention climbs; drops after reader `COMMIT` + purge tick.
+- **Placement:** After history list & purge (§6); pairs with idle-in-transaction hook.
+- **UX:** Simple bar/counter (not a dashboard); optional “idle txn” preset. Primary wow moment for prod hygiene.
 
-**“Uncommitted reader” stress mode (toggle):** leave R open from t1 through many writer commits; undo meter climbs; caption ties to history list / idle in transaction.
+### 5. Idle transaction clock *(optional — merge into #4 if scope tight)*
 
-### Implementation notes
+- **Goal:** Same meter, framed as “ORM left txn open during HTTP” — tie to `processlist` / tease 20.
+- **Placement:** Long transactions section (§7).
+- **UX:** Sleep/timer label on reader session; caption links to history list length in `SHOW ENGINE INNODB STATUS`.
 
-- Pure client simulation; **no live MySQL**.
-- Model: array of versions `{ trxId, qty, prevIndex }`; read view = `{ createdAt, isolation }`; visibility function shared with unit tests.
-- Keep visuals aligned with site interactives (ink borders, mono event log, clear scrub labels).
-- Accessibility: scrubber keyboard operable; live region announces “Reader sees qty=5 via undo version 2”.
-- Do **not** simulate gap locks or blocking — if R used `FOR UPDATE`, show a disabled note “see article 12.”
+**Explicit non-goals:** gap locks, deadlock graphs, redo flush — forward to 12 / 14. `FOR UPDATE` path shows disabled note “see article 12.”
 
-### Success criterion
-
-A reader who only uses the widget can explain: “writers create undo; my open RR transaction keeps that undo alive; commit lets purge reclaim it.”
+**Implementation notes:** Shared visibility function + unit tests; keyboard-operable controls; live region for “Reader sees qty=5 via undo version 2.”
 
 ---
 
@@ -372,9 +375,9 @@ Reader / author verification before publishing:
 - [ ] Names ORM / pool / external-I/O antipatterns (Stripe-across-txn, whole-request unit-of-work).  
 - [ ] Mentions undo tablespace growth/truncate at awareness level without becoming a DBA runbook.  
 - [ ] Short secondary-index MVCC note; no covering-index deep dive (→ 15).  
-- [ ] Interactive: scrub time → visible version; undo meter with uncommitted/open reader.  
-- [ ] Does **not** deep-dive gap locks, deadlocks, or redo flush settings.  
-- [ ] Cites primary nodes with public 9.7 URLs; no Oracle text paste.  
+- [ ] Scatters mini-demos mid-article (chain, RR/RC, undo lifetimes, history meter) — not one top mega-lab.
+- [ ] Cites primary nodes via `<Cite />` / `<References />`; no Oracle text paste.
+- [ ] Humanizer pass before publish; first-person voice check.
 - [ ] Ends with: begin late, commit early, never hold DB txns across network I/O; watch history length.
 
 ---
@@ -383,7 +386,7 @@ Reader / author verification before publishing:
 
 1. **How deep on undo tablespace truncate?** Prefer one subsection + link; full `CREATE UNDO TABLESPACE` choreography is optional appendix for ops-curious readers.  
 2. **History list vs “read view” precision** — Teaching model can say “open snapshot pins undo.” Avoid overclaiming exact InnoDB purge scheduling internals unless citing purge-configuration carefully.  
-3. **Interactive fidelity for RC** — Primary wow moment is RR + open reader + climbing undo. RC mode can be a toggle that resets the pin each SELECT; don’t overbuild.  
+3. **Interactive scope** — Ship chain walker + RR/RC toggle + history meter as v1; undo lifetime chips if cheap; avoid one timeline scrubber that tries to teach everything.  
 4. **`INFORMATION_SCHEMA` / Perf Schema for open trx** — Light mention here; full forensics toolkit is article 20. Maybe one query (`sys.innodb_trx` / `performance_schema.events_transactions_current`) as a “where to look next” box.  
 5. **Secondary indexes** — Keep to one paragraph; resist pulling ICP/covering into this post.  
 6. **Postgres comparison** — One callout max (“MVCC everywhere; retention/bloat failure modes rhyme”). Do not rewrite 09’s isolation contrast.  
@@ -391,6 +394,18 @@ Reader / author verification before publishing:
 8. **mysqldump** — Frame as *legitimate* long consistent read that ops must schedule; not an app antipattern.  
 9. **Voice** — Prefer “fix the long transaction” over “tune purge threads” as the default remedy.  
 10. **Handoff lines** — Close with the 09/11/12 split; open 12 by contrasting nonlocking vs locking reads on the same `items` row.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Part B series opener + 09/11/12 division in first screen
+- [ ] Scatter demos mid-article; no import-at-top mega-lab
+- [ ] `<Cite />` / `<References />` for all core claims
+- [ ] Humanizer pass; first-person voice; no formulaic section stamps
+- [ ] Idle-in-transaction hook in long-transaction section (not forced cold open)
+- [ ] Forward to 12 (locking reads) and 20 (open-trx queries)
+- [ ] Register `mysql-mvcc` in hub `seriesList.postSlugs` when publishing
 
 ---
 
@@ -406,5 +421,5 @@ description: >
   How InnoDB consistent reads walk undo version chains, why the history list
   grows under idle-in-transaction workloads, and how purge reclaims space —
   with a snapshot visualizer for web developers.
-interactive: mysql-mvcc-versions
+interactive: mysql-mvcc (folder of scattered mini-demos)
 ```

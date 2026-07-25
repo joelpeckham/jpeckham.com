@@ -1,8 +1,18 @@
 # 01 — Tables, Types & Schema That Survive Production
 
-**Slug:** `mysql-schema-types`  
-**Tier:** Foundations (Part A)  
-**Audience:** Web app programmers who want deep DB literacy — spoon-fed, always tied to request/response apps, ORMs, and production pain.
+| Field | Value |
+| --- | --- |
+| **Number** | 01 |
+| **Title** | Tables, Types & Schema That Survive Production |
+| **Slug** | `mysql-schema-types` |
+| **Tier** | Foundations (Part A) |
+| **Status** | **Shipped draft** |
+| **Hub** | `/projects/mysql/` |
+| **Post** | `/posts/mysql-schema-types/` |
+| **MDX** | `src/app/posts/mysql-schema-types/page.mdx` |
+| **Demos** | `src/components/interactive/schema-byte-budget/` |
+| **Next** | 02 — Primary Keys & the Clustered Index (`mysql-primary-keys`) |
+| **Audience** | Web app programmers who want deep DB literacy — spoon-fed, always tied to request/response apps, ORMs, and production pain |
 
 ---
 
@@ -14,23 +24,24 @@ Web developers care because ORMs hide types until production doesn’t: money ro
 
 ---
 
-## Real-world hook
+## Real-world hook (as shipped)
 
-Open with three recognizable failure classes, then name stacks that live or die on getting types right:
+**Not a cold open.** The article opens with a series welcome (“Come on in, the water's fine.”) that orients readers to Learn MySQL, sets expectations (~foundations first, deep dives later), and states why types matter before any day-job story.
 
-1. **Money that isn’t money** — Checkout totals stored as `DOUBLE` or JS `number`. Stripe’s API model is integer minor units (cents); Shopify Liquid/money helpers and most payment gateways assume exact decimal math. A SaaS billing table that uses `FLOAT` for `unit_price` will eventually disagree with Stripe’s ledger by a cent under aggregation — and support tickets will blame “the API,” not the column.
+Failure classes are woven into the type sections as motivation, not a three-bullet preamble:
 
-2. **Identity that doesn’t fit the language** — Auth0 / Cognito / Clerk often give opaque string subject IDs (`VARCHAR` / `CHAR` of fixed max length). Homegrown apps that use `INT AUTO_INCREMENT` hit the signed 2.1B ceiling; Node and browser JSON happily stringify bigints poorly if you chose `BIGINT UNSIGNED` without a serialization plan. GitHub-style snowflake IDs and Discord IDs are classic “must be string in the client” stories.
+1. **Money that isn’t money** — Float/`DOUBLE` checkout totals vs Stripe-style integer minor units. Surfaced in the money section with `MoneyModeDemo`.
+2. **Identity that doesn’t fit the language** — `INT` ceilings, JS bigint rounding, UUID/ULID width and secondary-index tax (preview of article 02). Surfaced in “Choosing IDs” with `IdWidthDemo`.
+3. **Time that moves when the server does** — `TIMESTAMP` session TZ vs wall-clock `DATETIME`. The **BetterRX** hospice-pharmacy respite-scheduling story lives in “Choosing time types”: “which stays start *now*?” only makes sense with an explicit timezone story. Surfaced with `TimeTypeDemo`.
+4. **Charset / emoji** — `utf8mb3` truncation. Surfaced in “Choosing string types” with `VarcharCharsetDemo`.
 
-3. **Time that moves when the server does** — Calendar apps (Calendly-like scheduling), booking systems, and audit logs: `TIMESTAMP` converts to/from session timezone; `DATETIME` does not. A Rails/`ActiveRecord` or Prisma app that stores “event starts at” as `TIMESTAMP` and then changes `time_zone` on the connection (or moves region) rewrites history for every reader. WordPress-era `utf8` (`utf8mb3`) truncation of emoji in comments is the charset cousin of the same lesson: the type definition is product behavior.
-
-Concrete teaching scenario for the whole piece: **a multi-tenant marketplace** (think Etsy-lite / Shopify storefront backend) with `users`, `shops`, `listings`, `orders`, `order_items`, and a sparse `listing_attributes` JSON blob for seller-defined facets — Next.js / Nest / Rails talking to MySQL 8+/9.x InnoDB via Prisma or ActiveRecord.
+Worked example: a **multi-tenant marketplace** (users, listings, order_items) — not healthcare PHI. Same type decisions, less paperwork.
 
 ---
 
 ## Primary documentation sources
 
-Prefer these nodes while writing (local corpus: `sources/mysql-refman-9.7/nodes/`). Cite public URLs in the published post.
+Prefer these nodes while writing (local corpus: `sources/mysql-refman-9.7/nodes/`). Cite public URLs in the published post via `<Cite n={…} />` + `<References items={[…]} />`. Paraphrase only.
 
 - **data-types** — Data Types overview (categories, M/D/FSP conventions)  
   https://dev.mysql.com/doc/refman/9.7/en/data-types.html
@@ -63,46 +74,35 @@ Prefer these nodes while writing (local corpus: `sources/mysql-refman-9.7/nodes/
 - **sql-mode** (supporting) — Strict mode, invalid dates, truncation → error vs warning  
   https://dev.mysql.com/doc/refman/9.7/en/sql-mode.html
 
-Optional deep links while drafting (not all need to appear in the post): `null-values`, `innodb-row-format`, `precision-math-decimal-characteristics`, `numeric-type-attributes`, `enum`, `blob`, `charset-column`, `create-table-check-constraints`.
+Supporting citations shipped in the post: MDN `Number.MAX_SAFE_INTEGER`, Stripe zero-decimal currencies, charset/collation naming, `working-with-null`.
+
+Optional deep links for future edits: `null-values`, `innodb-row-format`, `precision-math-decimal-characteristics`, `numeric-type-attributes`, `enum`, `blob`, `charset-column`, `create-table-check-constraints`.
 
 ---
 
-## Article structure
+## Article structure (as shipped)
 
-Spoon-fed progression. Each section ends with a one-line “app consequence.”
+First-person, casual prose. No “app consequence” stamps per section. Demos embedded mid-article after motivate → explain.
 
-1. **What a table is under InnoDB (30-second mental model)**  
-   Default engine is InnoDB; a table is a clustered index of rows. Types decide what sits in that leaf, which foreshadows Article 02 (PK) without stealing it. App consequence: migrations aren’t “just SQL” — they reshape the physical row every request reads.
+| # | H2 / H3 | Content | Demo |
+| --- | --- | --- | --- |
+| 1 | **Come on in, the water's fine.** | Series welcome; what today covers; why types before locks/MVCC | — |
+| 2 | **What a table actually is (and why that isn't pedantry)** | InnoDB clustered index mental model; types decide leaf payload; migrations reshape physical rows | — |
+| 3 | **Types matter** | Row-size ceiling preview; width + correctness both vote on pages | — |
+| 3a | *Choosing IDs* | INT/BIGINT, JS rounding, UUID/ULID, internal PK + `CHAR(26)` public id pattern | `IdWidthDemo` |
+| 3b | *Money: floats are for physics homework, not invoices* | Integer cents + `CHAR(3)` currency (Stripe); `DECIMAL` alternative | `MoneyModeDemo` |
+| 3c | *Choosing time types* | `DATETIME` vs `TIMESTAMP`; BetterRX respite scheduling TZ story; 2038; Prisma/Rails mapping callout | `TimeTypeDemo` |
+| 3d | *Choosing string types* | Charset vs collation; `utf8mb4` / `utf8mb4_0900_ai_ci`; byte math under multibyte | `VarcharCharsetDemo` |
+| 3e | *NULL is a third state* | Three-valued logic; when `NOT NULL` + default | — |
+| 3f | *JSON: a deliberate escape hatch* | Sparse facets yes; money/FK/filter keys no | — |
+| 4 | **Why the row's byte budget matters** | Stack type choices → rows per page → list-endpoint I/O | `RowBudgetDemo` |
+| 5 | **A marketplace schema that holds up** | Bad Prisma-ish schema vs defended marketplace v1; ties back to row-budget presets | — (references demo presets) |
+| 6 | **Checklist before you migrate** | PR-review checklist | — |
+| 7 | **References** | IEEE-style `<References />` block | — |
 
-2. **The column anatomy checklist**  
-   Walk `CREATE TABLE` pieces readers actually use: name, type, `NULL`/`NOT NULL`, `DEFAULT`, charset/collation overrides, comments. Explicitly defer FKs (Art. 16), secondary indexes (Art. 03), generated columns deep dive (Art. 17). App consequence: ORM migrations that omit nullability are product bugs.
+**Deferred explicitly in prose:** secondary indexes (Art. 03), FKs (Art. 16), JSON indexing / generated columns (Art. 17).
 
-3. **Integers: width, signedness, and ID strategy**  
-   Byte table for `TINYINT`→`BIGINT`; when unsigned helps; when it fights languages/ORMs; boolean-as-`TINYINT(1)` folklore vs real boolean handling; counters vs surrogate keys. App consequence: pick ID type *with* JSON/API serialization in mind on day one.
-
-4. **Exact vs approximate numerics (money and metrics)**  
-   `DECIMAL(M,D)` precision/scale; never float for money; integer minor-units pattern (Stripe-style) as alternative; floats OK for telemetry/scores. App consequence: ledger columns and “display price” columns have different jobs — schema should say so.
-
-5. **Time types that match the product**  
-   `DATE` vs `DATETIME` vs `TIMESTAMP` ranges; session TZ conversion on `TIMESTAMP` only; fractional seconds (`FSP`); `DEFAULT`/`ON UPDATE` for `created_at`/`updated_at`; store UTC explicitly as a team convention. App consequence: “event time” and “row mutation time” are different columns with different types.
-
-6. **Strings: CHAR, VARCHAR, TEXT, and utf8mb4**  
-   Character length vs byte length under multibyte charset; trailing-space quirks; when `VARCHAR(255)` is cargo-cult; emoji / supplementary planes require `utf8mb4`; collation briefly (equality & `ORDER BY`, not a full collation treatise). App consequence: user-facing text defaults to `utf8mb4` + a deliberate max length tied to the UI.
-
-7. **NULL is a third state (not empty string, not zero)**  
-   Three-valued logic footguns in `WHERE`, unique indexes (preview), and app code that treats SQL `NULL` as JS `null` inconsistently. App consequence: optional profile fields and “unknown” are not the same as `''`.
-
-8. **JSON as a deliberate escape hatch**  
-   Validated binary JSON vs stuffing JSON into `TEXT`; good uses (sparse seller attributes, feature flags blob); bad uses (replacing relational money/ids); note that JSON isn’t directly indexed — generated columns later. App consequence: JSON is for *shape that changes per tenant*, not for core join keys.
-
-9. **Row size, storage, and why types are a performance decision**  
-   Rough byte budget from `storage-requirements` + InnoDB off-page for long VARCHAR/TEXT/JSON; denser rows → more rows per page → better buffer-pool hit rate (preview Art. 13). App consequence: `VARCHAR(2000)` “just in case” on every column is a silent tax on every list endpoint.
-
-10. **A production-shaped starter schema (worked example)**  
-    Assemble `users` / `listings` / `orders` / `order_items` with defended types; show one bad “ORM default” schema side-by-side. App consequence: readers leave with a template they can paste into a migration and argue about in PR review.
-
-11. **Tie-back & preview**  
-    Checklist + “next: primary keys & the clustered index” (Art. 02) — PK choice sits *on top of* these types.
+**Bridge to Art. 02:** checklist close + natural link — PK choice sits on top of these types.
 
 ---
 
@@ -123,48 +123,28 @@ Mechanisms and pitfalls that keep this from being a cheat sheet:
 - **ENUM as a schema trap (brief)** — Tempting for status fields; changing members is DDL pain; often better as `TINYINT` + app enum or a lookup table — don’t over-teach ENUM, just inoculate.
 - **JSON binary format & `max_allowed_packet`** — Large documents aren’t free; partial update optimizations exist but apps that rewrite whole blobs every request pay write amplification.
 - **Null bitmap / nullable columns still cost** — Nullable columns aren’t “free metadata”; prefer `NOT NULL` with real defaults when the domain always has a value.
-- **ORM impedance** — Prisma/Rails/Django/Hibernate default mappings (`Float` ↔ `DOUBLE`, `DateTime` ↔ `TIMESTAMP`, string length 191 for utf8mb4 unique indexes historically) — call out mapping review as part of schema design.
+- **ORM impedance** — Prisma primary in snippets; one-line Rails/`ActiveRecord` contrast for `DateTime` → `TIMESTAMP` defaults.
 
 ---
 
-## Interactive feature
+## Interactive feature (as shipped)
 
-**Working title:** `SchemaByteBudget` (or `RowLayoutVisualizer`)  
-**Path (planned):** `src/components/interactive/schema-byte-budget/`  
-**MDX pattern:** import at top of `/posts/mysql-schema-types/`, render demo, then `## Things to Play With` bullets, then essay (same as RAID / neural-net / 8-puzzle).
+**Path:** `src/components/interactive/schema-byte-budget/`  
+**Pattern:** five small client-only demos scattered mid-article — **not** one top-of-page mega-lab, **not** a “Things to Play With” section.
 
-### UI concept
+| Demo | Section | Teaches |
+| --- | --- | --- |
+| `IdWidthDemo` | Choosing IDs | URL exposure, JSON round-trip, secondary-index width by id strategy |
+| `MoneyModeDemo` | Money | Float vs `DECIMAL` vs integer cents — exactness vs bytes |
+| `TimeTypeDemo` | Choosing time types | TZ conversion outcome on `TIMESTAMP` vs stable `DATETIME` digits |
+| `VarcharCharsetDemo` | Choosing string types | Charset truncation, byte thermometer, rows-per-page hint |
+| `RowBudgetDemo` | Why the row's byte budget matters | Presets (ORM bad / marketplace v1 / wide VARCHAR soup); rows per page |
 
-A single composition: left side is a **column builder** (add/remove columns; pick type from a curated palette; tweak M/D/FSP, nullability, charset). Right side is a **row byte strip** — a horizontal segmented bar (or grid of byte cells) showing approximate on-page storage for one InnoDB row under simplifying assumptions (DYNAMIC row format, utf8mb4 worst-case for strings, length prefixes, null bitmap bit, no overflow page detail beyond “spills off-page”).
+**Shared chrome:** `schema-byte-budget/shared.tsx` (re-export pattern for future articles).
 
-Controls (sliders / selects, not a SQL sandbox):
+**Cut from original plan:** single `SchemaByteBudget` / `RowLayoutVisualizer` mega-composition at the top with one scrubber controlling all panels. Splitting earned clearer motivate → embed rhythm and let prose carry NULL/JSON without demos.
 
-| Control | Effect |
-| --- | --- |
-| Integer width | `TINYINT`→`BIGINT`, toggle UNSIGNED — segment grows 1→8 bytes |
-| Money mode | Switch price column between `DOUBLE` / `DECIMAL(12,2)` / `BIGINT` cents — show “exact?” badge |
-| String length slider | `VARCHAR(n)` — bytes = `n * 4` worst-case under utf8mb4 + length prefix; warn near row limit |
-| Charset toggle | `utf8mb3` vs `utf8mb4` — emoji sample turns into truncation warning on mb3 |
-| Time type toggle | `DATETIME` vs `TIMESTAMP` — show range chip + “TZ converts on read” indicator |
-| Nullable toggles | Flip nullability — tiny null-bitmap cost + “three-valued logic” callout |
-| Preset schemas | Buttons: “ORM defaults (bad)”, “Marketplace v1 (good)”, “Wide VARCHAR soup (fails)” |
-
-### User actions → insight
-
-1. Load **ORM defaults** → see float money + `TIMESTAMP` event time + `utf8mb3` bio.  
-2. Flip money to `DECIMAL` or integer cents → “exact” badge; bytes barely change, correctness does.  
-3. Drag listing `description` VARCHAR length up → bar approaches 65,535 shared limit / shows off-page spill.  
-4. Paste 😀 into the sample string under mb3 → visual truncation; under mb4 → ok.  
-5. Switch event time to `DATETIME` → 2038 warning clears; TZ badge clears.
-
-Insight produced: **types are a layout and a contract**, not labels. Readers feel why “make everything VARCHAR(255)” and “FLOAT for price” are expensive before they read the essay.
-
-### Mapping to site patterns
-
-- Client component, self-contained state, no backend (like RAID visualizer).  
-- Parameter scrubbing + preset scenarios (like neural-net training controls).  
-- Optional clickable byte segments that highlight which column owns those bytes (RAID-style block click → explanation panel).  
-- Keep math *honest but simplified*: label assumptions (“illustrative InnoDB DYNAMIC, worst-case utf8mb4”) so pedants aren’t misled; link essay sections for nuance (`innodb-row-format`, overflow pages).
+**Fidelity rule (shipped):** label math as illustrative (≠ `INFORMATION_SCHEMA`); worst-case utf8mb4 assumptions where relevant.
 
 ---
 
@@ -191,7 +171,7 @@ CREATE TABLE listings_bad (
 
 Teaching points: float money, `utf8`→mb3, timestamp event time, JSON-as-TEXT, nullable everything, oversized VARCHAR competing for row budget.
 
-### 2. Hardened marketplace core (target schema)
+### 2. Hardened marketplace core (target schema — house defaults)
 
 ```sql
 CREATE TABLE users (
@@ -292,15 +272,44 @@ Close the essay by stating: **correct types prevent classes of bugs no amount of
 
 ---
 
-## Open questions / author notes
+## Authoring notes (lessons applied)
 
-- **Minor units vs `DECIMAL`:** Pick a house style for the series (recommend integer cents for currency *amounts*, `CHAR(3)` currency code; mention `DECIMAL` as equally valid for non-USD fractional currencies / FX). Stay consistent in later articles’ schemas.
-- **Public IDs:** ULID/`CHAR(26)` vs UUID (`BINARY(16)` vs `CHAR(36)`) — decide one recommended pattern for examples; mention the other briefly. UUID storage deserves a short callout without derailing.
-- **Collation choice:** `utf8mb4_0900_ai_ci` vs `utf8mb4_unicode_ci` — enough for “use a modern Unicode collation,” defer deep collation to a sidebar or later note.
-- **Interactive fidelity:** How precise should the byte visualizer be? Prefer labeled approximations + “not a substitute for `INFORMATION_SCHEMA`” over pretending to simulate full DYNAMIC overflow rules.
-- **SQL mode / MySQL 9.7 defaults:** Confirm which strict modes are default in 9.7 when describing “prod vs laptop” traps; cite `sql-mode` rather than guessing version drift.
-- **ORM examples:** Pick one primary ORM for snippets (Prisma *or* Rails) and one contrast sentence for the other — avoid maintaining three dialects.
-- **Scope guardrails:** Do not deep-dive FKs, secondary indexes, or JSON multi-valued indexes here — link forward to Arts. 03, 16, 17.
-- **Series glue:** Hub `/projects/mysql/` + post `/posts/mysql-schema-types/`; ensure `seriesList` eventually includes this slug first in Part A order.
-- **License/citation:** Paraphrase only; never paste Oracle refman prose into the MDX. Link node URLs.
-)
+- **Voice:** first person throughout; casual/jokey where it helps; humanizer pass before publish.
+- **Structure:** series welcome on post 1; BetterRX story in the time section, not forced cold open.
+- **Citations:** `<Cite />` + `<References />`; 18 numbered refs in shipped draft.
+- **Interactives:** scatter pattern; each demo earns one beat; mega-lab plan retired.
+- **House defaults locked for the series** (see resolved decisions below).
+
+---
+
+## Resolved decisions (formerly open questions)
+
+| Question | Decision |
+| --- | --- |
+| Minor units vs `DECIMAL` | **Integer cents** (`*_cents`) + `CHAR(3)` currency for series examples; mention `DECIMAL(M,D)` as valid alternative |
+| Public IDs | **`CHAR(26)` ULID-style** unique secondary; clustered PK stays **`BIGINT UNSIGNED AUTO_INCREMENT`** |
+| Collation | **`utf8mb4_0900_ai_ci`** as default; `_bin` / locale-specific when product requires |
+| Interactive fidelity | Labeled approximations; not a substitute for `INFORMATION_SCHEMA` |
+| ORM examples | **Prisma primary**; one-line Rails/`ActiveRecord` contrast where mapping bites |
+| Scope guardrails | No deep FK / secondary-index / JSON-MVI dives — forward links only |
+
+---
+
+## Drafting checklist
+
+**Shipped (done):**
+
+- [x] MDX at `src/app/posts/mysql-schema-types/page.mdx`
+- [x] Five scattered demos under `schema-byte-budget/`
+- [x] Series welcome + natural section flow (no formulaic stamps)
+- [x] `<Cite />` + `<References />` with primary doc URLs
+- [x] Marketplace good/bad schema pair
+- [x] Checklist + bridge to Art. 02
+- [x] Humanizer pass
+- [x] Stub wired in `seriesList` / catalog
+
+**Future edits:**
+
+- [ ] Re-run humanizer after substantive rewrites
+- [ ] Keep house defaults aligned if Art. 02+ schemas change
+- [ ] Confirm MySQL 9.7 `sql-mode` defaults if citing “prod vs laptop” traps

@@ -10,7 +10,19 @@
 | **Depends on** | 02 (clustered pages), 03 (secondary indexes → more pages), 10 (EXPLAIN literacy — “plan looks fine, still slow”), lightly 11 (long txns pin old versions; don’t steal undo). |
 | **Feeds into** | 14 (dirty pages / redo / flush), 15 (fewer pages touched via covering), 19 (replica warm sets diverge), 20 (I/O wait digests). |
 | **Published path** | `/posts/mysql-buffer-pool/` |
-| **Interactive** | Buffer-pool LRU scrubber (hot pages vs cold sequential scan eviction + hit-rate meter) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach. Prefer shared chrome from `schema-byte-budget/shared.tsx`. Client-only; label illustrative math.
+- **House defaults:** Integer cents; ULID `CHAR(26)` public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM in snippets.
+- **Length:** Part B can run longer than 10m if every section earns it; still prefer skimmable prose over encyclopedia.
 
 ---
 
@@ -96,42 +108,39 @@ Cite the public HTML from published posts. Local research corpus: `sources/mysql
 | `innodb-information-schema-buffer-pool-tables` | https://dev.mysql.com/doc/refman/9.7/en/innodb-information-schema-buffer-pool-tables.html | Usage patterns for the I_S buffer pool tables. |
 | `optimizing-innodb-configuration-variables` | https://dev.mysql.com/doc/refman/9.7/en/optimizing-innodb-configuration-variables.html | Optional framing: config after SQL/schema, not before. |
 
-**Citation rule:** paraphrase + link; never paste Oracle wording into the published post.
+**Citation rule:** paraphrase + `<Cite />` / `<References />`; never paste Oracle wording into the published post.
 
 ---
 
 ## Article structure
 
-Proposed MDX flow (top interactive, then narrative). Spoon-fed: one memory idea per section, always tied to request handlers and managed hosting reality.
+Suggested H2 spine — sentence-case, conversational. Scatter **named mini-demos** mid-article; no mega LRU lab at the top. Teach pages-before-LRU mental model briefly (callback 02/03) before young/old list jargon.
 
-1. **Hook** — Monday-after-export outage; EXPLAIN unchanged; hit rate collapsed.
-2. **Interactive** — Buffer-pool LRU scrubber; invite readers to run a hot OLTP mix, then a cold scan, and watch hit rate / young list die.
-3. **What the buffer pool is (30-second model)** — Pages of table + index data in RAM; misses → disk (or cloud storage latency); dedicated-host “up to ~80%” vs managed SKU truth.
-4. **Pages, not rows** — Why row count lies; page size mental model; clustered PK + secondary indexes multiply pages (tie 02/03); wide `SELECT *` burns more pool.
-5. **Young / old LRU (the mechanism)** — Midpoint insertion; old sublist ~3/8; first real access makes a page young; aging toward eviction; why this is *not* textbook LRU.
-6. **Working set vs thrash** — Define working set for a web app; show how mysqldump / full scans / read-ahead interact; `innodb_old_blocks_time` as scan resistance (not a silver bullet).
-7. **Hit rate literacy** — How to read Standard Monitor / status vars / managed dashboards; what “good” looks like for OLTP; why a short dip during deploy isn’t the same as sustained thrash.
-8. **Sizing for web apps on managed MySQL** — 128MiB default trap on DIY Docker; RDS/Aurora/Cloud SQL memory SKUs; PlanetScale-class constraints; leave headroom; you often **cannot** “just set 80%.”
-9. **Why clever SQL loses to fit-in-memory** — Gallery: perfect `ref` plan on cold archive vs sloppy plan on hot recent partition/table; product implications (archive, shard by tenant age, don’t put audit log in the hot schema).
-10. **What you can change (app-first ladder)** — Schema locality → query touch-set → schedule cold jobs → isolate analytics → then size/knobs → preload after restart.
-11. **Ops cameos** — Dump/restore warm set; failover cold start; don’t query `INNODB_BUFFER_PAGE*` on prod lightly.
-12. **Forward links** — Dirty pages/redo (14), covering to touch fewer pages (15), replica warmth (19), wait forensics (20).
-13. **Further reading** — Linked refman nodes.
-
-**Length target:** long-form deep dive (~3–4.5k words) + interactive; denser than Part A, but still spoon-fed — no DBA checklist dump.
+1. **Part B opener + what today covers** — shift from concurrency (11–12) to RAM shape; Monday-after-export hook can land in §6 if stronger after mechanism setup.
+2. **What the buffer pool is** — pages in RAM; misses → storage latency; managed SKU vs dedicated-host folklore.
+3. **Pages, not rows** — working set estimate; secondary indexes + wide rows multiply pages. *(Optional mini-demo: **Page touch counter** for one list query.)*
+4. **Young / old LRU with midpoint insertion** — mechanism in plain English. *(Embed **Young/old LRU strip**.)*
+5. **Working set vs cold scan thrash** — dump, export, analytics on primary. *(Embed **Sunday export thrash** preset on same strip + **Hit-rate meter**.)*
+6. **Monday morning story** — EXPLAIN unchanged, hit rate collapsed; tie to export job.
+7. **Hit rate literacy** — Standard Monitor / managed dashboards.
+8. **Sizing for managed MySQL** — 128MiB trap; when to resize SKU vs tune SQL.
+9. **Clever SQL loses to fit-in-memory** — gallery contrast hot recent vs cold full scan.
+10. **App-first fix ladder** — shrink touch set → move cold jobs → then knobs.
+11. **Tie-back checklist** + forward links (14, 15, 19, 20).
+12. **References** — IEEE list.
 
 ---
 
 ## Deep-dive beats
 
-Teach these ideas in order. Each beat should end with “so in your app…”
+Teach these ideas in order. Weave handler implications into each beat’s prose — no “App implication:” stamp lines.
 
 ### Beat A — The buffer pool is the product’s RAM personality
 
 - InnoDB caches **table and index data pages** in a memory area called the buffer pool (`innodb-buffer-pool`).
 - On a dedicated DB server, operators often aim large (manual discusses up to ~80% of physical RAM) so InnoDB behaves like an in-memory database after warmup (`innodb-buffer-pool`, `innodb-parameters`).
 - Configured size is not the whole story: InnoDB needs additional memory for structures (~10% greater than the specified pool size — teach as “leave headroom,” not as precise accounting).
-- **App implication:** Your API latency distribution is largely “were the pages already here?” Staging with a tiny dataset always looks hot; production with years of rows is a different machine.
+- Your API latency distribution is largely “were the pages already here?” Staging with a tiny dataset always looks hot; production with years of rows is a different machine.
 
 ### Beat B — Think in pages, estimate the working set
 
@@ -143,7 +152,7 @@ Teach these ideas in order. Each beat should end with “so in your app…”
   - Joins multiply page touches across tables (article 06).
 - Rough teaching estimate (order-of-magnitude, not a calculator):  
   `hot_rows × avg_row_bytes / page_size` (+ index pages). Enough to show “10GB table, 200MB hot set” vs “everyone’s dashboard scans 2GB of history.”
-- **App implication:** Archive/cold tables and “all-time” features are buffer-pool product decisions.
+- Archive/cold tables and “all-time” features are buffer-pool product decisions.
 
 ### Beat C — Young / old LRU with midpoint insertion
 
@@ -158,7 +167,7 @@ Mechanism (paraphrase from `innodb-buffer-pool` + `innodb-performance-midpoint_i
 
 Teach with a diagram in prose + the interactive — young head, midpoint, old tail, eviction at the end.
 
-- **App implication:** A page seen once during a dump should die in the old list; a page hit every request on `/api/inbox` should stay young. When that stops happening, latency is “memory,” not “SQL syntax.”
+- A page seen once during a dump should die in the old list; a page hit every request on `/api/inbox` should stay young. When that stops happening, latency is “memory,” not “SQL syntax.”
 
 ### Beat D — Working set vs cold sequential scan thrash
 
@@ -178,7 +187,7 @@ Manual guidance worth teaching (not cargo-culting):
 - Huge tables that cannot fit: smaller `innodb_old_blocks_pct` (e.g. toward 5) restricts once-read data’s share of the pool — **benchmark**; effects vary.
 - Small tables that fit: defaults (or even higher old pct) are often fine.
 
-- **App implication:** Prefer **replica / separate analytics store** for cold scans; never “run the weekly export on the primary that serves checkout” without expecting a warm-set tax.
+- Prefer **replica / separate analytics store** for cold scans; never “run the weekly export on the primary that serves checkout” without expecting a warm-set tax.
 
 ### Beat E — Hit rate literacy (what to look at)
 
@@ -197,7 +206,7 @@ Managed-MySQL translation table (teach patterns, not vendor UI tours):
 | Pool size | Parameter group / instance class memory (not always a naked `SET GLOBAL` for apps) |
 | I/O latency under miss | Cloud volume IOPS/throughput limits — misses are *more* expensive than “local NVMe folklore” |
 
-- **App implication:** Add “check buffer pool / read I/O” next to EXPLAIN when prod is slow and plans look fine (bridge from article 10).
+- Add “check buffer pool / read I/O” next to EXPLAIN when prod is slow and plans look fine (bridge from article 10).
 
 ### Beat F — Sizing for web apps (managed constraints)
 
@@ -214,7 +223,7 @@ Teach an opinionated ladder:
 5. Online resize exists (`innodb-buffer-pool-resize`) but chunk/instances constraints matter on self-hosted; on managed, you often **resize the instance** instead.
 6. After restart/failover: warm set is gone until rebuild — dump/restore (`innodb-preload-buffer-pool`) or traffic-driven warmup; expect a latency cliff.
 
-- **App implication:** Capacity planning is “does the hot working set fit this SKU?” not “did we index the column?”
+- Capacity planning is “does the hot working set fit this SKU?” not “did we index the column?”
 
 ### Beat G — Clever SQL loses to fit-in-memory
 
@@ -235,7 +244,7 @@ Gallery contrast (same schema, different access):
 2. Cold: `SELECT COUNT(*) FROM orders` / full dump — floods old list, evicts (1).
 3. “Clever” but cold: perfect index on `archived_orders(status, created_at)` used by a rare admin tool that still pulls gigabytes — fine on a replica; catastrophic on the primary’s pool.
 
-- **App implication:** Performance reviews should ask “what pages does this endpoint keep warm?” before “can we add a hint?”
+- Performance reviews should ask “what pages does this endpoint keep warm?” before “can we add a hint?”
 
 ### Beat H — App-first fix ladder (then knobs)
 
@@ -253,76 +262,38 @@ Ritual to close the essay:
 
 ## Interactive feature
 
-### Name
+Scatter **3–5 small client demos** under `src/components/interactive/mysql-buffer-pool/` (shared chrome from `schema-byte-budget/shared.tsx`). Split the old mega-scrubber — same sim core, multiple embeds.
 
-**Buffer-pool LRU Scrubber**  
-Suggested component path: `src/components/interactive/buffer-pool-lru/` (mirror RAID / puzzle-solver: `"use client"`, imported at top of MDX).
+### 1. Young/old LRU strip
 
-### Teaching goal
+- **Goal:** See midpoint insert, promote-to-young, evict-from-tail — not textbook LRU.
+- **Placement:** Young/old mechanism section (§4).
+- **UX:** Horizontal strip (32–48 slots); color hot-set page ids; one-line event log.
 
-Let the reader *see* young vs old, watch a cold sequential scan evict the hot working set, and correlate that with a **hit-rate meter** — the Monday-morning story in miniature.
+### 2. Sunday export thrash
 
-### Primary UX (ship this)
+- **Goal:** Hot OLTP mix → cold sequential scan → hot mix again; watch hot pages evicted.
+- **Placement:** Working set vs thrash (§5) + Monday hook (§6).
+- **UX:** Preset buttons on same strip; reuses #1 component with scripted workloads.
 
-1. **Mini buffer pool** — fixed N slots (e.g. 32–64 “pages”), drawn as a horizontal LRU:  
-   **YOUNG (MRU head) → midpoint → OLD → eviction tail**.  
-   Color pages by identity (table/page id), with a distinct tint for “hot working set” vs “cold scan” pages.
-2. **Workload controls**
-   - **Hot OLTP mix** — repeatedly touches a small set of page ids (e.g. 8 “recent orders” pages). Button: “Run 50 hot requests” or a gentle autoplay.
-   - **Cold sequential scan** — walks a large page id range once (dump/analytics), inserting at midpoint; optional toggle for `old_blocks_time`-like delay before young-making.
-   - **Reset / warmup** — clear pool or pre-seed hot set.
-3. **Hit-rate meter** — running `hits / (hits + misses)` (display as `hit rate 985 / 1000` style echo of Standard Monitor, plus a simple % bar). Misses flash when a request needs a page not in the pool (simulate disk).
-4. **Event log (one line)** — “scan inserted page 140 at midpoint,” “hot request promoted page 7 to young head,” “evicted page 7 (was hot).”
-5. **Scenario presets**
-   - “Healthy SaaS morning” — only hot mix → high hit rate, young list dominated by hot ids.
-   - “Sunday export” — hot mix, then cold scan, then hot mix again → hit rate collapses, hot ids appear at tail/evicted.
-   - “Scan-resistant” — same export with higher simulated `old_blocks_time` / promotion delay → hot set survives better (qualitative, not a claims of production tuning).
+### 3. Hit-rate meter
 
-### Secondary mode (nice-to-have)
+- **Goal:** Correlate pool state with Monitor-style `hits / (hits+misses)` display.
+- **Placement:** Embed beside #2 and hit-rate literacy (§7).
+- **UX:** Simple bar + fraction; miss flash on cold access — not a metrics dashboard.
 
-- Slider: **pool size** (slots) vs **working set size** — when working set > pool, even “healthy” mix never reaches high hit rate (fit-in-memory lesson).
-- Toggle: **read-ahead burst** — insert a block of sequential pages at once (`innodb-performance-read_ahead` teaser).
-- “Managed SKU” label: small pool preset vs “dedicated 80%” large pool preset — same working set, different miss pain.
+### 4. Working set vs pool size
 
-### Interaction / motion notes (site pattern)
+- **Goal:** When working set > pool capacity, even “healthy” traffic never stabilizes high hit rate.
+- **Placement:** Sizing / fit-in-memory sections (§8–9).
+- **UX:** Slider: pool slots vs working-set size; qualitative only.
 
-- Intentional motion: pages slide toward MRU on promote; midpoint insert animation; eviction fade at tail; hit-rate needle/bar ease (not noisy sparkline dashboard).
-- One composition: LRU strip + controls + hit-rate meter. No card grid of unrelated metrics.
-- Keyboard: run hot / run scan / reset; focusable page slots with aria labels (`page 7, young, hot-set`).
-- No live MySQL connection; pure client simulation.
+### 5. Scan resistance toggle *(optional)*
 
-### Data shape (implementation sketch)
+- **Goal:** Higher simulated `old_blocks_time` → export hurts less (qualitative; label “benchmark before prod”).
+- **Placement:** Thrash section (§5). Cut if #2 already feels crowded.
 
-```ts
-type PageId = number;
-
-type PoolPage = {
-  id: PageId;
-  kind: "hot" | "cold" | "other";
-  insertedAt: number; // sim time
-  lastAccessAt: number;
-  list: "young" | "old";
-};
-
-type SimConfig = {
-  capacity: number;          // e.g. 48
-  oldPct: number;            // default 0.37
-  oldBlocksTimeMs: number;   // default 1000 (sim units)
-  workingSet: PageId[];      // e.g. [1..8]
-  coldRange: [PageId, PageId]; // e.g. [100, 300]
-};
-
-type SimStats = {
-  hits: number;
-  misses: number;
-  evictions: number;
-  youngPromotions: number;
-};
-
-// hitRateDisplay ≈ like Monitor: Math.round(1000 * hits / (hits+misses))
-```
-
-Keep the simulation honest-enough: midpoint insert, promote-on-access (with optional time gate), evict from old tail when full. Document simplifications in a collapsible “this is a model” note (single list, no flush list, no redo).
+**Non-goals:** multiple buffer pool instances, flush list, redo — tease 14 only.
 
 ---
 
@@ -502,6 +473,15 @@ Closing checklist for the published post. Each row: symptom → earlier article 
 11. **Legal:** Original teaching prose only; link refman; local corpus stays gitignored (`sources/README.md`).
 12. **Series glue:** Register slug `mysql-buffer-pool` in hub `seriesList.postSlugs` when publishing; place after locks (12), before durability (14).
 13. **Tone check:** Empowering, slightly scary Monday story → crisp mechanism → practical app ladder. Avoid “set buffer pool to 80%” as the moral for Docker-compose developers.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Part B opener; scatter LRU/thrash/hit-rate demos mid-article
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Managed-hosting constraints before “80% of RAM” advice
+- [ ] Forward to 14, 15, 19, 20; don’t steal redo/flush (14)
 
 ---
 

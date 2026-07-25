@@ -10,7 +10,19 @@
 | **Series hub** | `/projects/mysql/` |
 | **Post path** | `/posts/mysql-durability/` |
 | **Prev / next** | 13 Buffer Pool → **14** → 15 Covering Indexes |
-| **Interactive** | Yes — crash timeline stepper (toggle flush settings; show what survives power loss mid-commit) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists.
+- **Citations:** IEEE `<Cite n={…} />` + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article — **split** crash timeline, flush toggles, and doublewrite into separate embeds, not one dashboard. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma in snippets.
+- **Length:** Part B can run longer if every section earns it.
 
 ---
 
@@ -75,35 +87,28 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` while drafting. Link th
 | `forcing-innodb-recovery` | https://dev.mysql.com/doc/refman/9.7/en/forcing-innodb-recovery.html | Mention-only if “corruption / won’t start” comes up; not a how-to centerpiece. |
 | `innodb-disk-io` / `optimizing-innodb-diskio` | https://dev.mysql.com/doc/refman/9.7/en/innodb-disk-io.html / https://dev.mysql.com/doc/refman/9.7/en/optimizing-innodb-diskio.html | Optional: `innodb_flush_method` / fsync counting via `Innodb_data_fsyncs` for readers chasing commit latency. |
 
-**Citation style in the published post:** inline links like `[InnoDB and the ACID Model](https://dev.mysql.com/doc/refman/9.7/en/mysql-acid.html)` plus a short “Sources” list at the bottom mirroring the core table.
-
-**Research note:** There is no standalone `innodb-flush-log-at-trx-commit` node — the full 0/1/2 text lives under `innodb-parameters`. Cite that node (and quote/paraphrase carefully), not a fictional page id.
+**Citation rule:** paraphrase carefully; cite with `<Cite />` / `<References />`; never paste Oracle prose.
 
 ---
 
 ## Article structure
 
-Suggested MDX outline (top → bottom). Interactive component imported at the **top**, matching RAID / neural-net / Art. 08 pattern.
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; no mega crash stepper at the top. Teach WAL layers before flush knob alphabet soup.
 
-1. **Interactive: Crash timeline stepper** (client demo — flush setting toggles + power-loss / process-crash inject)
-2. **Hook** — HTTP 200 then power loss; “who lied, the API or the disk?”
-3. **What COMMIT actually promised in Article 08** — atomicity vs durability; durability is *after* commit returns
-4. **Mental model: WAL / redo path (one diagram worth of prose)**  
-   Buffer pool dirty pages ≠ durable. Redo is the crash journal. LSN advances. Data files catch up later via checkpointing.
-5. **The log buffer and flush policy** — `innodb_flush_log_at_trx_commit` 0 / 1 / 2 table + crash exposure
-6. **Doublewrite: the other half of “don’t corrupt pages”** — torn writes during page flush; not a substitute for redo flush
-7. **Crash recovery in one page** — restart → apply redo → roll back incomplete; committed-but-unflushed is simply *gone*
-8. **Binary log sync (durability of the commit stream)** — when binlog is on, `sync_binlog` matters; full-durability pair; defer replica lag / HA to Art. 19
-9. **SaaS crash scenarios (worked matrix)** — power loss vs `mysqld` kill vs storage that lies about fsync
-10. **When teams knowingly trade durability** — legitimate cases, how to document the trade, anti-patterns (“benchmark defaults in prod”)
-11. **Ops literacy without becoming a DBA** — what to `SHOW GLOBAL VARIABLES` / status; capacity vs flush (don’t confuse them)
-12. **Tie-back checklist**
-13. **Next up** — Covering indexes (15): back to query shape; durability knobs stay in the runbook
-14. **Sources**
+1. **Part B opener + what today covers** — HTTP 200 then power loss hook.
+2. **What COMMIT promised in article 08** — atomicity vs durability.
+3. **WAL / redo path** — buffer pool dirty ≠ durable. *(Embed **WAL layer stack**.)*
+4. **Log buffer and flush policy** — `innodb_flush_log_at_trx_commit` 0/1/2. *(Embed **Flush survival panel** — toggles update badges live.)*
+5. **When crash hits** — before vs after COMMIT returns; power loss vs `kill -9`. *(Embed **Crash timing inject** on same panel.)*
+6. **Doublewrite** — torn page protection, separate from redo flush. *(Embed **Torn page / doublewrite** — small side demo.)*
+7. **Crash recovery in one page** — redo replay; whole commits lost, not half-applied.
+8. **Binary log sync** — `sync_binlog` pair; tease 19. *(Optional collapsed **sync_binlog** row on flush panel.)*
+9. **SaaS crash matrix + team language** — when flush=2 is acceptable vs ledger paths.
+10. **Ops literacy** — `SHOW VARIABLES`; capacity vs durability confusion guard.
+11. **Tie-back checklist** + bridge to 15.
+12. **References** — IEEE list.
 
-Target length: long-form teaching post (~3–4.5k words). Mechanism-heavy but always returns to request handlers and SLAs.
-
-Each major section ends with a one-line **app consequence**.
+Do not end sections with “App consequence:” stamps.
 
 ---
 
@@ -124,7 +129,7 @@ Teach a four-layer story (reuse Art. 13 buffer-pool language):
 
 **Key teaching line:** InnoDB does **not** need to write the `.ibd` page before `COMMIT` returns. It needs the **redo** that can reconstruct that page change. That is write-ahead logging.
 
-**App consequence:** Commit latency is often *fsync of redo* (and binlog), not “how big is my row.”
+- Commit latency is often *fsync of redo* (and binlog), not “how big is my row.”
 
 ### Beat B — `innodb_flush_log_at_trx_commit` 0 / 1 / 2
 
@@ -143,7 +148,7 @@ Nuances the article must teach (docs call these out):
 - Crash recovery still makes each transaction **all-or-nothing** — you lose whole commits, you don’t half-apply a commit.
 - Replication setups that care about durability: docs recommend **`innodb_flush_log_at_trx_commit=1`** and **`sync_binlog=1`**.
 
-**App consequence:** Setting `2` is a *conscious SLA change*, not a free latency win.
+- Setting `2` is a *conscious SLA change*, not a free latency win.
 
 ### Beat C — Doublewrite ≠ redo flush
 
@@ -161,7 +166,7 @@ From `innodb-doublewrite-buffer`:
 - `innodb_doublewrite=OFF` is a integrity/performance trade (benchmarks, special atomic-write hardware stories); **DETECT_ONLY** writes metadata only (detect incomplete writes, don’t repair from doublewrite content).
 - Disabling doublewrite dynamically OFF↔ON is restricted; teach “don’t casually flip in prod without knowing the rules.”
 
-**App consequence:** Turning off doublewrite to chase TPS can buy silent page corruption risk — a worse failure class than “lost 200ms of orders.”
+- Turning off doublewrite to chase TPS can buy silent page corruption risk — a worse failure class than “lost 200ms of orders.”
 
 ### Beat D — Hardware can lie about fsync
 
@@ -173,7 +178,7 @@ Teach at product level (not a storage whitepaper):
 - “We set flush=1” ≠ “we tested kill -9 and power pull.”
 - UPS / AZ failure stories belong next to this caution, lightly — then point at backups / replicas (Art. 19), not HA design here.
 
-**App consequence:** Durability is a **stack** (InnoDB settings × filesystem × volume). Own the stack you deploy on.
+- Durability is a **stack** (InnoDB settings × filesystem × volume). Own the stack you deploy on.
 
 ### Beat E — SaaS crash matrix (teaching table)
 
@@ -205,7 +210,7 @@ From `optimizing-innodb-logging` / redo-log capacity:
 - Growing `innodb_redo_log_capacity` / `innodb_log_buffer_size` reduces checkpoint pressure and write amplification — **performance**, not “weaker durability.”
 - `ALTER INSTANCE DISABLE INNODB REDO_LOG` is for **bulk load into a new instance only**; unexpected stop with redo disabled → corruption / refuse restart. One stern callout; never a prod “optimization.”
 
-**App consequence:** Scale redo capacity before you sacrifice flush=1.
+- Scale redo capacity before you sacrifice flush=1.
 
 ### Beat H — Commit path vs outbox / HTTP
 
@@ -219,56 +224,38 @@ Reconnect to Art. 08 lightly:
 
 ## Interactive feature
 
-### Name
+Scatter **4–5 small client demos** under `src/components/interactive/mysql-durability/` (shared chrome from `schema-byte-budget/shared.tsx`). Split the old monolithic stepper.
 
-`DurabilityCrashStepper` (or `MysqlDurabilityCrashTimeline`) under `src/components/interactive/`.
+### 1. WAL layer stack
 
-### Metaphor / UX
+- **Goal:** Dirty buffer pool page → redo log buffer → redo files → async `.ibd` — COMMIT can return before data file write.
+- **Placement:** WAL path section (§3).
+- **UX:** Vertical phase rail (RAID-style); one `UPDATE` + `COMMIT` story on `invoices`.
 
-Reuse the RAID / Art. 08 **numbered phase rail + active hint** pattern, but the subject is a **single commit’s journey through memory and disk**, then a crash inject.
+### 2. Flush survival panel
 
-**Global toggles (always visible):**
+- **Goal:** `innodb_flush_log_at_trx_commit` 0/1/2 changes what survives power loss after COMMIT returned.
+- **Placement:** Flush policy section (§4).
+- **UX:** Segmented control 0|1|2; truth-table badges (“acknowledged commits at risk ~1s / buffer”).
 
-- `innodb_flush_log_at_trx_commit`: segmented control **0 | 1 | 2**
-- Optional secondary: `sync_binlog`: **0 | 1** (collapsed advanced row — default 1 when “binlog enabled” checkbox on)
-- **Crash type:** `Power loss` vs `mysqld kill -9`
-- **Doublewrite:** ON / OFF (affects a separate “page flush” side scenario, not the commit LSN path)
+### 3. Crash timing inject
 
-**Phases (happy path before crash):**
+- **Goal:** Crash *during* step 3 vs *after* step 4 (HTTP 200); power loss vs `kill -9` nuance for flush=2.
+- **Placement:** Crash scenarios (§5); reuses #2 panel.
+- **UX:** “Inject crash” at commit phase; survival copy updates per toggle.
 
-| Step | Label | What the UI shows |
-| ---: | --- | --- |
-| 1 | Begin + mutate | `START TRANSACTION` / `UPDATE invoices…`; buffer pool page dirty; redo records enter **log buffer** (RAM chip icon) |
-| 2 | COMMIT requested | Handler waiting; “client has not received 200 yet” |
-| 3 | Redo write / flush | Animate per setting: **1** → write+fsync to redo files; **2** → write to OS cache (disk not fsync’d); **0** → still only in log buffer until timer |
-| 4 | COMMIT returns | API badge flips to **200**; outbox/ledger rows marked “acknowledged” |
-| 5 | Inject crash | User picks timing: *during step 3* vs *after step 4*; crash type from toggle |
-| 6 | Recovery | Replay narrative: redo applied from last durable LSN; show which acknowledged commits survived |
+### 4. Torn page / doublewrite
 
-**Survival panel (always updated when toggles change):**
+- **Goal:** 16KB page half-written during checkpoint; doublewrite ON repairs, OFF → corruption pain — **separate from** redo flush lesson.
+- **Placement:** Doublewrite section (§6).
+- **UX:** Single page graphic + ON/OFF toggle; no full commit timeline.
 
-A small truth table / badge row:
+### 5. sync_binlog companion *(optional)*
 
-- “Acknowledged commits after last fsync: **survive** / **at risk (~1s)** / **at risk (buffer)**”
-- One-sentence hint that changes with flush + crash type, e.g.  
-  - flush=1 + power loss after 200 → “Should survive (if disk honored fsync).”  
-  - flush=2 + power loss after 200 → “May vanish — was in OS cache.”  
-  - flush=2 + kill -9 after 200 → “Often survives — OS may still hold/flush the write.”  
-  - flush=0 + either → “May never have left the log buffer.”
+- **Goal:** Second durability hole when binlog enabled; pair with flush=1.
+- **Placement:** Binlog sync (§8). Collapsed “advanced” row on #2 if scope tight.
 
-**Optional side track (tab or toggle):** “Torn page during checkpoint”
-
-- Show a 16KB page half-written in `.ibd`
-- Doublewrite ON → recovery copies good page from `#ib_….dblwr`
-- Doublewrite OFF → “page corrupt / recovery pain”
-
-**Controls:** Step forward / Back / Reset; toggles live-update the survival panel even mid-step (recompute outcome).
-
-**Copy/hints:** Use real variable names and SQL (`COMMIT`, `SHOW VARIABLES`), not “magic durability mode.” Footnote: “Managed MySQL consoles expose these as parameters too.”
-
-**A11y / motion:** `prefers-reduced-motion`; `aria-current="step"`; keyboard-operable toggles; don’t rely on color alone for survive/lost (icons + text).
-
-**Non-goals for v1:** real MySQL, simulating exact LSN math, full binlog group commit, replica promote, `innodb_flush_method` matrix.
+**Non-goals:** exact LSN math, `innodb_flush_method` matrix, replica promote.
 
 ---
 
@@ -413,7 +400,7 @@ Readers should be able to answer yes to each:
 
 ## Open questions / author notes
 
-1. **Interactive complexity:** Ship commit-path + flush toggles first; torn-page/doublewrite as a second tab if the component gets heavy. Recommendation: both in v1 if the survival panel stays compact — torn page is the best intuition pump for doublewrite.
+1. **Interactive scope** — Ship WAL stack + flush/crash panel + torn-page demo as separate embeds; merge doublewrite tab only if v1 schedule slips.
 2. **flush=2 vs kill -9 nuance:** Docs emphasize loss on crash when logs aren’t flushed; industry teaching often says “2 survives mysqld crash, not OS/power.” Keep language aligned with the manual (“transactions for which logs have not been flushed can be lost”) while still giving the OS-cache intuition — label the kill -9 row as “often survives in practice, not a guarantee.”
 3. **Managed MySQL defaults:** Confirm current defaults on common hosts (RDS parameter groups, etc.) when drafting — article should say “verify yours” rather than assert every cloud uses 1.
 4. **Series glue:** Art. 08 must keep durability as a teaser only; Art. 13 should mention dirty pages flush asynchronously; Art. 19 owns replica/binlog topology — this article only owns `sync_binlog` as a durability twin.
@@ -430,14 +417,9 @@ Readers should be able to answer yes to each:
 
 ## Drafting checklist (when writing the post)
 
-- [ ] Frontmatter: title, slug `mysql-durability`, series id `mysql`, description focused on redo/flush/crash tradeoffs for app teams
-- [ ] Import interactive at top
-- [ ] Link refman URLs for all core nodes (especially `innodb-parameters` for 0/1/2)
-- [ ] Explicit prev teaser from Art. 08 / 13; next → Art. 15; binlog HA → Art. 19
-- [ ] Crash matrix includes power loss *after* HTTP 200
-- [ ] Doublewrite separated cleanly from redo flush
-- [ ] “How to talk about the trade” section with runbook language
-- [ ] No Group Replication / cluster topology leakage
-- [ ] Tie-back checklist as compact end section
-- [ ] Hub + `seriesList.postSlugs` updated when stub goes live
+- [ ] Part B opener; scatter WAL/flush/crash/doublewrite demos mid-article — not one top stepper
+- [ ] `<Cite />` / `<References />` (especially `innodb-parameters` for 0/1/2)
+- [ ] Humanizer pass; first-person voice; crash matrix includes power loss *after* HTTP 200
+- [ ] Doublewrite separated from redo flush; no HA topology leakage
+- [ ] Forward to 15 and 19 (binlog); back-link 08/13
 )

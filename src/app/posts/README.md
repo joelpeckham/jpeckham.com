@@ -77,5 +77,8 @@ House style for this series — tune it as we go, but treat these as defaults wh
 ### Interactives
 
 - Client demos live under `src/components/interactive/…`.
-- Don’t drop a toy at the top with a “Things to Play With” laundry list by default. **Motivate** why the visual matters, **explain** the UI pieces in prose, then embed the component.
+- Prefer **several small demos** scattered through the article next to the section they teach — not one mega-lab at the top (articles 1–2 set this pattern).
+- Don’t drop a toy with a “Things to Play With” laundry list. **Motivate** why the visual matters, **explain** the UI in prose, then embed.
+- Keep each demo single-focus and visually simple. Cut demos that don’t earn their keep.
 - Keep math honest but labeled (illustrative ≠ `INFORMATION_SCHEMA`).
+- Before publish, run a **humanizer** pass on the prose (`~/.cursor/skills/humanizer`) so the piece doesn’t sound like chatbot output.

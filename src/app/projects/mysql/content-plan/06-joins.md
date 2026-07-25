@@ -9,7 +9,20 @@
 | **Series home** | `/projects/mysql/` |
 | **Depends on** | 03 Secondary Indexes, 04 SELECT / Filtering (join keys must be indexable; projection matters when joins multiply columns) |
 | **Feeds into** | 05 Pagination (join + `ORDER BY`/`LIMIT`), 10 EXPLAIN (full literacy), 15 Covering Indexes (join without PK lookups) |
-| **Estimated length** | ~2,500–3,200 words + top-of-page interactive |
+| **Estimated length** | ~10 minutes skim (~2,500–3,200 words if every beat earns it) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -30,6 +43,8 @@ Tone: spoon-fed. Every mechanism beat returns to a request handler (order list, 
 ---
 
 ## Real-world hook
+
+Place the dashboard N+1 vs join story in the section where nested-loop cost lands — not forced as a cold open unless it’s the best hook.
 
 **Scene:** A SaaS “Projects” dashboard endpoint — `GET /api/projects?include=owner,latest_activity`.
 
@@ -54,7 +69,7 @@ Open question for the reader (answer later in the piece): *If LEFT JOIN is “sa
 
 ## Primary documentation sources
 
-Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTML in the published post. Do **not** paste Oracle prose.
+Cite with `<Cite />` / `<References />`. Local nodes under `sources/mysql-refman-9.7/nodes/`. Do **not** paste Oracle prose.
 
 ### Core (must cite)
 
@@ -90,48 +105,25 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTM
 
 ## Article structure
 
-Suggested H2/H3 outline for the MDX post (interactive imported at top, like RAID / neural-net):
+Suggested H2 outline — sentence-case, conversational. Scatter **named mini-demos** mid-article; no stepper at the top.
 
-1. **Hook — One dashboard, two cost curves**  
-   ORM N+1 vs one join; promise of the piece.
-
-2. **Interactive: Nested-loop join stepper**  
-   Short caption: “Watch outer rows probe the inner table — this is why indexes on join keys matter.”
-
-3. **INNER vs LEFT in API English**  
-   Required association vs optional; NULL columns in JSON; anti-join pattern for “projects with no owner assigned.” Prefer LEFT over RIGHT for portability (`join` docs).
-
-4. **How MySQL actually runs a join**  
-   Nested-loop mental model (`nested-loop-joins`).  
-   Side box: hash join when no index (`hash-joins`) — still “probe,” different structure.  
-   EXPLAIN columns that matter now: table order, `type`, `key`, `ref`, `rows` (`explain-output`).
-
-5. **Join order is a performance dial**  
-   Small/filtered driving table first when legal; LEFT JOIN freezes outer-before-inner (`outer-join-optimization`).  
-   Accidental INNER via WHERE on right table (`outer-join-simplification`).  
-   `STRAIGHT_JOIN` as last-resort order club (`select` / `using-explain`) — rarely needed if indexes are right.
-
-6. **Indexes make joins scale**  
-   FK / join column indexes → `eq_ref` / `ref` instead of `ALL`.  
-   Tie back to article 03 without re-teaching composites.
-
-7. **ORM N+1 vs one fat join vs batched `IN`**  
-   Three patterns with tradeoffs (row explosion, payload shape, cacheability).
-
-8. **When to denormalize (or split queries)**  
-   Hot list endpoints, wide 1:N fanout, read-mostly counters / display names.
-
-9. **Checklist + what EXPLAIN should look like**  
-   Before shipping the endpoint.
-
-10. **Next in series**  
-    Pagination (05) often wraps these joins; EXPLAIN deep dive (10) sharpens the same skills.
+1. **Series beat + what today covers** — joins that stay cheap under real API traffic; bridge from 04 projection and 05 pagination-on-joins.
+2. **Hook — One dashboard, two cost curves** — ORM N+1 vs one join.
+3. **INNER vs LEFT in API English** — required vs optional association; anti-join pattern. *(Embed **LEFT vs accidental INNER** here — ON vs WHERE.)*
+4. **How MySQL actually runs a join** — nested-loop mental model; hash join side box. *(Embed **Nested-loop stepper** here.)*
+5. **Join order is a performance dial** — driving table first; outer-join handcuffs; null-rejecting WHERE.
+6. **Indexes make joins scale** — FK/join column indexes → `eq_ref` / `ref`.
+7. **ORM N+1 vs one fat join vs batched `IN`** — three patterns. *(Embed **N+1 trip counter** compare mode here.)*
+8. **Row explosion and fat join payloads** — 1:N fanout. *(Embed **1:N fanout meter** here.)*
+9. **When to denormalize (or split queries)** — hot list paths, display fields.
+10. **Checklist + what EXPLAIN should look like** — smoke test before shipping.
+11. **References** — IEEE list; bridge to 05 pagination and 10 EXPLAIN.
 
 ---
 
 ## Deep-dive beats
 
-Each beat: mechanism → app consequence → what to do.
+Weave mechanism → app takeaway into prose (no “App consequence:” line endings).
 
 ### Beat A — INNER means “drop the parent if the child is missing”
 
@@ -210,55 +202,35 @@ Readers should recognize:
 
 ## Interactive feature
 
-### Name
+**Folder:** `src/components/interactive/mysql-joins/` (shared chrome from `schema-byte-budget/shared.tsx` as needed).
 
-**Nested-Loop Join Stepper** (row fanout visualizer)
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Client-only; THREE presets max for stepper scenarios.
 
-### Placement
+### 1. Nested-loop stepper
 
-Top of MDX, client component under `src/components/interactive/` (same pattern as `raid-visualizer`, `neural-net`, `puzzle-solver`).
+- **Goal:** Make “for each outer row, probe inner” visceral; show indexed probes vs scans.
+- **Placement:** Section 4 (how MySQL runs a join).
+- **UX:** Phased workflow (RAID-like): pick outer row → probe inner → emit joined row(s). Presets: `projects → owners` (many:1), `orders → line_items` (1:N). Inner access toggle: indexed `ref`/`eq_ref` vs `ALL` vs simplified hash join.
 
-### Pedagogy goal
+### 2. N+1 trip counter
 
-Make “for each outer row, probe inner” visceral, and show why **indexed probes** beat **scans**, and why **1:N fanout** multiplies work/output.
+- **Goal:** Compare SQL join (1 trip, probes inside MySQL) vs N+1 (1 + N round-trips).
+- **Placement:** Section 7 (ORM patterns).
+- **UX:** Side-by-side counters as outer row count scrubs; same logical probes, different round-trip tax.
 
-### UI sketch
+### 3. LEFT vs accidental INNER
 
-**Controls**
+- **Goal:** Show `LEFT JOIN` + `WHERE right.col = …` rejecting NULL-padded rows → effective INNER.
+- **Placement:** Section 3 (INNER vs LEFT).
+- **UX:** Toggle filter placement (`ON` vs `WHERE`); row set and plain-language verdict update.
 
-- Scenario preset: `projects → owners` (1:1 / many:1), `orders → line_items` (1:N), `issues → assignees` (LEFT / optional).
-- Inner access mode toggle: **Indexed `ref`/`eq_ref`** vs **Table scan (`ALL`)** vs **Hash join** (simplified).
-- Outer row count scrubber (e.g. 5–50) and average matches per outer row (fanout 0–8).
-- Step / Play / Reset (phased workflow like RAID).
+### 4. 1:N fanout meter
 
-**Canvas**
+- **Goal:** Feel row multiplication when joining orders → line_items.
+- **Placement:** Section 8 (row explosion).
+- **UX:** Scrub average lines per order; watch emitted rows and payload width tick up.
 
-- Left column: outer table rows (highlight current).
-- Right column: inner table; matching rows light up on each probe.
-- Center: running counters — `probes`, `rows examined (est.)`, `rows emitted`, `round-trips if this were N+1`.
-- Optional mini EXPLAIN strip updating live: `type`, `rows`, Extra.
-
-**Phases**
-
-1. **Pick driving row** — highlight one outer row.  
-2. **Probe** — animate lookup (index B-tree hint vs full scan sweep).  
-3. **Emit** — show joined output row(s); for LEFT with 0 matches, emit NULL-padded row.  
-4. **Accumulate cost** — counters tick; compare sidebar “ORM N+1 equivalent.”
-
-**Compare mode (toggle)**
-
-- Side-by-side: **SQL join** (1 trip, probes inside MySQL) vs **N+1** (1 + N trips, same logical probes in the app).
-
-### Implementation notes
-
-- Pure client simulation; no live MySQL.
-- Keep state in a small pure module (`join-stepper.ts`) + tests for cost math (mirrors `raid.ts` / `search.test.ts` pattern).
-- Respect site interactive look: ink borders, mono stats, stepped workflow — not a dashboard of cards.
-- Accessibility: keyboard Step/Play; text summary of current phase for screen readers.
-
-### Caption copy (draft)
-
-> MySQL’s nested-loop join walks outer rows and probes the next table for matches. Drag fanout and watch examined rows explode when the inner probe is a scan — then flip on an index.
+**Implementation notes:** Pure client simulation in `join-stepper.ts` + tests; keyboard Step/Play; mini EXPLAIN strip optional, not a second mega-lab.
 
 ---
 
@@ -440,7 +412,7 @@ Ship-ready questions for the reader (and for the end of the post):
 
 6. **`STRAIGHT_JOIN`:** Document as escape hatch with warnings (semijoin disable). Don’t recommend it as everyday style.
 
-7. **Interactive scope control:** THREE presets max; hash-join mode can be schematic (build bucket → probe) rather than a full hash-table simulation.
+7. **Interactive scope control:** THREE presets max for stepper; scatter 3–4 demos mid-article — hash-join mode schematic only.
 
 8. **Denormalization ethics:** Keep the section short and pragmatic — counters / display-name caches — not a data-warehousing digression.
 
@@ -456,10 +428,9 @@ Ship-ready questions for the reader (and for the end of the post):
 
 ## Writing checklist (when drafting the post)
 
-- [ ] Open with web-app scenario; close with checklist — no floating theory.
-- [ ] Cite refman via node id + URL; paraphrase only.
-- [ ] Interactive at top; caption states the learning outcome in one sentence.
-- [ ] INNER/LEFT, nested-loop fanout, join order, N+1, denormalize — all five focus items covered.
-- [ ] Spoon-fed: one idea per section; worked schema reused throughout.
-- [ ] No steal of full EXPLAIN course (10) or covering-index course (15).
-)
+- [ ] Open with web-app scenario; close with checklist — no floating theory
+- [ ] `<Cite />` + `<References />` for technical claims; paraphrase only
+- [ ] Scatter 3–4 mini-demos mid-article; humanizer pass; first-person voice
+- [ ] INNER/LEFT, nested-loop fanout, join order, N+1, denormalize — all five focus items covered
+- [ ] Prisma-primary snippets; spoon-fed one idea per section; reuse worked schema
+- [ ] No steal of full EXPLAIN course (10) or covering-index course (15)

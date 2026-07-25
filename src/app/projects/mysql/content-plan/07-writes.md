@@ -9,7 +9,19 @@
 | **Series position** | After JOINs (06); before Transactions (08) |
 | **Hub** | `/projects/mysql/` |
 | **Post path** | `/posts/mysql-writes/` |
-| **Interactive** | Yes — top-of-MDX client demo (see below) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -27,11 +39,13 @@ By the end, a reader should be able to:
 
 **Out of scope (hand off):** full transaction/`BEGIN`/`COMMIT`/`ROLLBACK` pedagogy, isolation anomalies, and lock/gap/deadlock deep dives → articles **08**, **09**, **12**. Mention autocommit and “one statement ≈ one transaction” only as a light bridge so bulk tips and idempotency make sense.
 
-**Teaching voice:** spoon-fed, request/response framed, original prose. Cite Oracle docs; never paste refman text into the published MDX.
+**Teaching voice:** spoon-fed, request/response framed, original prose. Cite with `<Cite />` / `<References />`; never paste refman text into the published MDX.
 
 ---
 
 ## Real-world hook
+
+Place the webhook idempotency story in the upsert section — bulk-import hook in the batching section. Not forced cold opens unless they’re the best hook.
 
 **Scene:** a Stripe (or Shopify) webhook handler for `checkout.session.completed` / `orders/create`.
 
@@ -58,7 +72,7 @@ Tie both hooks to production pain readers already feel: duplicate webhook orders
 
 ## Primary documentation sources
 
-Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored). Public cite form: `https://dev.mysql.com/doc/refman/9.7/en/<id>.html`.
+Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored). Public URLs go in `<References />`; paraphrase only.
 
 ### Core DML (must-read while drafting)
 
@@ -106,37 +120,19 @@ Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored). Public cite
 
 ## Article structure
 
-Suggested MDX spine (H2s). Interactive component mounts **above** the first H2 (site pattern: RAID / neural-net / puzzle).
+Suggested MDX spine — sentence-case H2s. Scatter **named mini-demos** mid-article; no dual-panel playground at the top.
 
-1. **Hook — The webhook that must not double-charge**  
-   Retries, unique natural keys, “200 OK means idempotent.”
-
-2. **Mental model — A write is index work**  
-   Clustered row + every secondary (callback to 02/03). One sentence on autocommit → 08.
-
-3. **INSERT — Creating rows on purpose**  
-   Column lists, defaults, multi-row `VALUES` / `VALUES ROW()`, `INSERT IGNORE` vs error-and-retry, `LAST_INSERT_ID()` caveats for multi-row.
-
-4. **UPDATE & DELETE — Change and remove with a WHERE**  
-   Selective predicates; LIMIT as safety valve; “set to same value doesn’t count as changed”; soft-delete product note vs hard `DELETE`.
-
-5. **Upserts — `ON DUPLICATE KEY UPDATE` vs `REPLACE`**  
-   Decision table; multiple unique indexes; row aliases (`AS new`); when REPLACE’s delete+insert breaks FKs/triggers/auto-inc.
-
-6. **Affected vs matched — reading the driver return value**  
-   UPDATE changed vs found; upsert 0/1/2; `CLIENT_FOUND_ROWS` / Prisma-`found` style surprises; never treat “0” as always-failure for idempotent PATCH.
-
-7. **Bulk patterns — batching without a data warehouse**  
-   Multi-row insert sizing; PK order; when to graduate to `LOAD DATA`; warn about disabling unique/FK checks (import-only, trusted data).
-
-8. **Write amplification — indexes you pay for on every POST**  
-   Tie interactive back; “indexes are a read optimization with a write tax.”
-
-9. **App patterns checklist**  
-   Webhook idempotency key, inventory-ish counter upsert, batch create endpoint, ORM mapping notes (Rails `upsert`, Prisma `upsert`, Django `update_or_create` — behavior differs; verify SQL).
-
-10. **What’s next**  
-    Article 08: wrap multi-statement checkout in a real transaction; 09: what concurrent readers see.
+1. **Series beat + what today covers** — writes as index work + idempotency; light autocommit bridge → 08.
+2. **Hook — The webhook that must not double-charge** — retries, natural unique keys.
+3. **Mental model — A write is index work** — clustered row + every secondary (callback 02/03).
+4. **INSERT — Creating rows on purpose** — multi-row `VALUES`; `INSERT IGNORE`; `LAST_INSERT_ID()`.
+5. **UPDATE & DELETE — Change and remove with a WHERE** — no-op PATCH; chunked `DELETE`.
+6. **Upserts — `ON DUPLICATE KEY UPDATE` vs `REPLACE`** — decision table; row aliases. *(Embed **Upsert strategy picker** here.)*
+7. **Affected vs matched — reading the driver return value** — 0/1/2 dance. *(Embed **Affected-rows interpreter** here.)*
+8. **Bulk patterns — batching without a data warehouse** — multi-row insert; PK order; `LOAD DATA` sidebar. *(Embed **Batch single vs multi-row** here.)*
+9. **Write amplification — indexes you pay for on every POST** — write tax. *(Embed **Index maintenance cost meter** here.)*
+10. **App patterns checklist** — webhook idempotency, ORM mapping notes (Prisma-primary).
+11. **References** — IEEE list; bridge to 08 (transactions) and 09 (visibility).
 
 ---
 
@@ -228,49 +224,35 @@ From `insert-optimization` + `optimizing-innodb-bulk-data-loading`:
 
 ## Interactive feature
 
-**Primary recommendation: Upsert Decision Playground + mini write-cost meter** (one component, two linked panels).
+**Folder:** `src/components/interactive/mysql-write-playground/` (shared chrome from `schema-byte-budget/shared.tsx` as needed).
 
-Site pattern: `"use client"` demo under `src/components/interactive/`, imported at top of MDX (see `raid-visualizer`, `neural-net`, `puzzle-solver`).
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Split the old dual-panel mega-component into **separate small embeds** — not one top lab.
 
-### Panel A — Upsert decision playground
+### 1. Upsert strategy picker
 
-**Controls:**
+- **Goal:** Choose INSERT / IGNORE / ON DUPLICATE / REPLACE and see what MySQL does + warning chips.
+- **Placement:** Section 6 (upserts).
+- **UX:** Scenario presets (webhook, profile save); schema toggles (single vs two UNIQUE footgun); generated SQL with `AS new` form; plain-language outcome.
 
-- Scenario picker: *Webhook idempotency*, *User profile save*, *Inventory counter*, *Full row resync*.
-- Conflict strategy: `INSERT`, `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`, `REPLACE`.
-- Schema toggles: single UNIQUE (`provider_event_id`) vs **two** UNIQUEs (show the footgun).
-- Incoming payload vs existing row (editable key fields + column values).
+### 2. Affected-rows interpreter
 
-**Output:**
+- **Goal:** Decode 0 / 1 / 2 for upsert and “0 rows changed” on no-op UPDATE.
+- **Placement:** Section 7 (affected vs matched).
+- **UX:** Toggle `CLIENT_FOUND_ROWS`; show driver-facing count vs “desired state achieved.”
 
-- Generated SQL (with `AS new` alias form for upsert).
-- Plain-language “what MySQL will do” (insert / update in place / delete+insert / skip).
-- Predicted **affected-rows** for the single-row case (0 / 1 / 2), plus a note when `CLIENT_FOUND_ROWS` would change it.
-- Warning chips: *multiple unique indexes*, *REPLACE fires DELETE side effects*, *auto-inc may advance*, *no-op update → 0*.
+### 3. Index maintenance cost meter
 
-### Panel B — Batch write + index-maintenance cost visualizer
+- **Goal:** Visceral write amplification — clustered + N secondaries per row.
+- **Placement:** Section 9 (write amplification).
+- **UX:** Row count slider; secondary index count (0–8); stacked illustrative cost bars + tiny index-tree glyphs lighting per row.
 
-**Controls:**
+### 4. Batch single vs multi-row
 
-- Row count slider (1 → 5_000).
-- Statement mode: *N single-row INSERTs* vs *1 multi-row INSERT* (batches of K).
-- Secondary index count (0–8), optional “wide PK” toggle (secondary payload cost).
-- Optional: fraction of updates that touch an indexed column.
+- **Goal:** Feel round-trip / parse tax of N single-row INSERTs vs batched multi-`VALUES`.
+- **Placement:** Section 8 (bulk patterns).
+- **UX:** Compare statement count and toy latency units; label illustrative.
 
-**Visualization:**
-
-- Stacked cost bars inspired by `insert-optimization` proportions: round-trips/parse vs row writes vs **per-index maintenance** (illustrative units, not a benchmark claim).
-- Tiny “index trees touched” glyph: 1 clustered + N secondaries lighting up per row.
-- Caption: change buffer may defer secondary I/O when cold — demo still counts logical maintenance work.
-
-**Implementation notes:**
-
-- Pure client math + animation; no live MySQL.
-- Keep first viewport of the **post** calm: demo is interactive tool below title/lede, not a dashboard of unrelated stats (align with site interactive posts).
-- Prefer 2–3 intentional motions: strategy highlight, cost bar morph, index glyphs pulse on “run.”
-- Component name idea: `MysqlWritePlayground` → `src/components/interactive/mysql-write-playground/`.
-
-**Fallback if scope tight:** ship Panel A only; cover bulk cost with a static diagram + the cost-factor list from `insert-optimization`.
+**Fallback:** If scope tight, ship upsert picker + affected-rows only; static diagram for bulk/index cost.
 
 ---
 
@@ -394,7 +376,7 @@ Reader self-check before leaving the post:
 
 ## Open questions / author notes
 
-1. **Interactive scope:** Ship combined playground+cost meter, or A-only for v1? Recommendation: A+B if one afternoon of polish; otherwise A first with a static cost diagram.
+1. **Interactive scope:** Ship 3–4 scattered mini-demos (upsert picker + affected-rows minimum); avoid one top dual-panel mega-lab.
 2. **ORM section depth:** Keep to a short “verify the SQL your ORM emits” box with 2–3 framework links, or a dedicated subsection with screenshots of Prisma/Rails upsert SQL? Prefer short box — ORM APIs churn; MySQL semantics do not.
 3. **`LOAD DATA` security rabbit hole:** `LOCAL`, privilege, and path rules deserve restraint. Link `load-data` + security child pages; do not make this a sysadmin article.
 4. **Change buffer default in 9.7:** Confirm wording against `innodb_change_buffering` default (`none` in the local node). Teach logical amplification regardless; avoid implying buffering always softens bulk load pain on stock 9.7.
@@ -403,15 +385,15 @@ Reader self-check before leaving the post:
 7. **Soft delete vs hard delete:** Product advice belongs here lightly; cascading FK behavior waits for 16.
 8. **Tone/length target:** Foundations post — aim ~2.5–4k words + interactive; enough to be the “writes” reference, not a DML encyclopedia (`INSERT…SELECT`, multi-table UPDATE/DELETE stay secondary).
 9. **Example domain:** Stick with `orders` + webhook throughout for continuity; optional second sketch (`users.email` profile save) in the playground scenarios.
-10. **No Oracle paste:** Draft from these notes; quote only short SQL forms; link node URLs in a Sources footnote or inline “MySQL 9.7 — INSERT” style citations.
+10. **No Oracle paste:** Draft from these notes; quote only short SQL forms; use `<References />` for refman URLs.
 
 ---
 
 ## Drafting checklist (when writing the post)
 
-- [ ] Register slug in series list / hub when publishing.
-- [ ] Build interactive under `src/components/interactive/…` and import in MDX.
-- [ ] Cite public refman URLs for insert, update, delete, replace, insert-on-duplicate, insert-optimization, innodb-index-types, innodb-change-buffer, information-functions; light link to load-data.
-- [ ] Explicit handoff sentences to 08 (transactions) and back-refs to 02/03 (PK + secondary indexes).
-- [ ] Include the affected-rows table and upsert vs REPLACE decision table in the published post.
-- [ ] Run through webhook + no-op PATCH stories end-to-end in copy before merge.
+- [ ] Register slug in series list / hub when publishing
+- [ ] Scatter 3–4 mini-demos mid-article under `src/components/interactive/…`
+- [ ] Humanizer pass; first-person voice; `<Cite />` + `<References />`
+- [ ] Explicit handoff to 08 (transactions) and back-refs to 02/03 (PK + secondary indexes)
+- [ ] Include affected-rows table and upsert vs REPLACE decision table in published post
+- [ ] Run webhook + no-op PATCH stories end-to-end in copy before merge

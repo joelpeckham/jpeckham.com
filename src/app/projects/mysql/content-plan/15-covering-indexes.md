@@ -10,7 +10,19 @@
 | **Published path** | `/posts/mysql-covering-indexes/` |
 | **Depends on** | 02 PK/clustered, **03 secondary indexes**, **04 SELECT/projection**, 05 pagination (ORDER BY alignment), **10 EXPLAIN** (`Using index` / `Using index condition`) |
 | **Feeds** | 13 buffer pool (index leaf density / working set), 17 JSON/generated columns (covering via generated cols), 18 online DDL (cost of wider indexes), 20 perf schema (handler read stats) |
-| **Interactive** | Index design lab — toggle included columns / SELECT list; show PK lookups avoided; ICP on/off comparison |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article; **PK bounce avoided** must read clearly (builds on article 02 secondary-bounce demo). Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B — skimmable prose over encyclopedia.
 
 ---
 
@@ -129,81 +141,50 @@ Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md`. Cite public HTML in the 
 - Generated-column indexes as covering for JSON attributes → **17**
 - Skip scan / Index Merge algorithms → mention only if EXPLAIN shows them
 
-**Citation rule:** paraphrase mechanisms; link node URLs; original teaching schemas (tickets/orders), not Oracle’s `people`/`zipcode` verbatim.
+**Citation rule:** paraphrase mechanisms; cite with `<Cite />` / `<References />`; original teaching schemas (tickets/orders), not Oracle’s `people`/`zipcode` verbatim.
 
 ---
 
 ## Article structure
 
-Suggested H2/H3 progression for `page.mdx`. Interactive **first** (site pattern: RAID / neural-net / 8-puzzle).
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; callback article 02 **secondary bounce** before teaching covering.
 
-1. **Interactive: Covering Index & ICP Lab** (client demo at top)
-2. **Hook — “We already have an index”** — slow list API; EXPLAIN looks fine; introduce the PK bounce
-3. **Refresh: secondary leaf anatomy** (tight callback to 02/03)
-   - Indexed columns + PK columns in every secondary entry
-   - Path: secondary B-tree → PK → clustered row
-   - Short PK still matters (covering indexes are fatter when PK is fat)
-4. **What “covering” / index-only access means**
-   - Definition from `mysql-indexes` / `optimizing-innodb-queries`
-   - EXPLAIN Extra: **`Using index`**
-   - Mental test: *Could this query be answered if the base table were offline?*
-5. **Projection is half the design** (callback to 04)
-   - List-card columns vs `SELECT *` / wide ORM models
-   - Detail endpoints vs list endpoints need different indexes (or accept bounce on detail)
-6. **Designing a covering composite for a hot API** *(heart of the article)*
-   - Order: filter equalities → filter range/sort → **included payload columns**
-   - PK columns are “free” in the leaf (`index-extensions`) — don’t duplicate `id` unless teaching clarity
-   - Worked before/after EXPLAIN on the orders/tickets schema
-7. **ICP — filter before the bounce**
-   - Without ICP vs with ICP walk (paraphrase `index-condition-pushdown-optimization`)
-   - When ICP helps: non-sargable / non-range-limiting predicates on *later* index columns (e.g. `LIKE '%x%'` on an indexed suffix) while leading columns still range
-   - EXPLAIN: **`Using index condition`** — explicitly **not** `Using index`
-   - InnoDB: secondary indexes only; no win on pure clustered access
-   - Limits: subqueries, stored functions, virtual generated secondary indexes (as documented)
-   - Staging toggle: `optimizer_switch='index_condition_pushdown=off/on'`
-8. **Covering vs ICP vs “Using where” — decision triangle**
-   - Ideal: covering (`Using index`) — no row read
-   - Next: ICP — fewer wasted row reads
-   - Fallback: index locate + row read + server-side `Using where`
-9. **When you still need the row: MRR as cousin**
-   - Short section: Disk-sweep MRR sorts PK lookups (`mrr-optimization`); Extra `Using MRR`
-   - Covering makes MRR irrelevant (no base rows)
-   - Don’t center the article on MRR — enough to decode EXPLAIN and relate to bounce cost
-10. **Costs and anti-patterns**
-    - Wider indexes → more space, slower writes, more buffer-pool pressure on the index itself
-    - “Cover the whole table” / include `TEXT`/`JSON` blobs — usually wrong
-    - Duplicate indexes (filter-only + covering that supersedes) — use invisible indexes to retire
-    - ORM `include`/`select` that accidentally pull non-covered columns and silently lose `Using index`
-11. **Worked gallery** — 3–4 API shapes with before/after indexes + EXPLAIN Extra
-12. **Tie-back checklist** + forward links (13, 17, 18, 20)
-13. **Further reading** — linked refman nodes
-
-**Length target:** long-form deep dive (~3–4.5k words) + interactive — denser than article 03; practical, not an optimizer-trace thesis.
+1. **Part B opener + what today covers** — “index is used but API still slow”; PK bounce tax.
+2. **Refresh: secondary leaf anatomy** — indexed cols + PK; two-hop path (02/03). *(Embed **PK bounce counter** — same visual language as article 02; show N clustered lookups.)*
+3. **What covering / index-only means** — `Using index`; mental test.
+4. **Projection is half the design** — list DTO vs `SELECT *` (04).
+5. **Designing a covering composite for a hot API** — filter → sort → payload suffix. *(Embed **Covering index builder** — flip to `Using index`, bounce → 0.)*
+6. **ICP — filter before the bounce** — `Using index condition` ≠ covering. *(Embed **ICP filter gate**.)*
+7. **Covering vs ICP vs MRR** — decision triangle; MRR one short section.
+8. **Costs and anti-patterns** — wider indexes; ORM greed. *(Embed **SELECT \* tax** preset on builder.)*
+9. **Worked gallery** — before/after EXPLAIN Extra.
+10. **Tie-back checklist** + forward links (13, 17, 18, 20).
+11. **References** — IEEE list.
 
 ---
 
 ## Deep-dive beats
 
-Teach these in order. Each beat ends with “so in your app…”
+Teach these in order. Weave app outcomes into prose — no “App implication:” stamp lines.
 
 ### Beat A — The secondary → PK bounce is the tax
 
 - From `innodb-index-types`: secondary entries carry PK values; InnoDB uses them to find the clustered row.
 - Non-covering access ≈ *index seek/scan + N clustered lookups* (N ≈ rows examined that pass index conditions).
-- App implication: a “perfect” composite that still serves `SELECT *` from a wide orders row pays the tax on every list request. Measure with `EXPLAIN ANALYZE` / handler reads (tease 20), not vibes.
+- A “perfect” composite that still serves `SELECT *` from a wide orders row pays the tax on every list request. Measure with `EXPLAIN ANALYZE` / handler reads (tease 20), not vibes.
 
 ### Beat B — Covering = index-only = `Using index`
 
 - From `mysql-indexes`: if the query uses only columns present in some index, values can come from the index tree.
 - From `explain-output`: Extra `Using index` means no additional seek to the actual row.
 - Nuance: for InnoDB user-defined clustered PK, `type: index` + `key: PRIMARY` can be index-ish without Extra `Using index` — teach carefully so readers don’t false-negative on PK scans.
-- App implication: list endpoints should name columns; then extend the composite until Extra flips to `Using index` *for that query*.
+- List endpoints should name columns; then extend the composite until Extra flips to `Using index` *for that query*.
 
 ### Beat C — PK extension is already covering `id`
 
 - From `index-extensions`: secondary `(org_id, status, updated_at)` is internally like `(org_id, status, updated_at, id)` (for a single-column PK).
 - `SELECT id, org_id, status, updated_at WHERE …` may already be covering **without** adding `id` to the KEY definition.
-- App implication: start by projecting PK + indexed columns; only then add true payload columns (`email`, `total_cents`) to the index definition.
+- Start by projecting PK + indexed columns; only then add true payload columns (`email`, `total_cents`) to the index definition.
 
 ### Beat D — Column order still matters (covering doesn’t repeal left-prefix)
 
@@ -211,7 +192,7 @@ Teach these in order. Each beat ends with “so in your app…”
 - Heuristic for covering list indexes:  
   **`(always_equality…, optional_equality…, range_or_order_by…, [payload cols…])`**
 - Payload columns at the end usually don’t participate in range determination — they’re there so the leaf can answer SELECT. Putting a low-selectivity payload column *before* the range key can wreck the prefix — don’t.
-- App implication: “include columns” ≠ “shuffle filter order.” Treat covering suffixes as *INCLUDE*-style (MySQL has no separate INCLUDE syntax — you append to the composite).
+- “include columns” ≠ “shuffle filter order.” Treat covering suffixes as *INCLUDE*-style (MySQL has no separate INCLUDE syntax — you append to the composite).
 
 ### Beat E — ICP: push predicates into the index walk
 
@@ -220,7 +201,7 @@ Teach these in order. Each beat ends with “so in your app…”
 - EXPLAIN: `Using index condition`. Manual states it does **not** show `Using index` because full rows still must be read when ICP applies in the documented sense.
 - Applicability (teach the InnoDB-relevant bits): `range`/`ref`/`eq_ref`/`ref_or_null`; InnoDB **secondary** only; not for conditions with subqueries/stored functions; not for secondary indexes on virtual generated columns (as of this refman node).
 - Classic shape (re-domain): index `(zip, last, first)` + `zip = ? AND last LIKE '%x%' AND address LIKE …` — leading equality uses index range; ICP can test `last LIKE` before row read; `address` still needs the row.
-- App implication: when you can’t cover (payload too wide / rarely selected), still put filterable columns in the index so ICP can discard junk keys cheaply — e.g. store `status` even if SELECT needs a fat `metadata` JSON column.
+- When you can’t cover (payload too wide / rarely selected), still put filterable columns in the index so ICP can discard junk keys cheaply — e.g. store `status` even if SELECT needs a fat `metadata` JSON column.
 
 ### Beat F — Covering vs ICP vs MRR (one diagram in prose)
 
@@ -233,7 +214,7 @@ Teach these in order. Each beat ends with “so in your app…”
 
 - MRR (`mrr-optimization`): accumulate index tuples, sort by row ID, sequentialize clustered access — helps when covering is impossible and table isn’t cached.
 - InnoDB/MyISAM skip MRR when covering already applies.
-- App implication: chase covering for stable hot paths; understand ICP/MRR as “still bouncing, but smarter.”
+- Chase covering for stable hot paths; understand ICP/MRR as “still bouncing, but smarter.”
 
 ### Beat G — ORM footguns that destroy covering
 
@@ -241,91 +222,58 @@ Teach these in order. Each beat ends with “so in your app…”
 - GraphQL/resolvers that request nested fields → SQL suddenly needs non-covered columns.
 - `includes` / eager loads that force join to wide tables — covering on the drive table doesn’t fix joined tables (tease 06).
 - Soft-delete scopes (`deleted_at IS NULL`) — if `deleted_at` isn’t in the index, you may lose covering or rely on ICP/WHERE after row read; often belongs in the composite.
-- App implication: treat the **list DTO** as the covering contract; add a CI check or comment next to the migration: “covers `GET /api/...`.”
+- Treat the **list DTO** as the covering contract; add a CI check or comment next to the migration: “covers `GET /api/...`.”
 
 ### Beat H — Write and memory cost of covering indexes
 
 - From `optimization-indexes` / `optimizing-innodb-queries`: indexes cost space and slow writes; fat indexes reduce leaf density → more I/O to scan the same key range.
 - Updating a covered payload column (e.g. `status` or `total_cents`) updates the secondary leaf — list-friendly columns that change often have write amplification.
 - Prefer covering **stable** list fields; avoid covering rapidly churning counters unless the read path is critical.
-- App implication: one covering index per hottest endpoint beats five “almost covering” indexes.
+- One covering index per hottest endpoint beats five “almost covering” indexes.
 
 ### Beat I — Verify like a grown-up
 
 - Staging: `EXPLAIN` / `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` (careful in prod) — look for Extra flip.
 - Optional: `SET optimizer_switch = 'index_condition_pushdown=off'` A/B to feel ICP (interactive mirrors this).
 - Invisible index swap: add covering index, make old index invisible, watch p95 / handler stats (articles 18/20).
-- App implication: don’t ship a wider index without a before/after plan pasted in the PR.
+- Don’t ship a wider index without a before/after plan pasted in the PR.
 
 ---
 
 ## Interactive feature
 
-### Name
+Scatter **4–5 small demos** under `src/components/interactive/mysql-covering-index/` (reuse bounce visual from article 02 where possible). Win metric: **PK / clustered lookups avoided**.
 
-**Covering Index & ICP Lab** (working title)  
-Path: `src/components/interactive/mysql-covering-index/` (or `mysql-index-only/`)  
-Import at top of `src/app/posts/mysql-covering-indexes/page.mdx`:
+### 1. PK bounce counter
 
-```mdx
-import { MysqlCoveringIndexLab } from "@/components/interactive/mysql-covering-index";
+- **Goal:** Secondary range finds rows; each non-covered column forces a clustered lookup — counter climbs (article 02 callback).
+- **Placement:** Secondary leaf refresh (§2).
+- **UX:** Step strip: secondary scan → N bounces; mono SQL; big “PK lookups: N” readout.
 
-<MysqlCoveringIndexLab />
-```
+### 2. Covering index builder
 
-### What the user does
+- **Goal:** Append payload columns to composite + narrow SELECT → `Using index`, bounces drop to 0.
+- **Placement:** Designing covering composite (§5).
+- **UX:** Column chips for index + SELECT toggles; EXPLAIN Extra badge flips.
 
-Fixed teaching table `orders` (aligned with articles 03/04/10):
+### 3. ICP filter gate
 
-| Column | Role |
-| --- | --- |
-| `id` | PK (always in secondary leaves) |
-| `org_id`, `status`, `updated_at` | Filter / sort |
-| `customer_email`, `total_cents`, `currency` | List-card payload |
-| `notes` (TEXT) | Detail-only — never cover |
+- **Goal:** `Using index condition` filters on index before row read — partial win, not index-only.
+- **Placement:** ICP section (§6).
+- **UX:** ICP on/off; show row reads remaining vs bounce counter.
 
-Controls:
+### 4. SELECT * tax
 
-1. **Index builder** — choose ordered key parts from the column chips (2–6 columns). Default: `(org_id, status, updated_at)`.
-2. **SELECT list toggles** — which columns the query projects (checkboxes). Presets: “List card,” “IDs only,” “ORM SELECT *,” “Detail blob (+ notes).”
-3. **WHERE toggles** — `org_id = ?`, `status = ?`, `updated_at > ?`, plus one ICP-flavored predicate e.g. `customer_email LIKE '%@example.com'` or `notes LIKE '%refund%'` (notes never in index → cannot ICP that part).
-4. **ICP switch** — On/Off (models `index_condition_pushdown`).
-5. Optional **ORDER BY updated_at DESC** toggle (shows whether sort is satisfied by index vs “needs filesort” badge — light, article 05 owns depth).
+- **Goal:** Same covering index; `SELECT *` pulls `notes` TEXT → lose `Using index`, bounces return.
+- **Placement:** Anti-patterns (§8).
+- **UX:** Preset on #2 builder — one click “ORM SELECT *”.
 
-### What they see
+### 5. List card preset *(optional)*
 
-A single composition (not a dashboard):
+- **Goal:** Before/after buttons: filter-only index + list card SELECT vs covering index.
+- **Placement:** Gallery or §5. Cut if #2 covers it.
 
-- **Query preview** — live SQL string from toggles.
-- **Access story** — step strip:  
-  `Secondary scan → [ICP filter?] → PK lookups: N → Row filter? → Result`
-- **Counters (toy but honest labels):**
-  - Index entries examined (from a fixed toy cardinality model)
-  - **PK / clustered lookups avoided** (big number when covering)
-  - Full row reads remaining
-- **EXPLAIN Extra badges** (teaching model):  
-  - `Using index` when SELECT ∪ WHERE ∪ ORDER BY columns ⊆ index leaf (incl. implicit PK)  
-  - `Using index condition` when ICP on + non-covering + some WHERE columns ⊆ index but not all SELECT  
-  - `Using where` when residual predicates need the row/server  
-  - Note when covering makes MRR N/A
-- Plain-English verdict: e.g. “Covering — 0 PK lookups for 50-row page” vs “Index used, but 50 clustered lookups for email/total.”
-
-### Insight produced
-
-Muscle memory: **narrow SELECT + append payload columns to the composite → PK lookups drop to zero**; ICP is the consolation prize when the row is still required. Mirrors article 03’s prefix matcher, but the win metric is **lookups avoided**, not merely “index used.”
-
-### Implementation notes
-
-- `"use client"`; pure TypeScript rules engine; unit-test like `raid.test.ts`.
-- No live MySQL — deterministic teaching model; label “simplified; real optimizer is cost-based.”
-- Visual language: match site interactives (bordered ink controls, mono SQL/EXPLAIN readouts, restrained motion — animate PK-lookup count dropping when covering flips on; ICP gate as a filter chip on the secondary stream).
-- Reuse glossary wording consistent with article 10’s EXPLAIN explorer (`Using index` vs `Using index condition`).
-- Do **not** simulate full MRR buffering unless cheap as a third badge; a footnote is enough.
-
-### Stretch (only if cheap)
-
-- Before/after preset buttons: “Filter-only index + SELECT *” vs “Covering list index + list card SELECT.”
-- Tiny write-cost meter: qualitative “index width / write tax” bar that grows as columns are added — reinforces Beat H.
+**Non-goals:** full MRR simulation; fake cost-based optimizer.
 
 ---
 
@@ -536,13 +484,8 @@ Close by forcing internals → app outcomes:
 
 ## Drafting checklist (when writing the post)
 
-- [ ] Create `src/app/posts/mysql-covering-indexes/page.mdx` with interactive import at top
-- [ ] Implement `MysqlCoveringIndexLab` + unit tests for covering/ICP rules
-- [ ] Update hub / `content.ts` / `seriesList` when publishing
-- [ ] Cross-link 03, 04, 05, 10, 13, 17, 18, 20
-- [ ] Cite 6–10 refman URLs inline where claims are made (`index-condition-pushdown-optimization`, `mysql-indexes`, `innodb-index-types`, `explain-output`, `index-extensions`, `mrr-optimization`, `optimizing-innodb-queries`, …)
-- [ ] Include before/after EXPLAIN narratives (Extra flip to `Using index`)
-- [ ] One ICP on/off staging snippet with `optimizer_switch`
-- [ ] Explicit glossary callout: `Using index` vs `Using index condition` vs `Using MRR`
-- [ ] Paraphrase only — no Oracle prose
+- [ ] Callback article 02 bounce demo; scatter covering/ICP demos mid-article
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Glossary: `Using index` vs `Using index condition` vs `Using MRR`
+- [ ] Before/after EXPLAIN narratives; cross-link 03, 04, 10, 13, 17, 18, 20
 )

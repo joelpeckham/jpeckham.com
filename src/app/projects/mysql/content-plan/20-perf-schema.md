@@ -8,7 +8,19 @@
 | **Tier** | Deep dive (Part B / series capstone) |
 | **Role in arc** | Diagnostic toolkit that closes the series — readers leave able to triage production pain into CPU / IO / lock / index / sort categories and map each finding back to the right earlier article (1–19). |
 | **Published path** | `/posts/mysql-perf-schema/` |
-| **Interactive** | Digest triage board (pick synthetic symptoms → reveal which P_S / `sys` tables light up) *or* annotated incident-timeline scrubber |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet (series capstone).
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article; triage board > mega dashboard. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B capstone — can run longer if every bucket earns it; still skimmable.
 
 ---
 
@@ -95,40 +107,37 @@ Cite the public HTML from published posts. Local research corpus: `sources/mysql
 | `explain` / `explain-output` | https://dev.mysql.com/doc/refman/9.7/en/explain.html | “When EXPLAIN isn’t enough” contrast — don’t re-teach article 10. |
 | `sys-ps-setup-save` / `sys-ps-setup-reload-saved` / `sys-ps-setup-reset-to-default` | (sys schema procedures) | Incident hygiene: snapshot config → enable → restore. |
 
-**Citation rule:** paraphrase + link; never paste Oracle wording into the published post.
+**Citation rule:** paraphrase + `<Cite />` / `<References />`; never paste Oracle wording into the published post.
 
 ---
 
 ## Article structure
 
-Proposed MDX flow (top interactive, then narrative). Capstone energy: one forensic idea per section, always ending in “so in your app / so in Slack…”.
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; capstone energy without a top mega-lab.
 
-1. **Hook** — Slow checkout; EXPLAIN looks fine; Slack has no shared diagnosis language.
-2. **Interactive** — Digest triage board (or incident timeline); invite readers to classify symptoms before the essay.
-3. **When EXPLAIN isn’t enough** — Plan vs population; concurrency; cache; “wrong query being blamed”; ORM string explosion.
-4. **The forensics stack** — Slow query log → digests → waits → locks → (optional) InnoDB instruments. Prefer the left side first.
-5. **Mental model: events, consumers, digests** — spoon-fed: statement events nest stages/waits; digests normalize SQL; `sys` is a view layer.
-6. **Find the hot digests** — `sys.statement_analysis` / `events_statements_summary_by_digest` ordered by total and by avg latency; read sample text.
-7. **Decode the digest columns (literacy core)** — latency vs lock time; examined vs sent; no-index; temp; sort; errors.
-8. **Bucket the pain** — decision tree: scan / sort-temp / lock / IO / long-trx → which article owns the fix.
-9. **Live incident queries** — current statements, processlist, `sys.innodb_lock_waits`, wait classes.
-10. **Staging vs prod-with-care** — what to enable, truncate carefully, restore defaults; don’t leave history_long forever.
-11. **Series capstone checklist** — map findings → articles 1–19.
-12. **Further reading** — linked refman nodes; what this site’s series deliberately deferred.
-
-**Length target:** long-form synthesis (~3–4.5k words) + interactive; denser than mid-series posts because it is the graduation ceremony.
+1. **Series capstone opener** — slow checkout; EXPLAIN fine; need shared diagnosis language.
+2. **When EXPLAIN isn’t enough** — plan vs population; concurrency; wrong query blamed.
+3. **The forensics stack** — slow log → digests → waits → locks.
+4. **Events, consumers, digests** — mental model spoon-fed.
+5. **Find the hot digests** — `sys.statement_analysis`. *(Embed **Digest triage picker** — symptom → bucket.)*
+6. **Decode digest columns** — lock time, examined vs sent, no-index, sort, temp. *(Embed **Fake digest row highlighter**.)*
+7. **Bucket the pain** — decision tree → articles 1–19. *(Embed **Series article router** on each bucket.)*
+8. **Live incident queries** — locks, processlist. *(Embed **Lock wait fixture** when EXPLAIN looked fine.)*
+9. **Staging vs prod-with-care** — consumers, truncate hygiene.
+10. **Series capstone checklist** — map findings → earlier posts.
+11. **References** — IEEE list; what the series deferred.
 
 ---
 
 ## Deep-dive beats
 
-Teach these ideas in order. Each beat should end with “so in your app…”
+Teach these ideas in order. Weave handler implications into prose.
 
 ### Beat A — EXPLAIN is a map; digests are the traffic report
 
 - Article 10 taught planned access paths. Capstone: a good plan can still hurt under load (locks, IO, cardinality skew, wrong endpoint blamed).
 - Slow query log records *instances* that crossed `long_query_time`; digests aggregate *shapes* across literals (`performance-schema-statement-digests`).
-- App implication: ORM logs show thousands of unique strings; digests collapse them to one row you can prioritize by `SUM_TIMER_WAIT`.
+- ORM logs show thousands of unique strings; digests collapse them to one row you can prioritize by `SUM_TIMER_WAIT`.
 
 ### Beat B — The stack you actually use
 
@@ -150,7 +159,7 @@ So in your app: don’t start at InnoDB mutex instruments (`innodb-performance-s
 - `QUERY_SAMPLE_TEXT` / `QUERY_SAMPLE_SEEN` give a concrete statement to EXPLAIN.
 - Truncation / `max_digest_length`: long ORM queries can collide after `...` — mention as a gotcha.
 - Digest table full → special row with `SCHEMA_NAME`/`DIGEST` NULL absorbs leftovers; if that row is huge, raise `performance_schema_digests_size` or truncate/reset after investigation.
-- App implication: always filter `WHERE DIGEST IS NOT NULL` (or equivalent) when ranking “top offenders.”
+- Always filter `WHERE DIGEST IS NOT NULL` (or equivalent) when ranking “top offenders.”
 
 ### Beat D — Column decoder for `events_statements_summary_by_digest`
 
@@ -187,7 +196,7 @@ Decision tree (also powers the interactive):
 - `sys.innodb_lock_waits` — waiting vs blocking query text and ages.
 - `performance_schema.data_lock_waits` joined to `data_locks` — engine lock IDs when `sys` isn’t enough.
 - Transactions current / history — “idle in transaction” from a leaked request-scoped trx (articles 08, 11).
-- App implication: kill/fix at the *blocking* session (often a forgotten admin transaction), not the loud waiting API workers.
+- Kill/fix at the *blocking* session (often a forgotten admin transaction), not the loud waiting API workers.
 
 ### Beat G — Waits when SQL text looks innocent
 
@@ -218,92 +227,36 @@ Decision tree (also powers the interactive):
 
 ## Interactive feature
 
-### Name (primary recommendation)
+Scatter **4–5 small client demos** under `src/components/interactive/mysql-perf-schema/` (shared chrome from `schema-byte-budget/shared.tsx`). Split triage board into embeddable pieces.
 
-**Digest Triage Board**  
-Suggested component path: `src/components/interactive/digest-triage/` (`"use client"`, imported at top of MDX; mirror RAID / explain-explorer patterns).
+### 1. Digest triage picker
 
-### Primary UX (ship this)
+- **Goal:** Pick synthetic symptom → pain bucket (lock / scan / sort / temp / IO / DDL).
+- **Placement:** Find hot digests + bucket sections (§5–7).
 
-1. **Symptom picker** — 4–6 synthetic incidents (cards or a select), each with a one-line web story:
-   - “Checkout p95 up; EXPLAIN looks fine” → **lock waits**
-   - “Admin list suddenly scanning” → **full scan / no index**
-   - “Inbox sort melts CPU” → **filesort / sort counters**
-   - “Export creates disk temps” → **temp tables**
-   - “New replica is mysteriously slow” → **IO / buffer pool cold**
-   - “Deploy migration; writes queue” → **metadata / data locks during DDL**
-2. **Triage reveal** — for the selected symptom, highlight which tables/views/metrics “light up”:
-   - Digest columns (e.g. `SUM_LOCK_TIME`, `SUM_NO_INDEX_USED`, `SUM_SORT_ROWS`, `SUM_CREATED_TMP_DISK_TABLES`)
-   - `sys` views (`innodb_lock_waits`, `statements_with_full_table_scans`, `statements_with_sorting`, `statements_with_temp_tables`, `wait_classes_global_by_latency`, `schema_tables_with_full_table_scans`)
-   - Raw P_S anchors (`events_statements_summary_by_digest`, `data_lock_waits`, `table_io_waits_summary_by_index_usage`)
-3. **Fake digest row** — monospace mini-table of the synthetic summary row with severity tints (green / amber / red) on the columns that diagnose the case.
-4. **Next-step callout** — “Now EXPLAIN the sample” / “Open lock waits” / “Check buffer pool / replica” + link targets to earlier series posts by number.
-5. **No live MySQL** — all fixtures local JSON; do not require a connection.
+### 2. Fake digest row highlighter
 
-### Secondary mode (nice-to-have in same component)
+- **Goal:** Columns that diagnose the case tint red/amber (`SUM_LOCK_TIME`, `SUM_NO_INDEX_USED`, etc.).
+- **Placement:** Decode digest columns (§6).
 
-**Annotated incident timeline scrubber** — horizontal scrubber over a 5–10 minute synthetic incident:
+### 3. Series article router
 
-- T0: deploy / traffic spike marker
-- Digest latency climbs
-- Lock wait rows appear / clear
-- IO wait class spikes on replica promote
-- Annotation tooltips at scrub positions: “here digests would show X; here `innodb_lock_waits` would be non-empty”
+- **Goal:** Bucket → “read article 12” (etc.) with one-line next step.
+- **Placement:** Bucket the pain (§7) and capstone checklist (§10).
 
-Ship triage board first; timeline can be a second tab if scope allows.
+### 4. Lock wait fixture
 
-### Interaction / motion notes
+- **Goal:** “EXPLAIN looked fine” checkout case — `sys.innodb_lock_waits` lights up.
+- **Placement:** Live incident queries (§8).
 
-- Intentional motion: symptom card select → metric chips “ignite”; cross-fade between fake digest rows; brief pulse on the winning pain bucket.
-- One composition: symptom + lit-up metric board + next-step — not a DBA dashboard chrome soup.
-- Keyboard: arrow between symptoms; focusable metric chips with plain-English glossary (our wording).
+### 5. Incident timeline scrubber *(optional v1.1)*
 
-### Data shape (implementation sketch)
+- **Goal:** Annotated 5–10 min synthetic incident — deploy spike, digest climb, lock clears.
+- **Placement:** Optional second tab; ship picker + digest row first.
 
-```ts
-type PainBucket =
-  | "lock"
-  | "full_scan"
-  | "filesort"
-  | "temp_disk"
-  | "io_buffer"
-  | "ddl_meta_lock";
+**Non-goals:** live MySQL; full P_S catalog tour; DBA dashboard chrome.
 
-type MetricLight = {
-  id: string;
-  label: string; // e.g. "SUM_LOCK_TIME"
-  surface: "digest" | "sys" | "ps_raw";
-  tableOrView: string;
-  severity: "red" | "amber" | "green";
-  blurb: string; // our English
-};
-
-type DigestFixture = {
-  digestText: string;
-  schema: string;
-  countStar: number;
-  sumTimerWaitHuman: string;
-  sumLockTimeHuman: string;
-  rowsExamined: number;
-  rowsSent: number;
-  sumNoIndexUsed: number;
-  sumSortRows: number;
-  sumCreatedTmpDiskTables: number;
-  querySampleText: string;
-};
-
-type TriageCase = {
-  id: string;
-  title: string;
-  scenario: string;
-  bucket: PainBucket;
-  lights: MetricLight[];
-  digest: DigestFixture;
-  explainEnough: boolean; // false when the teaching point is "EXPLAIN looked fine"
-  nextArticles: number[]; // e.g. [12, 8, 11]
-  takeaway: string;
-};
-```
+Embed mid-article — not at top.
 
 ---
 
@@ -487,7 +440,7 @@ Closing “series graduation” table. Each row: forensic signal → earlier art
 
 ## Open questions / author notes
 
-1. **Interactive choice:** Prefer **Digest Triage Board** as v1 (clear teaching, fixture-friendly). Timeline scrubber is a strong v1.1 if the board feels thin—or a second tab.
+1. **Interactive scope** — Ship triage picker + digest row + article router as v1; timeline optional tab.
 2. **`sys` vs raw P_S in the post:** Lead with `sys.*` for readability; always show the underlying `performance_schema` table names so readers survive hosts where `sys` is missing/stripped.
 3. **Managed MySQL variance:** RDS/Aurora/Cloud SQL differ in which P_S tables/instruments are available and whether `sys` exists. Add a short “if `sys` is missing…” box with raw digest SQL.
 4. **Don’t re-teach article 10:** One section + links; the new skill is *choosing what to EXPLAIN* and *when EXPLAIN cannot see the pain*.
@@ -501,13 +454,21 @@ Closing “series graduation” table. Each row: forensic signal → earlier art
 12. **ORM brand balance:** Neutral SQL in fixtures; Prisma/Rails/Django as producers of literal soup that digests normalize.
 13. **Legal:** Original teaching prose only; link refman nodes; local `sources/mysql-refman-9.7/` stays gitignored.
 14. **Series glue:** Register slug `mysql-perf-schema` last in hub `seriesList.postSlugs`; hub copy should call this the diagnostic capstone.
-15. **Tone check:** Graduation energy — “you can run an incident without guessing” — not a tour of every `performance_schema` table (there are many).
+15. **Tone check:** Graduation energy — scatter demos mid-article; not at top.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Series capstone opener; scatter triage demos mid-article
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Don’t re-teach article 10 — teach choosing what to EXPLAIN
+- [ ] Capstone checklist maps every bucket → article 1–19
+- [ ] Copy-pasteable `sys.statement_analysis` + digest queries on stock MySQL 8+/9.x
 
 ---
 
 ## Draft success metrics (for later editing)
-
-- A reader can explain why EXPLAIN can look fine while digests show high `SUM_LOCK_TIME`.
 - Interactive makes three buckets (lock / scan / sort) visually distinct without a live database.
 - Top 10 example queries in the post are copy-pasteable on a stock MySQL 8+/9.x with `sys`.
 - Every major pain bucket maps to at least one earlier article number in the closing checklist.

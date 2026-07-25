@@ -10,7 +10,21 @@
 | **Published path** | `/posts/mysql-json/` |
 | **Depends on** | 01 schema/types (JSON escape hatch tease), 03 secondary indexes, 10 EXPLAIN; light callback to 15 covering (multi-valued cannot cover) |
 | **Feeds** | 18 online DDL (adding generated cols / multi-valued indexes is migration cost), 20 perf forensics (JSON rewrite amplification shows up in digests) |
-| **Interactive** | JSON path playground + “can we index this?” advisor |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B — skimmable prose over encyclopedia.
+
+**Article 02 callback:** Article `mysql-primary-keys` already tells the BetterRX JSON/MRN full-table-scan story. **Do not re-tell it as the cold open.** One short callback when teaching “filtering JSON without an index,” then go deeper on generated columns and multi-valued indexes here.
 
 ---
 
@@ -31,6 +45,8 @@ After this article, a reader should be able to:
 ---
 
 ## Real-world hook
+
+Place the prefs/flags/tags escape story in the section on green/red zones or indexing — not as a duplicate of article 02’s BetterRX JSON scan hook. Open with a **forward-looking** product ask (“six months later we need to filter flags”) or callback 02 in one sentence, then teach generated columns / multi-valued indexes.
 
 **Opening scenario — feature flags + sparse user prefs that escaped the schema:**
 
@@ -68,7 +84,7 @@ Concrete teaching scenario for the whole piece: **multi-tenant marketplace + Saa
 
 ## Primary documentation sources
 
-Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md`. Cite public HTML in the published post. **Citation rule:** paraphrase mechanisms; link node URLs; **never paste Oracle manual prose**.
+Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md`. Cite public HTML in the published post. **Citation rule:** paraphrase mechanisms; cite with `<Cite />` / `<References />`; **never paste Oracle manual prose**.
 
 ### Core (must read while drafting)
 
@@ -118,46 +134,21 @@ These appear as Texinfo nodes inside larger HTML pages — still cite the parent
 
 ## Article structure
 
-Spoon-fed progression. Interactive **first**, then essay. Each major section ends with a one-line “app consequence.”
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; no mega advisor at top.
 
-1. **Interactive: JSON Path Playground + Index Advisor** (client demo at top)  
-   Path experiments + “can we index this?” recommendations. App consequence: readers feel path vs indexability before the lecture.
-
-2. **The prefs/flags/tags feature that escaped the schema** — hook; show the three failing product queries; state the promise: flexible storage *with* indexed access paths.
-
-3. **What native `JSON` actually buys you**  
-   Validation on insert; binary format for key/array lookup without reparsing text; size ≈ `LONGBLOB`/`LONGTEXT` order of magnitude; `max_allowed_packet` ceiling; `utf8mb4` / `utf8mb4_bin` comparison semantics. Contrast stuffing JSON into `TEXT`. App consequence: use the type, not a string dump — but don’t confuse “validated blob” with “indexed blob.”
-
-4. **When JSON helps web apps (green zone)**  
-   Feature flag bags, sparse UI prefs, seller-defined facets, webhook/metadata passthrough, evolving A/B experiment payloads. Rule of thumb: **write-heavy shape churn, read-mostly whole document, rare SQL filters.** App consequence: JSON is for *document-shaped product data*, not for your join graph.
-
-5. **When JSON becomes a document-DB antipattern (red zone)**  
-   Money, user ids, statuses, foreign keys, anything in every list `WHERE` / `ORDER BY`, anything needing FK integrity or uniqueness across rows. “Schema-less” that still needs relational queries is the trap. Junction tables vs tag arrays decision. App consequence: if Product filters it weekly, promote it to a column (or indexed extract) *before* the table is huge.
-
-6. **JSON path literacy for app SQL**  
-   `$`, object keys, array indexes, `[*]`; `->` vs `->>` (extract vs unquote); `JSON_EXTRACT` / `JSON_UNQUOTE`; `JSON_VALUE(... RETURNING type)` for typed scalars; existence vs containment (`JSON_CONTAINS_PATH` vs `JSON_CONTAINS`). App consequence: ORMs that stringify paths inconsistently break both correctness and index matching.
-
-7. **Generated columns: VIRTUAL vs STORED**  
-   Syntax; deterministic expression rules; virtual = compute on read / materialize in secondary index leaves when indexed; stored = materialize in clustered row. When to prefer virtual+index vs stored. App consequence: indexing a virtual extract usually beats storing a duplicate scalar *and* indexing it — unless you read the scalar constantly without needing the index.
-
-8. **Indexing a scalar JSON path (three equivalent-ish recipes)**  
-   (A) Explicit generated column + `INDEX`. (B) Functional key part with careful `CAST` + collation. (C) Functional index on `JSON_VALUE(... RETURNING ...)`. Show EXPLAIN proving index use; show the classic `->>` / collation mismatch that silently disables the index. App consequence: the index only helps if the *query expression matches* what you indexed.
-
-9. **Multi-valued indexes for tags arrays**  
-   N:1 index records; `CAST(doc->'$.tags' AS CHAR(32) ARRAY)` (or typed numeric arrays); query with `MEMBER OF` / `JSON_CONTAINS` / `JSON_OVERLAPS`; composite with `org_id`; restrictions (no covering, no range/index-only, empty array → no index entries, unique = value unique across table, creation = `COPY`). When a `listing_tags` junction table is still the better product model. App consequence: “find by tag” can be indexed in MySQL — but it’s not a free Mongo-style secondary index on every path.
-
-10. **Writing JSON without toasting the buffer pool**  
-    Prefer `JSON_SET`/`REPLACE`/`REMOVE` for partial in-place updates when conditions hold; avoid rewriting the whole document on every prefs toggle; mention `JSON_STORAGE_FREE` / binlog `PARTIAL_JSON` lightly. App consequence: an ORM that always `UPDATE prefs = ?` with a full blob pays write amplification forever.
-
-11. **Optional shape enforcement: JSON Schema + CHECK**  
-    `JSON_SCHEMA_VALID` in a `CHECK` constraint for flags/prefs contracts — Draft 4 limits, no `$ref`. App consequence: flexible ≠ untyped chaos; fail writes that break the app contract.
-
-12. **Worked schema: marketplace + SaaS settings** (copy-pasteable)  
-    Bad all-JSON design vs hybrid relational+JSON with generated extracts + multi-valued tags.
-
-13. **Tie-back checklist** + preview Art. 18 (adding these indexes/columns in production is a migration) and callback to Art. 03/10 (same EXPLAIN literacy).
-
-Target length: **deep-dive essay** — longer than Foundations pieces; still spoon-fed. Roughly one interactive + ~10–12 H2s.
+1. **Part B opener + what today covers** — flexible attrs without abandoning relational indexing; brief callback to 02 if JSON scan story helps.
+2. **The prefs/flags/tags feature that escaped the schema** — three failing product queries.
+3. **What native JSON buys you** — validation; not indexed directly.
+4. **Green zone vs red zone** — when JSON helps vs document-DB antipattern.
+5. **JSON path literacy** — `->` vs `->>`. *(Embed **Path playground**.)*
+6. **Generated columns: VIRTUAL vs STORED**
+7. **Indexing a scalar path** — generated / functional / `JSON_VALUE`. *(Embed **Index advisor badge** + **Collation trap**.)*
+8. **Multi-valued indexes for tags** — `MEMBER OF` / `CONTAINS` / `OVERLAPS`. *(Embed **Multi-valued tags demo**.)*
+9. **Partial updates vs whole-document rewrite** — `JSON_SET`. *(Embed **Partial vs full rewrite** meter.)*
+10. **Optional JSON Schema + CHECK**
+11. **Worked hybrid schema**
+12. **Tie-back checklist** + preview 18.
+13. **References** — IEEE list.
 
 ---
 
@@ -201,72 +192,35 @@ Mechanisms and pitfalls that keep this from being “just use JSON”:
 
 ## Interactive feature
 
-### Name
+Scatter **4–5 small demos** under `src/components/interactive/mysql-json/` (shared chrome from `schema-byte-budget/shared.tsx`). Split path playground and advisor.
 
-**JSON Path Playground + Index Advisor** (working title)  
-Path: `src/components/interactive/mysql-json-index-advisor/`  
-Import at top of `src/app/posts/mysql-json/page.mdx`, same pattern as RAID / neural-net / 8-puzzle:
+### 1. Path playground
 
-```mdx
-import { MysqlJsonIndexAdvisor } from "@/components/interactive/mysql-json-index-advisor";
+- **Goal:** Live `->` / `->>` on sample `prefs` / `flags` / `listing.attrs` JSON; highlight matched subtree.
+- **Placement:** JSON path literacy (§5).
 
-<MysqlJsonIndexAdvisor />
-```
+### 2. Index advisor badge
 
-### UI concept
+- **Goal:** Given path + query intent → promote-to-column / generated index / multi-valued / don’t filter in SQL.
+- **Placement:** Scalar indexing (§7) and multi-valued intro (§8).
+- **UX:** Recommendation badge + mock mini-EXPLAIN (`ALL` vs `ref`); label illustrative.
 
-One composition, two cooperating panels (not a dashboard of cards):
+### 3. Collation trap
 
-1. **Path playground (left / top)**  
-   - Editable sample JSON document (presets: `user.prefs`, `org.flags`, `listing.attrs` with `tags` array).  
-   - Path input (`$.theme`, `$.flags.billing_v2`, `$.tags`, `$.tags[*]`, invalid path).  
-   - Live result of conceptual `->` / `->>` / typed scalar (show extracted JSON vs unquoted scalar vs “missing”).  
-   - Tiny path cheat-sheet that highlights the matched subtree in the document.
+- **Goal:** `->>` functional index ignored unless `CAST … COLLATE utf8mb4_bin` matches query — #1 EXPLAIN footgun.
+- **Placement:** Indexing scalar path (§7).
 
-2. **“Can we index this?” advisor (right / bottom)**  
-   - User picks a **query intent** (or the advisor infers from path + sample):
-     - Equality on scalar path (`prefs.theme = 'dark'`)
-     - Boolean / numeric flag (`flags.billing_v2 = true`)
-     - Membership in array (`'oak' MEMBER OF tags`)
-     - Contains-all / overlaps (`JSON_CONTAINS` / `JSON_OVERLAPS`)
-     - Whole-document fetch only (no SQL filter)
-   - Advisor outputs a **recommendation badge**:
-     - **Promote to column** — high-frequency filter / join / FK-ish
-     - **Generated column + secondary index** (show suggested `VIRTUAL` DDL)
-     - **Functional index via `JSON_VALUE` / `CAST…COLLATE`** (show DDL + matching `WHERE`)
-     - **Multi-valued index** (`CAST(... AS … ARRAY)`) + correct predicate family
-     - **Do not index / don’t filter in SQL** — fetch by PK/tenant and filter in app, or keep unindexed
-   - Shows a mock mini-`EXPLAIN` outcome: `type: ALL` vs `ref`/`range` with a cartoon key name.
-   - Warnings for known traps: collation mismatch, empty array, unique-on-tags, “this path is an object not a scalar,” “multi-valued can’t cover.”
+### 4. Multi-valued tags
 
-### Controls
+- **Goal:** `'oak' MEMBER OF (attrs->'$.tags')` with `CAST(… AS … ARRAY)` sketch; empty-array warning.
+- **Placement:** Multi-valued section (§8).
 
-| Control | Effect |
-| --- | --- |
-| Document preset | Swap prefs / flags / listing+tags samples |
-| Path string | Recompute extract + advisor |
-| `->` vs `->>` toggle | Show quoted JSON string vs unquoted scalar |
-| Query template select | Equality / MEMBER OF / CONTAINS / OVERLAPS / none |
-| “Hot filter?” toggle | If on, bias advisor toward promote-to-column |
-| Array cardinality slider | For tags: show write-amplification hint (N index entries/row) |
+### 5. Partial vs full rewrite
 
-### User actions → insight
+- **Goal:** `JSON_SET` one key vs whole-document `UPDATE` — qualitative write-amp bar.
+- **Placement:** Partial updates (§9).
 
-1. Load **listing.attrs** with `tags: ["oak","handmade"]`, path `$.tags`, query `MEMBER OF` → advisor recommends **multi-valued index** + shows `CAST(... AS CHAR(32) ARRAY)` sketch and warns about empty arrays.  
-2. Path `$.tags[0]` + equality → advisor says “scalar extract / generated column,” *not* multi-valued — teaches path shape matters.  
-3. Path `$.theme` on prefs + equality → generated/`JSON_VALUE` index; flip “Hot filter?” → **promote to column**.  
-4. Path `$.nested.object` (non-scalar) → “cannot index this path as a scalar; reshape or relationalize.”  
-5. Show functional index with `->>` without `CAST`/`COLLATE` → red trap callout: “index built but queries won’t match.”  
-6. Whole-document “load my prefs by user_id” → green: **no JSON index needed**; index `user_id` only.
-
-Insight produced: **JSON flexibility and indexability are separate design choices.** Readers leave knowing which lever (column / generated / multi-valued / don’t filter in SQL) matches their access pattern.
-
-### Mapping to site patterns
-
-- Client component, self-contained state, no backend.  
-- Presets + scrubbing like neural-net controls.  
-- Advisor copy should be terse and opinionated (series voice), with links into essay anchors (`#multi-valued`, `#generated-columns`, `#antipatterns`).  
-- Label mock EXPLAIN as educational, not a substitute for Art. 10 on real servers.
+**Non-goals:** live MySQL; full JSON Schema editor.
 
 ---
 
@@ -476,10 +430,19 @@ Close the essay by stating: **JSON is a typed document column inside a relationa
 - **Tags: multi-valued vs junction:** Give a clear heuristic in the post (simple scalar tags + membership queries → multi-valued; tag metadata / graph / FK to `tags` table → junction). Don’t pretend one wins forever.
 - **Charset for multi-valued string arrays:** Manual restricts multi-valued string indexes to `binary`/`binary` or `utf8mb4`/`utf8mb4_0900_as_cs`. Confirm example collations against 9.7 defaults when drafting so snippets don’t fail on create; case-sensitivity of tags is a product decision — call it out.
 - **Prisma / Rails / Django expression support:** Verify what each primary ORM can declare natively for generated columns and functional/multi-valued indexes; plan “raw SQL migration” snippets where ORMs lag. Pick one primary ORM for examples + one contrast sentence.
-- **Interactive fidelity:** Advisor should not claim to run a real optimizer — label mock EXPLAIN. Path evaluator can be a small in-browser JSON pointer/path subset (document supported path syntax).
+- **Interactive fidelity:** Advisor mock EXPLAIN only; path evaluator is client-side subset. Scatter embeds — no top mega-lab.
+- **Article 02 callback:** One sentence link to BetterRX JSON/MRN scan in indexing section; don’t duplicate as cold open.
 - **Partial update + binlog:** Keep `binlog_row_value_options=PARTIAL_JSON` as a short ops callout, not a replication essay (Art. 19).
 - **JSON Schema Draft 4 limits:** Mention no `$ref` / external resources so readers don’t paste modern Draft 2020-12 schemas expecting success.
 - **Duality views:** One-sentence “exists for Document Store / REST-ish duality; not this article” to avoid rabbit holes.
 - **Series glue:** Hub `/projects/mysql/` + post `/posts/mysql-json/`; ensure `seriesList.postSlugs` eventually includes `mysql-json` as #17. Cross-link Art. 01 (JSON escape hatch), 03 (secondary indexes), 10 (EXPLAIN), 15 (covering contrast), 18 (DDL).
-- **License/citation:** Paraphrase only; never paste Oracle refman prose into the MDX. Link node URLs from the tables above.
+- **License/citation:** Paraphrase only; `<Cite />` / `<References />`; never paste Oracle refman prose into the MDX.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Callback article 02 JSON story once; don’t re-tell as cold open
+- [ ] Scatter JSON demos mid-article; humanizer pass; first-person voice
+- [ ] `<Cite />` / `<References />`; multi-valued `COPY` DDL warning → 18
 - **Scope guardrails:** Do not deep-dive buffer pool (13), MVCC (11), or online DDL algorithms (18) beyond the JSON-specific migration warning.

@@ -10,7 +10,19 @@
 | **Post** | `/posts/mysql-isolation/` |
 | **Depends on** | 08 — Transactions & ACID (`mysql-transactions`) |
 | **Feeds into** | 11 — MVCC (`mysql-mvcc`); 12 — Locks (`mysql-locks`) |
-| **Interactive** | Two-session race visualizer (isolation toggle → what each session sees) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -32,6 +44,8 @@ After reading, a developer should be able to:
 ---
 
 ## Real-world hook
+
+Place the inventory double-check race in the anomaly / RR sections — Postgres contrast early if it helps readers feel seen.
 
 **Opening scenario — inventory double-check during checkout**
 
@@ -65,7 +79,7 @@ Postgres defaults to `READ COMMITTED`. Rails / Prisma / Django apps ported onto 
 
 ## Primary documentation sources
 
-Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTML in the published post.
+Cite with `<Cite />` / `<References />`. Local nodes under `sources/mysql-refman-9.7/nodes/`.
 
 | Node id | Public URL | Use in article |
 | --- | --- | --- |
@@ -90,19 +104,20 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTM
 
 ## Article structure
 
-Suggested MDX flow (interactive at top, per series pattern):
+Suggested MDX flow — sentence-case H2s. Scatter **named mini-demos** mid-article; no mega race board at the top.
 
-1. **Interactive** — Two-session race visualizer (see below).
+1. **Series beat + bridge from 08** — isolation is the dial on *I*; you already have BEGIN/COMMIT.
 2. **Hook** — Checkout / inventory race; “what does the other request see?”
-3. **Bridge from 08** — You already have `BEGIN`/`COMMIT`/autocommit; isolation is the dial on *I*.
-4. **The four levels (web-app tour)** — RU → RC → RR → Serializable, default called out hard.
-5. **Anomaly catalog** — Dirty / non-repeatable / phantom with HTTP-request metaphors + which levels allow them.
-6. **How InnoDB RR actually behaves** — Consistent-read snapshot; first `SELECT` pins; DML visibility surprise; don’t mix locking + nonlocking blindly.
-7. **Setting the dial** — `SET TRANSACTION`, scopes, checking `@@transaction_isolation`, ORM notes.
-8. **When teams switch to READ COMMITTED** — motivations, tradeoffs, binlog note.
-9. **SERIALIZABLE & locking reads** — when to escalate vs when `SELECT … FOR UPDATE` is the real tool.
-10. **App patterns / checklist** — short request txns; pick level deliberately; forward links to 11 & 12.
-11. **Further reading** — refman links.
+3. **The four levels (web-app tour)** — RU → RC → RR → Serializable; default RR called out hard.
+4. **Anomaly catalog** — dirty / non-repeatable / phantom with HTTP metaphors. *(Embed **Dirty read (RU)** mini-demo here — optional, footnote mode OK.)*
+5. **How InnoDB RR actually behaves** — consistent-read snapshot; first `SELECT` pins. *(Embed **Snapshot pin stepper** — RR script here.)*
+6. **READ COMMITTED contrast** — fresh snapshot per read. *(Embed **RC fresh read** — same script, RC selected — here or adjacent to #5.)*
+7. **DML vs SELECT gotcha** — COUNT vs DELETE surprise. *(Embed **DML vs SELECT gotcha** here.)*
+8. **Setting the dial** — `SET TRANSACTION`, scopes, pool sticky-session hazard.
+9. **When teams switch to READ COMMITTED** — motivations, tradeoffs.
+10. **SERIALIZABLE & locking reads** — tease `FOR UPDATE` → 12.
+11. **App patterns / checklist** — short txns; forward links to 11 & 12.
+12. **References** — IEEE list.
 
 Tone: spoon-fed, concrete, no academic isolation-proof digression. Prefer timelines (Session A / Session B) over theory tables alone — then summarize with a table.
 
@@ -242,68 +257,40 @@ One short paragraph near the end: “If you only remember one split: **09 = what
 
 ## Interactive feature
 
-### Name
+**Folder:** `src/components/interactive/mysql-isolation-race/` (shared chrome from `schema-byte-budget/shared.tsx`).
 
-**Two-Session Race Visualizer**  
-Suggested component path: `src/components/interactive/mysql-isolation-race/` (client component, imported at top of MDX — same pattern as RAID / neural-net / 8-puzzle).
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Pure client simulation — no live MySQL. Split the old single mega visualizer into **focused embeds** sharing one visibility engine + unit tests.
 
-### Goal
+### 1. Snapshot pin stepper (RR)
 
-Let the reader *toggle isolation* and step a fixed race script; the UI shows what Session A’s result set is after each step so the anomaly becomes visceral.
+- **Goal:** Classic A/B timeline — first `SELECT` pins; second `SELECT` ignores B’s commit until A commits.
+- **Placement:** Section 5 (InnoDB RR behavior).
+- **UX:** Two-column Session A | B; stepper; isolation fixed to RR; status chip “Snapshot pinned @ t0”.
 
-### UX sketch
+### 2. RC fresh read
 
-- **Top controls:** Isolation select — `READ UNCOMMITTED` | `READ COMMITTED` | `REPEATABLE READ` | `SERIALIZABLE` (default selected: `REPEATABLE READ`).  
-- **Scenario picker (tabs or select):**  
-  1. **Dirty / commit-or-rollback** — B updates then commits *or* rolls back; A reads in between.  
-  2. **Non-repeatable** — A reads, B commits update, A reads again.  
-  3. **Phantom** — A range-reads, B inserts into range and commits, A range-reads again.  
-- **Two columns:** Session A | Session B, each with a mini statement log and a “result table” pane.  
-- **Stepper:** Prev / Next / Reset (RAID-like phased workflow). Optional autoplay.  
-- **Status chips:** “Snapshot pinned @ t0”, “Fresh snapshot”, “Dirty read”, “Blocked waiting for lock” (SERIALIZABLE / locking cases — keep lock blocking *light*; no full lock table UI).  
-- **Caption under the board:** one sentence explaining the current step under the selected level.
+- **Goal:** Same script as #1 with RC — second `SELECT` sees B’s commit.
+- **Placement:** Section 6 (RC contrast) — can be same component with isolation toggle if embed count must stay low.
+- **UX:** Toggle RC vs RR on identical steps; A’s result pane updates instantly.
 
-### Teaching scripts (implement as data, not hard-coded JSX)
+### 3. Phantom range read
 
-**Script NRR — non-repeatable / snapshot**
+- **Goal:** Plain `SELECT` list grows under RC, stays pinned under RR snapshot.
+- **Placement:** Section 4 (phantom anomaly) or section 5.
+- **UX:** Range query on `orders WHERE status='open'`; B inserts + commits between A’s reads.
 
-| Step | A | B | RR expected | RC expected |
-| --- | --- | --- | --- | --- |
-| 0 | `START TRANSACTION` | — | — | — |
-| 1 | `SELECT qty FROM items WHERE id=1` → `5` | — | snapshot @ t1 | snapshot @ t1 |
-| 2 | — | `UPDATE items SET qty=4 WHERE id=1; COMMIT` | committed in DB | committed |
-| 3 | `SELECT qty …` | — | still `5` | `4` |
-| 4 | `COMMIT` | — | — | — |
-| 5 | `SELECT qty …` | — | `4` | `4` |
+### 4. DML vs SELECT gotcha
 
-**Script PH — phantom (plain SELECTs)**
+- **Goal:** `SELECT COUNT(*)` says 0 while `DELETE` still removes B’s newly committed row.
+- **Placement:** Section 7 (DML vs SELECT).
+- **UX:** Stepped script with COUNT → B commits → DELETE → subsequent SELECT in A.
 
-| Step | A | B | RR | RC |
-| --- | --- | --- | --- | --- |
-| 1 | `SELECT id FROM orders WHERE status='open'` → `(1)` | — | snap | snap |
-| 2 | — | `INSERT` open order `2`; `COMMIT` | — | — |
-| 3 | same `SELECT` | — | still `(1)` | `(1),(2)` |
+### 5. Dirty read (RU) — optional, cut if scope tight
 
-**Script DR — dirty (RU vs others)**
+- **Goal:** Show why RU is not for request handlers.
+- **Placement:** Section 4 (dirty read) as footnote mode.
 
-| Step | A | B | RU | RC/RR |
-| --- | --- | --- | --- | --- |
-| 1 | `START TRANSACTION`; `SELECT price` → `20` | `START TRANSACTION`; `UPDATE price=1` (uncommitted) | A may see `1` | A still `20` |
-| 2 | — | `ROLLBACK` | A’s dirty value vanishes on next rules; emphasize RU danger | — |
-
-**SERIALIZABLE flavor:** for the NRR script, show A’s second plain `SELECT` as taking `FOR SHARE` semantics (may block until B ends) when A has an open txn — simplified, with a “blocked” state rather than full lock graph.
-
-### Implementation notes
-
-- Pure client simulation with a tiny in-memory table + scripted commits; **no live MySQL**.  
-- Encode expected visibility per `(scenario, level, step)` so toggling isolation on the same step instantly rewrites A’s result pane.  
-- Keep visual language consistent with site interactives (ink borders, mono logs, clear step hints) without inventing a new design system.  
-- Accessibility: keyboard stepper, live region announcing “Session A now sees qty=5”.  
-- Tests: unit-test the pure visibility function (scenario × level × step → rows), same spirit as `raid.test.ts` / puzzle search tests.
-
-### Success criterion
-
-A reader who only plays with the widget should correctly predict RR vs RC on the inventory double-`SELECT` before reading Beat 4.
+**Implementation notes:** Encode visibility as `(scenario, level, step) → rows`; keyboard stepper; live region for a11y.
 
 ---
 
@@ -418,17 +405,17 @@ Reader / author verification before publishing:
 - [ ] Documents how to set isolation at **next / session / global** and the **pool sticky-session** hazard.  
 - [ ] Explains **why teams adopt READ COMMITTED** (contention, deadlock reduction, fresher reads) and tradeoffs (anomalies, row binlog).  
 - [ ] Mentions SERIALIZABLE + `FOR SHARE` conversion without recommending it as a CRUD default.  
-- [ ] Interactive demonstrates at least RR vs RC on the same race.  
+- [ ] Scattered mini-demos demonstrate RR vs RC on the same race (snapshot pin minimum)  
 - [ ] Explicit **forward links**: MVCC/undo → article 11; gap/next-key/deadlocks/`FOR UPDATE` inventory → article 12.  
 - [ ] Does **not** explain undo history list growth or lock wait graphs in depth.  
-- [ ] Cites primary nodes with public 9.7 URLs.  
+- [ ] Cites primary nodes via `<Cite />` / `<References />`  
 - [ ] Ends with actionable app rules: short txns, read-once or lock, don’t hold snapshots across slow I/O.
 
 ---
 
 ## Open questions / author notes
 
-1. **Interactive SERIALIZABLE fidelity** — Full blocking simulation may be confusing. Prefer a simplified “blocked until B commits” state for one script; link to article 12 for real lock waits. Confirm in implementation whether RU dirty reads are worth a third scenario tab or a footnote mode.  
+1. **Interactive SERIALIZABLE fidelity** — Full blocking simulation may be confusing. Prefer simplified “blocked until B commits” in snapshot stepper only; link to article 12. RU dirty reads: optional 5th mini-demo or footnote — don’t require one top mega-board with all scenarios.  
 2. **ORM API accuracy** — When drafting the post, verify current Rails / Prisma / Django isolation APIs rather than relying on memory; keep that subsection short.  
 3. **MySQL vs Postgres phantom story** — Postgres RR is not identical to InnoDB RR. One careful callout box is enough; do not derail into a cross-engine thesis.  
 4. **Article 08 handoff** — Ensure 08 only *names* isolation and points here; 09 should not re-teach `COMMIT`/`ROLLBACK`/`autocommit` except one bridge paragraph.  
@@ -438,6 +425,15 @@ Reader / author verification before publishing:
 8. **Live demo vs simulation** — Site pattern is client simulation (RAID etc.). Stay simulated; optionally later add a “paste this in two terminals” appendix (already in Example queries).  
 9. **Default recommendation voice** — Prefer “know your default; choose deliberately” over “everyone should switch to RC.” Many MySQL fleets stay on RR successfully with short transactions + locking reads.  
 10. **Scope creep watch** — Semi-consistent read and gap locks are *motivations* for RC, not a license to paste lock matrices into 09.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Replace stub MDX; scatter 3–5 mini-demos mid-article (snapshot pin + RC contrast minimum)
+- [ ] Humanizer pass; first-person voice; `<Cite />` + `<References />`
+- [ ] Bridge from 08 without re-teaching COMMIT/autocommit
+- [ ] Forward links to 11 (MVCC) and 12 (locks); no undo/deadlock deep dives
 
 ---
 
@@ -452,6 +448,6 @@ tier: Foundations
 description: >
   What concurrent HTTP handlers actually see under MySQL isolation levels —
   RR vs RC, dirty/non-repeatable/phantom races, and when teams switch defaults.
-interactive: mysql-isolation-race
+interactive: scattered mini-demos (snapshot-pin, rc-contrast, phantom, dml-vs-select)
 ```
 )

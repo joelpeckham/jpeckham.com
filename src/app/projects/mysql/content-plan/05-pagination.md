@@ -8,7 +8,19 @@
 | **Tier** | Foundations (Part A) |
 | **Series position** | After SELECT/filtering (04); before JOINs (06). Depends on secondary indexes (03) and PK/clustered index (02). |
 | **Published path** | `/posts/mysql-pagination/` |
-| **Interactive** | Yes — top-of-post scrubber comparing offset vs keyset cost |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -29,6 +41,8 @@ The reader should leave able to:
 ---
 
 ## Real-world hook
+
+Place the page-1 vs page-500 feed story in the section where OFFSET cost lands — not forced as a cold open unless it’s the best hook.
 
 **Scenario:** A product feed / activity timeline / admin “Users” table.
 
@@ -57,7 +71,7 @@ prisma.post.findMany({
 
 ## Primary documentation sources
 
-Cite public HTML from published posts. Local research corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored; do not paste Oracle text into MDX).
+Cite with `<Cite />` / `<References />`. Local research corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored; do not paste Oracle text into MDX).
 
 ### Core (must cite in article)
 
@@ -86,26 +100,27 @@ Readers see `Using filesort` in EXPLAIN and assume disk I/O. Clarify: filesort i
 
 ## Article structure
 
-Suggested H2/H3 outline for the published MDX (interactive at top, per series convention).
+Suggested H2 outline — sentence-case, conversational. Scatter **named mini-demos** mid-article; no mega-scrubber at the top.
 
-1. **Hook** — page 1 vs page 500; ORM `skip`/`offset` trap  
-2. **What `ORDER BY` + `LIMIT` actually promise** — syntax; result order is only as deterministic as the sort key  
-3. **Index-ordered scan vs filesort** — when MySQL can walk an index; when it cannot; `SELECT *` vs narrow projection tradeoff  
-4. **Why OFFSET pagination costs `offset + limit`** — discard semantics; deep pages; crawlers  
-5. **Keyset / seek pagination** — `(sort_cols, id)` cursor; `WHERE` predicate form; stable ties  
-6. **Indexes that make keyset fly** — composite left-prefix; `DESC` indexes for “newest first”  
-7. **API shapes** — page numbers vs cursors vs infinite scroll; total counts; `SQL_CALC_FOUND_ROWS` caution  
-8. **Failure modes** — duplicates/skips under concurrent writes; unstable sort; ORM gotchas  
-9. **Checklist** — when to keep OFFSET, when to migrate  
-10. **Prev/next** — series links to 04 and 06  
+1. **Series beat + what today covers** — why `ORDER BY … LIMIT offset, n` dies on deep pages; bridge from 03/04 index alignment.
+2. **Hook** — page 1 vs page 500; ORM `skip`/`offset` trap.
+3. **What `ORDER BY` + `LIMIT` actually promise** — syntax; deterministic sort keys need a tie-breaker.
+4. **Index-ordered scan vs filesort** — when MySQL can walk an index; `Using filesort` in Extra. *(Embed **Filesort vs index-ordered** toggle here.)*
+5. **Why OFFSET pagination costs `offset + limit`** — discard semantics; crawlers. *(Embed **Offset vs keyset cost scrubber** here.)*
+6. **Keyset / seek pagination** — `(sort_cols, id)` cursor; stable ties. *(Embed **Unstable sort ties** demo here.)*
+7. **Indexes that make keyset fly** — composite left-prefix; `DESC` indexes. *(Optional **Feed index builder** preset — show `(status, created_at, id)`.)*
+8. **API shapes** — page numbers vs cursors vs infinite scroll; total counts; `SQL_CALC_FOUND_ROWS` caution.
+9. **Failure modes** — duplicates/skips under concurrent writes; ORM gotchas.
+10. **Tie-back checklist** — when to keep OFFSET, when to migrate.
+11. **References** — IEEE list; bridge to 06 (joins + pagination).
 
-Target length: medium-long Foundations post (~2.5–4k words of teaching prose + demos/queries), denser on mechanisms than API fashion.
+Target length: ~10 minutes skim; denser only on keyset SQL and index alignment.
 
 ---
 
 ## Deep-dive beats
 
-Teach these mechanisms in order; each beat should end with a web-app takeaway.
+Teach these mechanisms in order; weave web-app takeaways into the prose (no “App consequence:” stamps).
 
 ### Beat 1 — Deterministic sort keys
 
@@ -218,46 +233,35 @@ Short aside from `limit-optimization`: with `LIMIT`, optimizer may prefer an ord
 
 ## Interactive feature
 
-**Name (working):** `OffsetVsKeysetScrubber`  
-**Location:** `src/components/interactive/mysql-pagination/` (or `offset-vs-keyset/`)  
-**Placement:** imported at top of MDX, same pattern as RAID / neural-net / 8-puzzle.
+**Folder:** `src/components/interactive/mysql-pagination/` (shared chrome from `schema-byte-budget/shared.tsx` as needed).
 
-### Pedagogical goal
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Client-only; label cost model as illustrative (≠ benchmark).
 
-Make the asymptotic difference *felt*: scrubbing toward deep pages grows offset work linearly; keyset work stays flat.
+### 1. Offset vs keyset cost scrubber
 
-### UI (site-like demo, one composition)
+- **Goal:** Make asymptotic difference felt — offset work grows linearly; keyset stays ~flat.
+- **Placement:** Section 5 (OFFSET discard semantics).
+- **UX:** Row strip + page/offset scrubber; side-by-side lanes for offset (growing skip region) vs keyset (seek + short scan). Live counters: `rows examined ≈ offset + limit` vs `≈ limit`.
 
-Not a dashboard of charts — one visual plane:
+### 2. Filesort vs index-ordered
 
-1. **Strip of rows** (virtualized or sampled) representing an ordered index / result stream (~10k–100k conceptual rows; render a window + density).
-2. **Scrubber / slider:** “Page” or “Offset depth” from shallow → deep (e.g. page 1 … page 500, pageSize fixed at 20).
-3. **Two lanes side-by-side** (or toggled overlay with clear labels):
-   - **Offset:** highlight “skipped” region growing left of the window + “returned” window of pageSize.
-   - **Keyset:** highlight a seek point + short forward scan of pageSize only.
-4. **Live counters** (monospace, secondary to the visual — not a stat strip in the hero sense; part of the interactive control surface):
-   - Offset: `rows examined ≈ offset + limit`
-   - Keyset: `rows examined ≈ limit` (plus tiny seek cost constant)
-   - Optional faux latency bar scaled from examined rows
-5. **Mode toggle:** “Index-ordered” vs “Filesort first” — in filesort mode, show a pre-pass over all matching rows before either strategy returns a page (teaches that keyset still needs the right index).
+- **Goal:** Teach that fixing filesort helps page 1 but doesn’t fix deep OFFSET alone.
+- **Placement:** Section 4 (index-ordered scan vs filesort).
+- **UX:** Toggle “index-ordered” vs “filesort first”; show pre-pass over matching rows before either strategy returns a page.
 
-### Interaction details
+### 3. Unstable sort ties
 
-- Scrubber is the primary control (pointer + keyboard).
-- Optional inputs: `pageSize` (10/20/50), total matching rows (1k / 10k / 100k).
-- Caption under demo: “Same `LIMIT 20`. Different work.”
-- Keep motion intentional: animate skip-region growth; seek “jump” on keyset when scrubbing.
+- **Goal:** Show duplicates/skips when `ORDER BY created_at` lacks unique tie-breaker.
+- **Placement:** Section 6 (keyset / stable cursors).
+- **UX:** Two pages of toy rows with tied timestamps; flip between bad vs `ORDER BY created_at DESC, id DESC`.
 
-### Implementation notes
+### 4. Feed index preset (optional)
 
-- Client component; pure math model — no real MySQL.
-- Cost model can be simple: `offsetCost = offset + limit`, `keysetCost = limit` (+ constant), optionally multiply by `lookupFactor` when simulating non-covering index.
-- Unit-test the cost functions (mirror `raid.test.ts` / puzzle search tests).
-- A11y: slider labeled; counters in live region.
+- **Goal:** Connect `(status, created_at, id)` composite to feed + keyset shape.
+- **Placement:** Section 7 (indexes for keyset).
+- **UX:** Static or lightly interactive index diagram aligned to the article’s `posts` schema.
 
-### Copy tie-in
-
-First paragraph under the demo should restate what the scrubber showed before diving into SQL.
+**Implementation notes:** Pure client math; unit-test cost functions; a11y on scrubber; cap conceptual N at 100k.
 
 ---
 
@@ -383,7 +387,8 @@ Reader / author verification before shipping the post:
 - [ ] Covered infinite-scroll cursor token shape (opaque, stable, `nextCursor`).
 - [ ] Called out nondeterministic ties when `ORDER BY` is incomplete.
 - [ ] Noted when OFFSET is still fine (small admin tables, true page-number UX, rare deep links).
-- [ ] Interactive scrubber ships at top; cost model matches the prose.
+- [ ] Scattered mini-demos mid-article (offset scrubber, filesort toggle, tie-breaker at minimum)
+- [ ] Humanizer pass; first-person voice; `<Cite />` + `<References />`
 - [ ] Forward-links: indexes (03), SELECT (04), EXPLAIN (10); no orphaned jargon.
 - [ ] No verbatim Oracle manual text in MDX; original teaching voice only.
 - [ ] ORM section mentions `skip`/`offset` defaults and how to express keyset in raw SQL / cursor APIs.
@@ -400,7 +405,7 @@ Reader / author verification before shipping the post:
 
 4. **Concurrent writes during scroll:** How much isolation detail? Recommendation: one short “new rows show up on refresh, not mid-cursor” paragraph; point to 09/11 for phantoms/MVCC. Don’t promise perfect snapshot pagination without `REPEATABLE READ` transaction spanning pages (usually wrong for APIs anyway).
 
-5. **Interactive scale:** Cap conceptual N at 100k so the scrubber stays smooth; label it as a model, not a benchmark.
+5. **Interactive scale:** Cap conceptual N at 100k; label as model; scatter demos — don’t merge into one top mega-scrubber.
 
 6. **Prisma / Drizzle / SQLAlchemy examples:** Pick one primary ORM for snippets (site audience lean?) + one raw SQL. Avoid boiling the ocean of client libraries.
 
@@ -414,6 +419,15 @@ Reader / author verification before shipping the post:
 
 ---
 
+## Drafting checklist (when writing the post)
+
+- [ ] Replace stub MDX; scatter 3–4 mini-demos mid-article
+- [ ] Humanizer pass; first-person voice; `<Cite />` + `<References />`
+- [ ] Prisma-primary ORM snippets; keyset SQL with unique tie-breaker
+- [ ] Cross-link 03, 04, 06, 10; defer full EXPLAIN depth
+
+---
+
 ## Draft metadata (for frontmatter when publishing)
 
 ```yaml
@@ -421,5 +435,5 @@ title: "Sorting, LIMIT & Pagination"
 description: "Why OFFSET pagination dies on deep pages, how ORDER BY uses indexes or filesort, and how keyset cursors keep infinite-scroll APIs fast."
 series: mysql
 order: 5
-# interactive: OffsetVsKeysetScrubber
+# interactive: scattered mini-demos (offset-scrubber, filesort-toggle, tie-breaker)
 ```

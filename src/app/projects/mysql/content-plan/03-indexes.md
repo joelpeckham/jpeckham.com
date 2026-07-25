@@ -10,6 +10,19 @@
 | **Published path** | `/posts/mysql-indexes/` |
 | **Depends on** | 01 schema/types, 02 primary keys & clustered index |
 | **Feeds** | 04 SELECT/filtering, 05 pagination, 10 EXPLAIN, **15 covering indexes** (tease only) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -30,6 +43,8 @@ After this article, a reader should be able to:
 ---
 
 ## Real-world hook
+
+Place the inbox/list story in the section where composite indexes land — not forced as a cold open unless it’s the best hook.
 
 **Opening scenario — tenant inbox / admin list API:**
 
@@ -93,44 +108,29 @@ Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md`. Cite public HTML in the 
 - Fulltext / spatial / multi-valued JSON indexes → later articles (17+)
 - Online DDL cost of `ADD INDEX` → **article 18** (one-line mention: adding indexes isn’t free in production)
 
-**Citation rule:** paraphrase mechanisms; link node URLs; **never paste Oracle manual prose**.
+**Citation rule:** paraphrase mechanisms; cite with `<Cite />` / `<References />`; **never paste Oracle manual prose**.
 
 ---
 
 ## Article structure
 
-Suggested H2/H3 progression for `page.mdx`. Interactive component imports **first**, matching RAID / neural-net / 8-puzzle.
+Suggested H2 spine for `page.mdx` — sentence-case, conversational. Scatter **named mini-demos** mid-article (see Interactive feature); no mega-lab at the top.
 
-1. **Interactive: Composite Index Prefix Matcher** (client demo at top)
-2. **The list endpoint that got slow** — hook; show the ORM SQL; state the promise of the article
-3. **Refresh: clustered vs secondary** (tight callback to 02)
-   - Secondary leaf = indexed columns + PK columns
-   - Lookup path: secondary B-tree → PK → clustered row
-   - Short PK ⇒ cheaper secondaries
-4. **What a B-tree secondary index is good for**
-   - Equality, ranges, `IN`, `BETWEEN`, `IS NULL`
-   - `LIKE 'foo%'` yes; `LIKE '%foo'` no (from B-tree characteristics)
-   - Sorting/grouping on a leftmost prefix (preview of article 05)
-5. **Composite indexes & the leftmost-prefix rule** *(heart of the article)*
-   - Sorted concatenation mental model
-   - Works: `(a)`, `(a,b)`, `(a,b,c)` for index on `(a,b,c)`
-   - Fails: filter on `b` alone, or `b`+`c` without `a`
-   - Range on a middle column “stops” useful use of later columns (teach with examples; keep EXPLAIN light)
-6. **Selectivity: why `status` alone is a trap**
-   - Value-group / cardinality intuition (`SHOW INDEX`, article 10 for plans)
-   - Put equality high-selectivity / always-present filters left; low-cardinality flags after tenant/user scope
-7. **One composite vs many single-column indexes**
-   - Index Merge exists but is often a consolation prize
-   - ORM “index every FK” migrations
-8. **The cost of indexes you don’t need**
-   - Extra space; slower INSERT/UPDATE/DELETE; optimizer choice overhead
-   - Invisible indexes for removal experiments
-9. **How ORMs create bad indexes** (practical gallery)
-10. **Teaser: covering indexes** (½ paragraph → article 15)
-11. **Worked schema: tickets / orders** (copy-pasteable)
-12. **Tie-back checklist** + next: article 04 (filters/projection) and 05 (ORDER BY + LIMIT need index alignment)
+1. **Series beat + what today covers** — secondary indexes as the daily performance lever; callback to 02 clustered/PK bounce in one paragraph.
+2. **The list endpoint that got slow** — tenant inbox hook; ORM SQL; why column order is a product decision.
+3. **Refresh: clustered vs secondary** — secondary leaf = indexed cols + PK; two-hop lookup; short PK ⇒ cheaper secondaries. *(Optional mini-demo: **Secondary bounce meter** — toy bytes-per-entry when PK width changes.)*
+4. **What a B-tree secondary index is good for** — equality, ranges, `IN`, prefix `LIKE`; preview sort alignment for 05.
+5. **Composite indexes and the leftmost-prefix rule** *(heart)* — sorted concatenation; works/fails examples; range freezes suffix. *(Embed **Left-prefix matcher** here.)*
+6. **Selectivity: why `status` alone is a trap** — cardinality intuition; tenant scope first. *(Embed **Selectivity scrubber** here.)*
+7. **One composite vs many single-column indexes** — Index Merge as consolation prize; ORM FK indexing. *(Embed **Composite vs singles** here.)*
+8. **The cost of indexes you don’t need** — write amplification; invisible indexes for safe drops.
+9. **How ORMs create bad indexes** — Prisma-first gallery with one-line Rails/Django contrasts.
+10. **Teaser: covering indexes** — ½ paragraph → article 15.
+11. **Worked schema: tickets / orders** — copy-pasteable examples from below.
+12. **Tie-back checklist** — practical review questions.
+13. **References** — IEEE list; natural bridge to 04 (filters/projection) and 05 (`ORDER BY` + `LIMIT` need index alignment).
 
-Target length: medium essay — deeper than a cheat sheet, not an InnoDB internals tome.
+Target length: ~10 minutes skim; deeper only where composite design needs it.
 
 ---
 
@@ -156,46 +156,44 @@ Mechanisms and pitfalls that elevate this beyond “add an index”:
 
 ## Interactive feature
 
-### Name
+**Folder:** `src/components/interactive/mysql-indexes/` (re-export shared chrome from `schema-byte-budget/shared.tsx` as needed).
 
-**Composite Index Prefix Matcher** (working title)  
-Path: `src/components/interactive/mysql-index-prefix/` (or `mysql-composite-index/`)  
-Import at top of `src/app/posts/mysql-indexes/page.mdx`, same pattern as:
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Client-only; label math as illustrative (≠ `INFORMATION_SCHEMA` / real optimizer).
 
-```mdx
-import { MysqlIndexPrefixMatcher } from "@/components/interactive/mysql-index-prefix";
+Scatter **3–5 single-focus demos** mid-article — not one mega-lab at the top.
 
-<MysqlIndexPrefixMatcher />
-```
+### 1. Left-prefix matcher
 
-### What the user does
+- **Goal:** Build muscle memory for which `WHERE` shapes use a composite index’s left prefix.
+- **Placement:** Section 5 (composite indexes & left-prefix).
+- **UX:** Fixed `tickets` table; user builds index column order (chips); toggles predicates (`=`, `>`, `IN`, `LIKE 'x%'`, `LIKE '%x'`). Verdict: uses index / partial prefix / cannot use — with highlighted prefix segments and one-line reason.
+- **Keep simple:** Pure TS rules engine; unit-test matcher; no covering-index / “Using index” UI (article 15).
 
-1. Sees a fixed example table `tickets` with columns: `org_id`, `status`, `assignee_id`, `updated_at`, `id` (PK).
-2. Chooses a **composite index** by reordering 2–4 columns (drag chips or click-to-build), e.g. `(org_id, status, assignee_id, updated_at)`.
-3. Toggles **WHERE predicates** on/off and sets operators (`=`, `>`, `IN`, `LIKE 'x%'`, `LIKE '%x'`).
-4. Optionally toggles an **ORDER BY** matching trailing columns (light touch toward article 05).
+### 2. Selectivity scrubber
 
-### What they see
+- **Goal:** Feel why low-cardinality leading columns (e.g. `status`) are weak alone vs scoped under `org_id`.
+- **Placement:** Section 6 (selectivity).
+- **UX:** Slider for distinctness of `status` vs `assignee_id`; toy “rows touched” estimate. Label as illustrative, not the cost-based optimizer.
 
-- A clear verdict: **Uses index** / **Partial prefix (N of M parts)** / **Cannot use this index for lookup**.
-- Highlighted leftmost usable prefix vs. “skipped” or unused suffix columns.
-- A one-line plain-English reason (“`assignee_id` is filtered but `org_id` is missing — not a left prefix”).
-- Optional **selectivity scrubber** (secondary control): slider for distinctness of `status` vs `assignee_id` showing a toy “rows touched” estimate — reinforces why low-cardinality leading columns are weak, without pretending to be the real optimizer.
+### 3. Composite vs singles
 
-### Insight produced
+- **Goal:** Show why three FK indexes ≠ one composite for the inbox query shape.
+- **Placement:** Section 7 (one composite vs many singles).
+- **UX:** Toggle “three single-column indexes” vs “one composite”; cartoon Index Merge vs single range scan — qualitative only.
 
-Muscle memory for left-prefix + equality-before-range, before they read EXPLAIN. Fits the site’s “play first, then theory” pattern (RAID phases, puzzle scrubber, neural-net sliders).
+### 4. Secondary bounce meter (optional — cut if redundant with 02)
 
-### Implementation notes
+- **Goal:** Remind that every secondary entry carries the PK; fat PK widens every index.
+- **Placement:** Section 3 (clustered vs secondary refresh).
+- **UX:** Toggle PK width (bigint vs UUID); watch toy secondary entry bytes tick up.
 
-- `"use client"` top-level component; pure TypeScript rules engine (unit-test the matcher like `raid.test.ts` / `search.test.ts`).
-- No live MySQL — deterministic teaching model; label it as a simplified prefix rule, not the full cost-based optimizer.
-- Visual language: match existing interactives (bordered ink controls, mono readouts, restrained motion — highlight prefix segments, don’t purple-glow).
-- Keep covering-index / “Using index” out of the demo UI (article 15).
+### 5. Equality-before-range (optional)
 
-### Stretch (only if cheap)
+- **Goal:** Range on a middle column freezes useful suffix columns.
+- **Placement:** End of section 5 or woven into left-prefix matcher as a preset.
+- **UX:** One preset query where `created_at > ?` stops `status` from narrowing the index range.
 
-Toggle “three single-column indexes” vs “one composite” and show a cartoon cost: Index Merge path vs single range scan — qualitative, not a benchmark.
+**Implementation notes:** `"use client"` components; shared ink/mono visual language; motivate in prose before each embed; 2–3 intentional motions per demo max.
 
 ---
 
@@ -327,7 +325,7 @@ Close the article by forcing internals → app outcomes:
 
 1. **Title vs stub metadata:** Stub/`content.ts` still says “Indexes” / EXPLAIN-heavy blurb. When publishing, retitle toward **Secondary Indexes** and rewrite description to match (composite, selectivity, left-prefix); move EXPLAIN emphasis to article 10.
 2. **Series order vs current stubs:** Hub currently lists `mysql-select` → `mysql-indexes` → `mysql-joins`. Master plan wants 01→02→**03 indexes**→04 select. Decide whether this post assumes 02 already published or needs a self-contained clustered/secondary primer paragraph (recommend: short primer + link).
-3. **Interactive scope freeze:** Prefix matcher alone is enough for v1. Selectivity scrubber is high value but can ship as a second control in the same component — avoid building a fake optimizer.
+3. **Demo count:** Ship 3–4 scattered demos (prefix matcher + selectivity + composite vs singles minimum). Avoid merging into one top mega-lab; avoid building a fake optimizer.
 4. **ORDER BY depth:** Article 05 owns pagination; here only show that `ORDER BY` matching a usable index prefix avoids filesort — one example, no keyset deep dive.
 5. **Index Merge tone:** Mention as “sometimes MySQL intersects/unions multiple indexes; don’t rely on it as your schema design.” Resist algorithm detail.
 6. **Histogram / `innodb_stats_*`:** Tempting rabbit hole via `index-statistics`. Keep to cardinality intuition; defer histograms to article 10 or a later ops note.
@@ -342,11 +340,12 @@ Close the article by forcing internals → app outcomes:
 
 ## Drafting checklist (when writing the post)
 
-- [ ] Replace stub MDX; import interactive at top
+- [ ] Replace stub MDX; scatter 3–5 mini-demos mid-article (motivate → explain → embed)
+- [ ] Humanizer pass on prose before publish
+- [ ] First-person voice check; no formulaic section stamps
+- [ ] `<Cite />` + `<References />` for technical claims (not inline doc hyperlinks on code)
 - [ ] Update `content.ts` title/description/art if needed
 - [ ] Cross-link 02 (PK/clustered), 04 (SELECT), 05 (pagination), 10 (EXPLAIN), 15 (covering)
-- [ ] Cite 6–10 refman URLs inline where claims are made
 - [ ] Unit-test prefix-matching rules
 - [ ] Manual pass: mobile layout of chip/reorder UI
 - [ ] No covering-index deep dive; no EXPLAIN encyclopedia
-`)

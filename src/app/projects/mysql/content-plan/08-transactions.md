@@ -9,7 +9,19 @@
 | **Series hub** | `/projects/mysql/` |
 | **Post path** | `/posts/mysql-transactions/` |
 | **Prev / next** | 07 Writes → **08** → 09 Isolation Levels |
-| **Interactive** | Yes — multi-step checkout transaction stepper (commit / rollback paths) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
 
 ---
 
@@ -28,6 +40,8 @@ This is the Foundations pivot from “how do I write one SQL statement correctly
 
 ## Real-world hook
 
+Place checkout / transfer stories in the sections where atomicity and autocommit land — not forced cold opens unless they’re the best hook.
+
 **Stripe / Shopify-style checkout** (primary narrative): a single `POST /checkout` must (a) reserve or decrement inventory, (b) create an order + line items, (c) record a payment intent / charge reference, and often (d) enqueue a fulfillment event. If step (b) succeeds and step (c) fails, the customer sees an error but stock is already gone — or worse, money is captured with no order. The database transaction is the first line of defense for the *local* consistency of those rows; payment APIs and outbox/saga patterns sit *outside* or *beside* that boundary (call that out; don’t pretend one MySQL `COMMIT` settles Stripe).
 
 **Banking / ledger transfer** (secondary): debit account A, credit account B. Autocommit on each `UPDATE` is a double-entry bug waiting to happen. Same mental model as checkout, cleaner arithmetic.
@@ -40,7 +54,7 @@ Tone: “your request handler is already a transaction in the business sense —
 
 ## Primary documentation sources
 
-Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTML in the published post.
+Cite with `<Cite />` / `<References />`. Local nodes under `sources/mysql-refman-9.7/nodes/`.
 
 ### Core (must read / cite in article)
 
@@ -63,29 +77,28 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` and link the public HTM
 | `savepoint` | https://dev.mysql.com/doc/refman/9.7/en/savepoint.html | Optional advanced beat: partial rollback *within* one transaction (rare in request handlers; mention, don’t center). |
 | `xa` | https://dev.mysql.com/doc/refman/9.7/en/xa.html | Explicitly **out of scope** for Foundations; one sentence if readers ask about distributed tx / 2PC. |
 
-**Citation style in the published post:** inline links like `[InnoDB and the ACID Model](https://dev.mysql.com/doc/refman/9.7/en/mysql-acid.html)` plus a short “Sources” list at the bottom mirroring the table above.
+**Citation style in the published post:** `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom — not inline doc hyperlinks on code.
 
 ---
 
 ## Article structure
 
-Suggested MDX outline (top → bottom). Interactive component imported at the **top**, matching RAID / neural-net pattern.
+Suggested MDX outline — sentence-case H2s. Scatter **named mini-demos** mid-article; no stepper at the top.
 
-1. **Interactive: Checkout transaction stepper** (client demo)
-2. **Hook** — Shopify/Stripe checkout partial-failure story (2–3 paragraphs)
-3. **What “transaction” means for a request handler** — one connection, one open unit of work, commit makes changes durable & visible
-4. **ACID in plain English (InnoDB edition)** — four short subsections; Isolation = teaser → article 09; Durability = “COMMIT waited for redo” teaser → article 14
-5. **Autocommit: the default that surprises ORM users** — each statement is its own transaction
+1. **Series beat + what today covers** — from single-statement writes (07) to multi-step request atomicity.
+2. **Hook** — Shopify/Stripe checkout partial-failure story (2–3 paragraphs).
+3. **What “transaction” means for a request handler** — one connection, one unit of work, commit makes changes durable & visible.
+4. **ACID in plain English (InnoDB edition)** — four short subsections; Isolation teaser → 09; Durability teaser → 14.
+5. **Autocommit: the default that surprises ORM users** — each statement is its own transaction. *(Embed **Autocommit footgun toggle** here.)*
 6. **Explicit boundaries: `START TRANSACTION` / `BEGIN` → `COMMIT` / `ROLLBACK`**
-7. **Request-scoped pattern** — open at start of use-case, commit before success response, rollback in `catch` / `ensure`
-8. **ORM pitfalls** — Rails / Prisma / Django (see Deep-dive beats)
-9. **Partial failure modes** — inventory without order; payment without ledger; implicit commit from DDL
-10. **What belongs inside vs outside the DB transaction** — Stripe API calls, email, webhooks, outbox pattern (light)
+7. **Request-scoped pattern** — open at start of use-case, commit before success response, rollback in `catch`. *(Embed **Checkout transaction stepper** here — commit vs rollback paths.)*
+8. **ORM pitfalls** — Prisma-first; Rails/Django contrasts (see Deep-dive beats).
+9. **Partial failure modes** — inventory without order; implicit commit from DDL. *(Optional **Partial failure** animation in stepper.)*
+10. **What belongs inside vs outside the DB transaction** — Stripe API, outbox pattern (light).
 11. **Tie-back checklist**
-12. **Next up** — Isolation (09): what other requests see while you’re mid-checkout
-13. **Sources**
+12. **References** — IEEE list; bridge to 09 (isolation).
 
-Target length: long-form teaching post (~2.5–4k words), not a cheatsheet.
+Target length: ~10 minutes skim; ~2.5–4k words only if every beat earns it.
 
 ---
 
@@ -194,51 +207,29 @@ Brief honesty section:
 
 ## Interactive feature
 
-**Name (working):** `CheckoutTransactionStepper`  
-**Location:** `src/components/interactive/checkout-transaction/` (or `mysql-transaction-stepper/`)  
-**Placement:** imported at top of the MDX post, same pattern as RAID.
+**Folder:** `src/components/interactive/mysql-transaction-stepper/` or `checkout-transaction/` (shared chrome from `schema-byte-budget/shared.tsx`; reuse RAID phase-rail pattern).
 
-### Metaphor / UX (RAID-like phased workflow)
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Pure client simulation — no live MySQL.
 
-Reuse the RAID visualizer’s **numbered phase rail + active hint + done checkmarks** pattern (`WORKFLOW` steps with `phase` / `step` / `label` / `hint`), but the subject is a checkout unit of work instead of drive rebuild.
+### 1. Checkout transaction stepper
 
-**Phases (happy path):**
+- **Goal:** Walk BEGIN → inventory → order → payment row → COMMIT or ROLLBACK; pending rows vs committed state.
+- **Placement:** Section 7 (request-scoped pattern).
+- **UX:** Numbered phase rail (RAID-like); table panels show uncommitted (dashed) vs solid rows; other-session SELECT panel updates on commit; failure injection after step 3.
 
-| Step | Label | What the UI shows |
-| ---: | --- | --- |
-| 1 | Begin | Connection idle → `START TRANSACTION`; session badge: `in_transaction` |
-| 2 | Reserve inventory | `UPDATE products SET stock = stock - 1 …`; row highlighted as dirty / uncommitted |
-| 3 | Create order | `INSERT INTO orders …` + `order_items`; tables panel shows pending rows (dashed / amber = uncommitted) |
-| 4 | Record payment row | `INSERT INTO payments … status='pending'` |
-| 5 | Commit **or** Rollback | Branching control |
+### 2. Autocommit footgun toggle
 
-**Controls:**
+- **Goal:** Show each step committing immediately — inventory decrement survives failed order INSERT.
+- **Placement:** Section 5 (autocommit).
+- **UX:** Same checkout script rewritten so `ROLLBACK` after a failed step cannot undo prior autocommitted statements.
 
-- **Step forward** / **Reset**
-- At step 5 (or via a “Inject failure” toggle earlier): choose **Commit** vs **Rollback**
-- Optional: **Autocommit mode** toggle that rewrites the demo — each step commits immediately so a failure after inventory leaves durable stock decrement (the horror path)
+### 3. Partial failure callout (optional — may live inside stepper)
 
-**Commit path visualization:**
+- **Goal:** Dramatize “inventory updated, order never created” without a second mega-lab.
+- **Placement:** Section 9 (partial failure modes).
+- **UX:** Single-frame before/after with autocommit on vs explicit transaction.
 
-- Pending rows solidify (amber → ink/green)
-- Other session’s `SELECT` panel updates from “old stock” → “new stock”
-- Status: `committed`
-
-**Rollback path visualization:**
-
-- Pending rows vanish
-- Stock returns to original
-- Status: `aborted`; hint text: “No other session ever saw the intermediate writes”
-
-**Failure injection (recommended):**
-
-- After step 3, user can click **Fail payment insert** → forces rollback path automatically, narrating “handler caught error → ROLLBACK”
-
-**Copy/hints** should use SQL the article teaches (`START TRANSACTION`, `COMMIT`, `ROLLBACK`), not ORM jargon, with a small footnote: “Rails `transaction`, Prisma `$transaction`, Django `atomic()` emit this.”
-
-**A11y / motion:** respect `prefers-reduced-motion`; phase rail uses `aria-current="step"` like RAID; keyboard-operable buttons.
-
-**Non-goals for v1:** real MySQL connection, isolation anomalies, deadlock simulation (those belong to 09/12 interactives if any).
+**Non-goals for v1:** isolation anomalies, deadlock simulation (09/12).
 
 ---
 
@@ -399,10 +390,10 @@ Readers should be able to answer yes to each:
 ## Drafting checklist (when writing the post)
 
 - [ ] Frontmatter: title, slug `mysql-transactions`, series id `mysql`, description focused on request handlers
-- [ ] Import interactive at top
-- [ ] Link refman URLs for all core nodes
-- [ ] ORM section covers Rails, Prisma, Django at least once each
+- [ ] Scatter 2–3 mini-demos mid-article (stepper + autocommit toggle minimum)
+- [ ] Humanizer pass; first-person voice; `<Cite />` + `<References />`
+- [ ] ORM section covers Rails, Prisma, Django at least once each (Prisma-primary in snippets)
 - [ ] Explicit “see you in article 09” for isolation
 - [ ] No gap-lock / MVCC deep dive leakage
-- [ ] Tie-back checklist rendered as a compact end section
+- [ ] Tie-back checklist rendered as compact end section
 - [ ] Hub + `seriesList.postSlugs` updated when stubs go live

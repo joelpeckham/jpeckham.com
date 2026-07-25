@@ -8,7 +8,19 @@
 | **Tier** | Deep dive (Part B) |
 | **Role in arc** | Operational edge of schema change under live traffic — after schema/indexes/writes/transactions/locks, before replication lag from long DDL (19) and wait forensics (20). |
 | **Published path** | `/posts/mysql-online-ddl/` |
-| **Interactive** | Migration planner: pick an `ALTER`, see `ALGORITHM` / `LOCK`, animate metadata-lock wait queue vs app traffic |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article; split algorithm picker and MDL animator. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B — skimmable prose over encyclopedia.
 
 ---
 
@@ -92,52 +104,25 @@ Cite public HTML from published posts. Local research corpus: `sources/mysql-ref
 - Rails `strong_migrations` — dangerous migration patterns checklist (maps cleanly onto the algorithm matrix).
 - Classic expand/contract / parallel-change posts (e.g. “expand and contract pattern for continuous delivery”) — use for app deploy sequencing, not as MySQL internals.
 
-**Citation rule:** paraphrase + link; never paste Oracle wording into the published post.
+**Citation rule:** paraphrase + `<Cite />` / `<References />`; never paste Oracle wording into the published post.
 
 ---
 
 ## Article structure
 
-Proposed MDX flow (top interactive, then narrative). Spoon-fed: one migration idea per section, always with a web-app deploy consequence.
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; no mega migration planner at top.
 
-1. **Deploy-day failure mode (hook)**  
-   Staging-fast / prod-stuck `ALTER`; `Waiting for table metadata lock`; feature flag vs migration ordering.  
-   App consequence: schema change is part of the request path’s availability budget.
-
-2. **What “online” actually means**  
-   Benefits from `innodb-online-ddl`: availability, less copy I/O, `LOCK` tuning. Default behavior tries Instant/In-place. “Online” ≠ zero lock ≠ zero risk.  
-   App consequence: never assume the ORM migration is safe because MySQL 8+ exists.
-
-3. **Three algorithms: INSTANT / INPLACE / COPY**  
-   Teach from `alter-table`: metadata-only vs in-place (maybe rebuild) vs full copy; concurrency defaults; forcing `ALGORITHM=…` to fail closed in CI.  
-   App consequence: put `ALGORITHM` / `LOCK` in the migration SQL you review, not only in folklore.
-
-4. **The operations matrix (web-dev subset)**  
-   Walk the rows apps hit daily from `innodb-online-ddl-operations`: add/drop/rename column, add secondary index, change nullability, change type, extend VARCHAR, set default, add PK (expensive), drop PK (COPY). Show Instant column as “maybe” with asterisks.  
-   App consequence: type changes and “NOT NULL without a plan” are still the expensive ones.
-
-5. **Why “ADD nullable COLUMN” wasn’t always free**  
-   Historical arc: pre-online / table-copy era → INPLACE rebuild still rewrote data for many column adds → Instant ADD COLUMN (metadata + row versions). MySQL 9.7: Instant is default when supported. Limits: can’t combine with non-Instant clauses; COMPRESSED / FULLTEXT / temp tables; max row versions (255) then rebuild; auto-increment column is *not* the cheap path.  
-   App consequence: “we added a null column, should be fine” needs a version + matrix check, not vibes.
-
-6. **Lock phases that still stall traffic**  
-   Three phases from `innodb-online-ddl-performance`; exclusive MDL at commit; long/idle transactions hold shared MDL until commit (`metadata-locking`); pending exclusive MDL **blocks new DML/SELECT** — the pile-up. Processlist + `performance_schema.metadata_locks`.  
-   App consequence: kill idle transactions / fix pool checkout leaks before a big ALTER window.
-
-7. **Expand / contract for web deploys**  
-   Pattern: expand schema (additive, Instant/INPLACE-friendly) → deploy dual-compatible app → backfill → switch reads/writes → contract (drop old column/index) in a later release. Map `strong_migrations`-style rules onto this. Multi-step > one clever `ALTER`.  
-   App consequence: backward-compatible migrations unlock independent deploy/rollback of app and schema.
-
-8. **Native Online DDL vs pt-osc / gh-ost (mental model)**  
-   Native: server does in-place/instant work + online DML log; cutover is MDL. External OSC: shadow table + row copy (triggers or binlog) + atomic rename/cutover; useful when rebuild is huge, you need throttle/pause, or you want to avoid long native rebuild risk / replica effects. Honest tradeoffs (triggers write amp; gh-ost ops complexity; native is simpler when Instant/INPLACE+LOCK=NONE fits).  
-   App consequence: reach for OSC when the matrix says “rebuilds table” on a huge hot table — not for every Instant ADD.
-
-9. **Worked migration: `fulfillment_state` on `orders`**  
-   Bad one-shot vs safe expand/contract sequence with explicit `ALGORITHM`/`LOCK`; optional index add as separate step; notes on defaults and NOT NULL cutover.  
-   App consequence: a paste-ready playbook for the Friday PR.
-
-10. **Tie-back checklist & preview**  
-    Checklist below; forward link to replication lag from long DDL (19) and wait forensics (20); back-links to transactions/locks (08–12) for idle-in-transaction.
+1. **Part B opener + what today covers** — Friday deploy / MDL hook.
+2. **What “online” actually means** — not invisible to the app.
+3. **Three algorithms: INSTANT / INPLACE / COPY** — fail-closed pinning. *(Embed **Algorithm outcome card**.)*
+4. **Operations matrix (web-dev subset)** — add column, add index, change type.
+5. **Why ADD nullable column wasn’t always free** — Instant + row versions.
+6. **Lock phases that still stall traffic** — idle txn + MDL queue. *(Embed **MDL wait queue animator**.)*
+7. **Expand / contract for web deploys** — fulfillment_state playbook. *(Embed **Expand/contract step list**.)*
+8. **Native Online DDL vs pt-osc / gh-ost** — mental model only.
+9. **Worked migration** — bad one-shot vs safe sequence. *(Embed **Mixed clauses trap** preset.)*
+10. **Tie-back checklist** + preview 19/20.
+11. **References** — IEEE list.
 
 ---
 
@@ -168,94 +153,36 @@ Mechanisms and pitfalls that keep this from being a cheat sheet:
 
 ## Interactive feature
 
-**Working title:** `MigrationPlanner` (or `OnlineDdlLab`)  
-**Path (planned):** `src/components/interactive/migration-planner/`  
-**MDX pattern:** import at top of `/posts/mysql-online-ddl/`, render demo, then `## Things to Play With` bullets, then essay (same as RAID / neural-net / EXPLAIN explorer).
+Scatter **4–5 small demos** under `src/components/interactive/mysql-online-ddl/` (shared chrome from `schema-byte-budget/shared.tsx`).
 
-### UI concept
+### 1. Algorithm outcome card
 
-One composition, two coordinated panels — **not** a dashboard:
+- **Goal:** Pick ALTER preset → INSTANT / INPLACE rebuild / COPY; concurrent DML yes/no; metadata-only badge.
+- **Placement:** Three algorithms (§3) and matrix (§4).
 
-1. **Migration picker** — choose a realistic `ALTER` from a curated list (or small builder: operation + options). Show the resulting SQL with explicit `ALGORITHM` / `LOCK`.
-2. **Outcome card** — algorithm used (Instant / In-place rebuild / In-place no rebuild / Copy), concurrent DML yes/no, rebuilds table yes/no, metadata-only yes/no, risk chips (MDL stall, disk, not Instant-combinable).
-3. **Traffic vs MDL animator** — a horizontal timeline / lane diagram:
-   - App workers issuing short autocommit reads/writes (moving dots).
-   - One “idle in transaction” session holding shared metadata lock.
-   - DDL session entering Phase 1 → 2 → 3; Phase 3 requests exclusive MDL and **queues**.
-   - Subsequent app queries stack up behind the exclusive wait (visual pile-up).
-   - Toggle: commit/rollback the idle txn → exclusive granted → brief freeze → traffic resumes.
+### 2. MDL wait queue animator
 
-### Preset ALTER catalog (fixtures)
+- **Goal:** Idle txn holds shared MDL → ALTER waits → new SELECTs queue — the outage shape.
+- **Placement:** Lock phases (§6). **Primary wow moment.**
 
-| Preset | SQL shape | Teaching outcome |
-| --- | --- | --- |
-| Add nullable column | `ADD COLUMN col VARCHAR(32) NULL, ALGORITHM=INSTANT` | Instant, metadata-only, still needs brief exclusive MDL |
-| Add NOT NULL + default (one-shot) | `ADD COLUMN col VARCHAR(32) NOT NULL DEFAULT 'x'` | Discuss version/matrix; contrast with expand/contract |
-| Add secondary index | `ADD INDEX …, ALGORITHM=INPLACE, LOCK=NONE` | Concurrent DML; no Instant; watch online log / finish waits |
-| Change column type | `MODIFY COLUMN id BIGINT …` | COPY (or non-online); scary on hot table → OSC callout |
-| Extend VARCHAR | `MODIFY COLUMN title VARCHAR(200)` (same charset) | Often INPLACE metadata-ish; contrast with charset/type change |
-| Drop column Instant | `DROP COLUMN legacy_flag, ALGORITHM=INSTANT` | Instant + row version bump; contract-phase warning |
-| Mixed clauses trap | `ADD COLUMN c INT, MODIFY COLUMN d BIGINT` | Least-capable algorithm wins; fail-closed demo |
-| Force COPY | Same Instant-capable op with `ALGORITHM=COPY` | Shows why pinning ALGORITHM matters |
+### 3. Expand/contract step list
 
-Each preset exposes recommended `ALGORITHM` / `LOCK` and a one-line “deploy advice.”
+- **Goal:** `fulfillment_state` bad one-shot vs 3–4 safe steps; strong_migrations overlay optional.
+- **Placement:** Expand/contract (§7) and worked migration (§9).
 
-### Animator controls
+### 4. Mixed clauses trap
 
-| Control | Effect |
-| --- | --- |
-| Idle transaction toggle | On: shared MDL held; DDL sticks in wait; app traffic queues. Off/commit: cutover completes. |
-| ALTER preset selector | Changes whether Phase 2 is “instant blip,” “long rebuild,” or “copy blocked writes.” |
-| Traffic rate slider | More app queries → taller wait queue during exclusive wait (feels like outage). |
-| `LOCK=NONE` vs default | For presets that support it; show fail-closed error toast if preset can’t honor NONE. |
-| “strong_migrations mode” | Highlights why the one-shot NOT NULL add is flagged; suggests expand/contract steps as a checklist overlay. |
+- **Goal:** Instant ADD + type change in one `ALTER` → whole statement downgrades; fail-closed demo.
+- **Placement:** Matrix or worked migration (§9).
 
-### User actions → insight
+### 5. Traffic rate slider *(optional)*
 
-1. Pick **Add nullable column / INSTANT** with idle txn **off** → Phase 3 is a tiny blip; traffic barely hiccups.  
-2. Turn idle txn **on**, re-run → same Instant ALTER, but app lanes freeze behind `Waiting for table metadata lock`.  
-3. Switch to **Change column type / COPY** → writes blocked for a long Phase 2 even without idle txn; insight: algorithm dominates duration; MDL still finishes it.  
-4. Switch to **Mixed clauses** → planner refuses Instant; shows downgrade path.  
-5. Enable **strong_migrations mode** on the dangerous one-shot → expands into a 3-step expand/contract plan.
+- **Goal:** More app queries → taller wait queue during exclusive MDL wait — qualitative only.
+- **Placement:** With #2. Cut if crowded.
 
-Insight produced: **Instant/INPLACE choose how much work you do; metadata locks decide whether the site hangs while you finish.** Readers feel why transaction hygiene and migration shape beat “MySQL supports online DDL.”
+**Non-goals:** live MySQL; full operations matrix encyclopedia.
 
-### Interaction / motion notes (site pattern)
-
-- Intentional motion: dots flowing in app lanes; DDL phase bar filling; exclusive lock pulse; queue stacking/unstacking when idle txn commits.
-- No card grid chrome; one scene: picker + outcome + lanes.
-- Keyboard: cycle presets; space toggles idle transaction.
-- No live MySQL — all outcomes from a local rules table derived from the operations matrix (label “illustrative MySQL 9.7 InnoDB rules; always verify on your version”).
-
-### Data shape (implementation sketch)
-
-```ts
-type DdlAlgorithm = "INSTANT" | "INPLACE" | "COPY";
-type DdlLock = "DEFAULT" | "NONE" | "SHARED" | "EXCLUSIVE";
-
-type MigrationPreset = {
-  id: string;
-  title: string;
-  scenario: string; // web-app story
-  sql: string;
-  requestedAlgorithm?: DdlAlgorithm;
-  requestedLock?: DdlLock;
-  result: {
-    algorithm: DdlAlgorithm;
-    lock: DdlLock;
-    rebuildsTable: boolean;
-    permitsConcurrentDml: boolean;
-    metadataOnly: boolean;
-    notes: string[];
-    risk: "low" | "medium" | "high";
-  };
-  expandContract?: string[]; // optional step list for strong_migrations mode
-};
-
-type AnimPhase = "idle" | "init" | "execute" | "wait_mdl" | "commit" | "done";
-```
-
-Rules engine: pure functions from operation kind → result; animator reads `result` + idle-txn flag to pick phase durations and whether app lane queues.
+Remove “Things to Play With” MDX list; no import-at-top mega-lab.
 
 ---
 
@@ -410,7 +337,7 @@ Use as the article’s closing “deploy-ready migrations” list.
 2. **No `innodb-instant-ddl` node:** Don’t invent a citation. Use `alter-table` + `innodb-online-ddl-operations` as the Instant sources.
 3. **Defaults / NOT NULL history:** `strong_migrations` advice evolved with MySQL versions (e.g. instant/defaults behavior). Be careful not to over-teach outdated “DEFAULT always rewrites the table” as current 9.7 truth — present as historical reason for the culture, then show today’s matrix.
 4. **gh-ost / pt-osc depth:** Mental model + when to reach for them — not a setup tutorial. No trigger SQL dump; link out.
-5. **Interactive rules fidelity:** Encode the *web-dev subset* of the matrix, not every FULLTEXT/spatial asterisk. Label simplifications; link essay for FULLTEXT first-index rebuild, etc.
+5. **Interactive scope** — Ship algorithm card + MDL animator + expand/contract list as separate embeds; rules table covers web-dev subset only.
 6. **Don’t steal article 19:** Replica lag gets one section beat + checklist row, not a binlog deep dive.
 7. **Don’t steal article 20:** `metadata_locks` / processlist are enough to diagnose the pile-up; full waits/digests stay in 20.
 8. **ORM brand balance:** Use `strong_migrations` as the clearest named example; mention Prisma Migrate / Django `RunSQL` / Laravel as producers of multi-clause ALTERs without bashing.
@@ -418,7 +345,16 @@ Use as the article’s closing “deploy-ready migrations” list.
 10. **Safety:** Never recommend `LOCK=EXCLUSIVE` on hot paths except deliberate maintenance. Emphasize fail-closed `LOCK=NONE` / `ALGORITHM=INSTANT|INPLACE`.
 11. **Legal:** Original teaching prose only; link refman nodes; local `sources/mysql-refman-9.7/` stays gitignored (`sources/README.md`).
 12. **Series glue:** Register slug `mysql-online-ddl` in hub `seriesList.postSlugs` when publishing; place after JSON (17), before replication (19).
-13. **Tone check:** Empowering ops literacy for app engineers — “you can read the matrix and design the deploy” — not fearmongering that every ALTER needs gh-ost.
+13. **Tone check:** Empowering ops literacy for app engineers — not fearmongering that every ALTER needs gh-ost.
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Scatter DDL demos mid-article; MDL pile-up visually obvious
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Expand/contract playbook copy-pasteable; strong_migrations mapping
+- [ ] Forward to 19 (replica lag) and 20 (metadata_locks)
 
 ---
 

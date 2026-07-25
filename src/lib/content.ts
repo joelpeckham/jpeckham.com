@@ -217,7 +217,7 @@ export const posts: ContentItem[] = [
     href: "/posts/mysql-primary-keys/",
     title: "Primary Keys & the Clustered Index",
     description:
-      "Why InnoDB’s table is the clustered index — and how PK shape drives every lookup.",
+      "In InnoDB the primary key is the table: clustered lookups, secondary bounce, and why random UUID PKs hurt.",
     date: "2026-07-24",
     kind: "post",
     seriesId: "mysql",

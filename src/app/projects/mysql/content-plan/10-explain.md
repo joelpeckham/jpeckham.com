@@ -8,7 +8,19 @@
 | **Tier** | Foundations (Part A capstone) |
 | **Role in arc** | Literacy tool that closes Part A — readers should leave able to diagnose the plans behind the schema/index/query/join/pagination patterns from articles 1–9 before Part B internals. |
 | **Published path** | `/posts/mysql-explain/` |
-| **Interactive** | Annotated EXPLAIN explorer (sample plans + hover decode; before/after index compare) |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** ~10 minutes for a casual skim; capstone may run longer if every synthesis beat earns it.
 
 ---
 
@@ -30,6 +42,8 @@ After this article, a reader should be able to:
 
 ## Real-world hook
 
+Place the slow admin orders page story in the section where reading plans begins — not forced as a cold open unless it’s the best hook.
+
 **Scene:** A SaaS inbox / orders admin page. Staging is fine; production p95 for `GET /api/orders?status=open&sort=-created_at&page=40` is 800ms–2s. The ORM (Prisma / Rails ActiveRecord / Django) “looks fine”—eager-loaded associations, one query for the list. Someone pastes `EXPLAIN` into Slack. Nobody knows which columns to fear.
 
 **Companies / surfaces that make this concrete:**
@@ -45,7 +59,7 @@ After this article, a reader should be able to:
 
 ## Primary documentation sources
 
-Cite the public HTML from published posts. Local research corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored; do not paste Oracle prose into MDX).
+Cite with `<Cite />` / `<References />`. Local research corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored; do not paste Oracle prose into MDX).
 
 ### Core (must cite / teach from)
 
@@ -71,37 +85,35 @@ Cite the public HTML from published posts. Local research corpus: `sources/mysql
 | `index-condition-pushdown-optimization` | https://dev.mysql.com/doc/refman/9.7/en/index-condition-pushdown-optimization.html | Decode `Using index condition` as a teaser → article 15. |
 | `where-optimization` | https://dev.mysql.com/doc/refman/9.7/en/where-optimization.html | Tie sargability failures (article 04) to `type: ALL` / unused `possible_keys`. |
 
-**Citation rule:** paraphrase + link; never paste Oracle wording into the published post.
+**Citation rule:** paraphrase + `<Cite />` / `<References />`; never paste Oracle wording into the published post.
 
 ---
 
 ## Article structure
 
-Proposed MDX flow (top interactive, then narrative). Keep spoon-fed: one new EXPLAIN idea per section, always with a web-app SQL example.
+Proposed MDX flow — sentence-case H2s, conversational spine. Scatter **named mini-demos** mid-article; no explorer at the top.
 
-1. **Hook** — Slow orders list; paste EXPLAIN; what “good enough” looks like for an API handler.
-2. **Interactive** — Annotated EXPLAIN explorer (see below); invite readers to hover columns before reading the essay.
-3. **What EXPLAIN is (and isn’t)** — Planned access path vs measured runtime; DESCRIBE-table synonym trap; EXPLAIN does not “make it fast.”
-4. **Three output modes you’ll actually use**
-   - Default / `FORMAT=TRADITIONAL` — tabular, one row per table (join order = read order).
-   - `FORMAT=TREE` — iterator tree; hash joins visible.
-   - `EXPLAIN ANALYZE` — runs the query; estimated vs actual rows/time (use carefully in prod).
-5. **Column decoder (the literacy core)** — walk `type`, keys, `rows`/`filtered`, `Extra` with a single running example that gets fixed mid-article.
-6. **Access-type ladder for apps** — focus `const` / `eq_ref` / `ref` / `range` / `index` / `ALL` (mention others exist; don’t catalog everything).
-7. **Extra flags that mean money** — `Using filesort`, `Using temporary`, `Using index`, `Using where`, `Using index condition`, join buffer / hash join notes.
-8. **EXPLAIN ANALYZE: estimates vs reality** — when `rows` lies; loops; “actual time”; when to trust ANALYZE over EXPLAIN.
-9. **ORM plan smells gallery** — 5–6 annotated before/after plans (ActiveRecord / Prisma / Django-flavored SQL, engine-agnostic).
-10. **Part A capstone checklist** — map symptoms back to articles 1–9.
-11. **What not to do yet** — hints, optimizer trace, covering-index rabbit holes → Part B / 15 / 20.
-12. **Further reading** — linked refman nodes.
+1. **Series beat + Part A capstone** — EXPLAIN as the literacy tool for articles 1–9.
+2. **Hook** — Slow orders list; paste EXPLAIN; what “good enough” looks like for an API handler.
+3. **What EXPLAIN is (and isn’t)** — plan vs runtime; DESCRIBE-table trap.
+4. **Three output modes you’ll actually use** — TRADITIONAL, TREE, ANALYZE (prod caution).
+5. **Column decoder (the literacy core)** — `type`, keys, `rows`/`filtered`, `Extra`. *(Embed **Access-type decoder** hover glossary here.)*
+6. **Access-type ladder for apps** — `const` / `eq_ref` / `ref` / `range` / `index` / `ALL`.
+7. **Extra flags that mean money** — filesort, temporary, hash join. *(Embed **Extra flags spotlight** here.)*
+8. **Before / after index win** — same query, composite added. *(Embed **Before/after plan compare** here.)*
+9. **EXPLAIN ANALYZE: estimates vs reality** — when `rows` lies. *(Optional **Estimate vs actual overlay** here.)*
+10. **ORM plan smells gallery** — 5–6 annotated before/after plans.
+11. **Part A capstone checklist** — map symptoms back to articles 1–9. *(Optional **Part A smell picker** tying EXPLAIN rows to article numbers.)*
+12. **What not to do yet** — hints, optimizer trace, covering-index rabbit holes.
+13. **References** — IEEE list.
 
-**Length target:** long-form tutorial (~2.5–4k words) + interactive; denser than early Part A posts because it’s a synthesis piece.
+**Length target:** capstone synthesis — ~10 minutes for the decoder core; longer only if every smell earns a beat.
 
 ---
 
 ## Deep-dive beats
 
-Teach these ideas in order. Each beat should end with “so in your app…”
+Teach these ideas in order. Weave “so in your app…” into prose — no formulaic ending stamps.
 
 ### Beat A — EXPLAIN is a plan, ANALYZE is a rehearsal
 
@@ -188,67 +200,45 @@ Close with a ritual:
 
 ## Interactive feature
 
-### Name
+**Folder:** `src/components/interactive/explain-explorer/` (shared chrome from `schema-byte-budget/shared.tsx`).
 
-**Annotated EXPLAIN Explorer**  
-Suggested component path: `src/components/interactive/explain-explorer/` (mirror RAID / puzzle-solver pattern: `"use client"`, imported at top of MDX).
+**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Curated fixtures first; optional paste-parse as v1.1 only. No live MySQL.
 
-### Primary UX (ship this)
+Split the old single **Annotated EXPLAIN Explorer** into **focused mid-article embeds**:
 
-1. **Plan picker** — 4–6 curated sample plans (traditional tabular JSON fixtures), each labeled with a web scenario:
-   - “Orders list, no index”
-   - “Orders list, composite index”
-   - “Join without FK index”
-   - “Join with `eq_ref`”
-   - “Sorted inbox with filesort”
-   - “Same query, index avoids filesort”
-2. **Rendered EXPLAIN table** — monospace grid matching MySQL traditional output (`id`, `select_type`, `table`, `type`, `possible_keys`, `key`, `key_len`, `ref`, `rows`, `filtered`, `Extra`).
-3. **Hover / focus decode** — hovering a cell or column header opens a short plain-English tooltip (from a local glossary object—**our** wording, not Oracle paste). Severity tint: green / amber / red for access types and Extra flags.
-4. **Before / after toggle** — paired plans share a scenario; toggle or split view shows index added / query rewritten; callout summarizes what changed (`type ALL→ref`, Extra lost `Using filesort`, `rows` drop).
-5. **Optional paste mode (v1 or v1.1)** — textarea accepts tab-separated or JSON EXPLAIN; best-effort parse into the grid. If parse fails, keep samples as the reliable path. Do **not** require a live MySQL connection.
+### 1. Access-type decoder
 
-### Secondary mode (nice-to-have in same component)
+- **Goal:** Hover `type` / column headers → plain-English tooltip from local glossary (our wording, not Oracle paste).
+- **Placement:** Section 5 (column decoder).
+- **UX:** One sample plan row; severity tint green/amber/red for access types.
 
-- Mini **TREE view** for one sample that includes a hash join, so readers see why TREE matters (`hash-joins`).
-- Fake **ANALYZE** overlay on one sample: show `estimated rows` vs `actual rows` mismatch to motivate ANALYZE without executing SQL in the browser.
+### 2. Before/after plan compare
 
-### Interaction / motion notes (site pattern)
+- **Goal:** Make index win visually obvious (`ALL→ref`, lose `Using filesort`, `rows` drop).
+- **Placement:** Section 8 (before/after) — pairs with running `orders` list example mid-article.
+- **UX:** Toggle or split view between paired fixtures; one-line takeaway per pair.
 
-- Intentional motion: column highlight on hover, before→after morph or cross-fade of the changing cells, brief “severity pulse” when switching to a bad plan.
-- No dashboard chrome; one composition: scenario label + plan table + glossary panel.
-- Keyboard: arrow between sample plans; focusable cells for a11y tooltips.
+### 3. Extra flags spotlight
 
-### Data shape (implementation sketch)
+- **Goal:** Decode filesort / temporary / hash join Extra tokens readers hit daily.
+- **Placement:** Section 7 (Extra flags).
+- **UX:** Click Extra chips → glossary panel; 2–3 curated bad plans.
 
-```ts
-type ExplainRow = {
-  id: number;
-  select_type: string;
-  table: string;
-  type: string;
-  possible_keys: string | null;
-  key: string | null;
-  key_len: string | null;
-  ref: string | null;
-  rows: number;
-  filtered: number;
-  Extra: string | null;
-};
+### 4. Estimate vs actual overlay (optional)
 
-type ExplainSample = {
-  id: string;
-  title: string;
-  scenario: string; // web-app story
-  sql: string;
-  format: "traditional";
-  rows: ExplainRow[];
-  pairId?: string; // links before/after
-  pairRole?: "before" | "after";
-  takeaway: string;
-};
-```
+- **Goal:** Motivate `EXPLAIN ANALYZE` when estimates lie.
+- **Placement:** Section 9 (ANALYZE).
+- **UX:** Fake ANALYZE row overlay on one join fixture — estimated vs actual rows mismatch.
 
-Glossary keyed by column name + known `type` / Extra tokens.
+### 5. Part A smell picker (optional capstone embed)
+
+- **Goal:** Map plan smell → article number → fix lever.
+- **Placement:** Section 11 (capstone checklist).
+- **UX:** Pick smell (“inner ALL”, “filesort + offset”) → highlights row in tie-back table.
+
+**Sample plan fixtures (shared data):** orders list no index; orders list composite; join without FK index; join with `eq_ref`; sorted inbox filesort; same query index-ordered.
+
+**Implementation sketch:** `ExplainRow` / `ExplainSample` types as before; unit-test glossary keys; keyboard navigation between samples.
 
 ---
 
@@ -391,14 +381,14 @@ Use as the article’s closing “Part A graduation” list. Each item: symptom 
 ## Open questions / author notes
 
 1. **MySQL version framing:** Series corpus is 8.x/9.7-shaped. Call out that `EXPLAIN ANALYZE` and TREE/hash-join visibility matter on modern servers; if readers are on ancient 5.7, traditional EXPLAIN still teaches the same literacy (hash join / ANALYZE sections become “upgrade notes”).
-2. **Interactive parse scope:** Full fidelity paste-parse of every EXPLAIN dialect (horizontal `\G`, TREE text, JSON v1 vs v2) is a rabbit hole. Ship curated samples + before/after first; paste as progressive enhancement.
+2. **Interactive parse scope:** Full fidelity paste-parse is a rabbit hole. Ship curated samples + scattered embeds first; paste as progressive enhancement.
 3. **JSON format version:** 9.7 `EXPLAIN ANALYZE FORMAT=JSON` needs `explain_json_format_version=2` (`explain`). Probably skip teaching JSON schema; stick to traditional + TREE in the UI.
 4. **Don’t steal article 15:** `Using index` gets a positive cameo only. No covering-index design workshop here.
 5. **Don’t steal article 20:** Slow query log / Performance Schema are “where plans come from in prod,” one paragraph max.
 6. **ORM brand balance:** Use neutral SQL in fixtures; name Prisma/Rails/Django as producers of SQL, not as the subject. Avoid implying one ORM is uniquely bad.
 7. **Safety callout:** `EXPLAIN ANALYZE` on a huge prod `UPDATE`/`DELETE` is hostile—article should state ANALYZE supports SELECT and multi-table UPDATE/DELETE (`explain`) and recommend SELECT-shaped reproductions.
 8. **Stats & histograms:** Mention `ANALYZE TABLE` when estimates are wrong; histogram deep dive is optional footnote via `controlling-optimizer` / `analyze-table`, not a section.
-9. **Coordination with article 06:** Nested-loop stepper (joins) vs EXPLAIN explorer (this post)—shared vocabulary (`eq_ref`, fanout) but different toys. Cross-link heavily; don’t duplicate the join visualizer.
+9. **Coordination with article 06:** Nested-loop stepper (joins) vs EXPLAIN embeds (this post)—shared vocabulary (`eq_ref`, fanout) but different toys. Cross-link heavily; don’t duplicate the join visualizer.
 10. **Legal:** Original teaching prose only; link refman nodes; local `sources/mysql-refman-9.7/` stays gitignored (`sources/README.md`).
 11. **Series glue:** Register slug `mysql-explain` in hub `seriesList.postSlugs` when publishing; place after isolation (09), before MVCC (11).
 12. **Tone check:** Capstone energy—celebrate literacy (“you can read the map now”) rather than dumping every Extra enum from the manual.
@@ -408,6 +398,15 @@ Use as the article’s closing “Part A graduation” list. Each item: symptom 
 ## Draft success metrics (for later editing)
 
 - A reader can decode a 2-table traditional EXPLAIN aloud in under a minute.
-- Before/after interactive makes the index win *visually* obvious (type + Extra + rows).
+- Scattered before/after embed makes the index win visually obvious (type + Extra + rows).
 - Zero sections that require knowing the optimizer cost model.
 - Every major smell maps back to a Part A article number.
+- Humanizer pass; first-person voice; `<Cite />` + `<References />`.
+
+## Drafting checklist (when writing the post)
+
+- [ ] Replace stub MDX; scatter 3–5 mini-demos mid-article
+- [ ] Humanizer pass; first-person voice check
+- [ ] `<Cite />` + `<References />` for all optimizer claims
+- [ ] Part A capstone checklist + forward links to 15 / 11–12 / 20
+- [ ] Curated EXPLAIN fixtures verified against MySQL 9.7 where screenshots used

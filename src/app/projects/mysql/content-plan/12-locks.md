@@ -10,7 +10,21 @@
 | **Post** | `/posts/mysql-locks/` |
 | **Depends on** | 08 — Transactions (`mysql-transactions`); 09 — Isolation (`mysql-isolation`); 11 — MVCC (`mysql-mvcc`) as prior context for “consistent read ≠ lock” |
 | **Feeds into** | 13 — Buffer Pool (hot rows sit in RAM *and* under lock); 16 — Foreign Keys (FK checks take shared locks); 18 — Online DDL (metadata vs row locks); 20 — Perf Schema forensics (lock waits as a wait class) |
-| **Interactive** | Two-transaction lock board — row + gap locks, induce deadlock, animate victim selection |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
+- **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff. Prefer shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
+- **Length:** Part B can run longer than 10m if every section earns it; still prefer skimmable prose over encyclopedia.
+
+**Series division (09 / 11 / 12):** 09 = visibility at each isolation level; 11 = MVCC / undo / history list; **12 = row, gap, and next-key locks + deadlocks when writers serialize.** One bridge sentence on snapshots vs locks; do not redo MVCC internals (11) or the full isolation tour (09).
 
 ---
 
@@ -92,26 +106,26 @@ Cite local nodes under `sources/mysql-refman-9.7/nodes/` while drafting. Link th
 
 **Do not paste Oracle prose.** Teach with the inventory/booking schema below; when using the official deadlock sequence, rename tables and keep the lock-order lesson.
 
+**Citation rule:** paraphrase mechanisms; cite with `<Cite />` / `<References />`; never paste Oracle manual prose.
+
 ---
 
 ## Article structure
 
-Suggested MDX flow (interactive at top, per series pattern):
+Suggested H2 spine — sentence-case, conversational. Scatter **named mini-demos** mid-article; no mega lock-board at the top.
 
-1. **Interactive** — Two-transaction lock board (see below).
-2. **Hook** — Concurrent checkout / booking; “ACID aborted one of you.”
-3. **Bridge from 08 / 09 / 11** — Transactions exist; isolation is about *visibility*; MVCC explains snapshots; **this article is about who waits**.
-4. **Lock vocabulary under RR** — S/X, record, gap, next-key, insert-intention; intention locks in one paragraph.
-5. **What statements lock** — `SELECT` vs `FOR UPDATE`/`FOR SHARE` vs `UPDATE`/`DELETE`/`INSERT`; unique point lookup vs range; “locks follow the index scan.”
-6. **Phantoms & gaps** — why RR locking reads take next-key; supremum; RC as the gap-lock escape hatch (point back to 09).
-7. **Deadlocks** — crossed order + range timing; detection; victim selection; ERROR 1213 vs 1205.
-8. **App patterns** — inventory claim, consistent lock order, retries with backoff, `NOWAIT`/`SKIP LOCKED`, when RC helps.
-9. **Observability** — `data_locks`, `data_lock_waits`, `SHOW ENGINE INNODB STATUS`, `innodb_print_all_deadlocks`.
-10. **Tie-back checklist** + forward links (13 / 16 / 18 / 20).
+1. **Part B beat + what today covers** — checkout/booking hook; 09/11/12 split in one paragraph (visibility → MVCC → **locks**).
+2. **Locks vs snapshots** — plain `SELECT` vs `FOR UPDATE` / DML; consistent readers can still see old versions (11). *(Optional one-line embed: **Snapshot vs lock** contrast chip — no MVCC replay.)*
+3. **Lock vocabulary under RR** — S/X, record, gap, next-key, insert-intention; intention locks in one paragraph.
+4. **What statements lock** — `SELECT` vs locking reads vs DML; unique equality vs range; locks follow the index scan. *(Embed **Record-only FOR UPDATE**.)*
+5. **Phantoms and gaps** — why RR locking reads take next-key; supremum; RC escape hatch (callback 09). *(Embed **Next-key gap guard**.)*
+6. **Deadlocks and retries** — crossed order + range timing; 1213 vs 1205; victim selection. *(Embed **Crossed-order deadlock stepper**.)*
+7. **App patterns** — inventory claim, consistent lock order, retry loop, `NOWAIT` / `SKIP LOCKED`, when RC helps.
+8. **Observability** — `data_locks`, `data_lock_waits`, `SHOW ENGINE INNODB STATUS`.
+9. **Tie-back checklist** + forward links (13 / 16 / 18 / 20).
+10. **References** — IEEE list.
 
-Each major section ends with a one-line **app consequence**.
-
----
+Do **not** end major sections with “App consequence:” stamps — weave the handler implication into the paragraph.
 
 ## Deep-dive beats
 
@@ -120,21 +134,21 @@ Each major section ends with a one-line **app consequence**.
 - Plain `SELECT` under RR: consistent read, **no row locks** (article 09/11).
 - `SELECT … FOR UPDATE` / `FOR SHARE`, `UPDATE`, `DELETE`: operate on current versions and **set locks** that other writers (and some locking readers) must respect.
 - Consistent readers still sail past your `X` locks using old versions — which is why “I locked it!” doesn’t stop other requests from *seeing* a pre-image via non-locking `SELECT`.
-- App consequence: if the bug is double-sell, you need a **locking read or atomic `UPDATE`**, not a second plain `SELECT`.
+- if the bug is double-sell, you need a **locking read or atomic `UPDATE`**, not a second plain `SELECT`.
 
 ### Beat 2 — Shared, exclusive, intention (just enough)
 
 - `S` = others may `S`, not `X`; `X` = exclusive for writers.
 - `FOR SHARE` → `S` (+ table `IS`); `FOR UPDATE` / `UPDATE` / `DELETE` → `X` (+ table `IX`).
 - Intention locks make row + table locking coexist; they mostly matter when someone does `LOCK TABLES` — mention, don’t drill.
-- App consequence: two checkouts can both `FOR SHARE` the same row and then both deadlock upgrading to `X` — prefer `FOR UPDATE` when you intend to write (manual’s counter example).
+- two checkouts can both `FOR SHARE` the same row and then both deadlock upgrading to `X` — prefer `FOR UPDATE` when you intend to write (manual’s counter example).
 
 ### Beat 3 — Record locks are index-record locks
 
 - Every row lock sits on an **index record** (clustered PK, or hidden clustered index if none).
 - Exclusive locks on secondary index records also lock the corresponding clustered records (`innodb-locks-set`).
 - `SHOW ENGINE` / P_S wording: `locks rec but not gap` / `REC_NOT_GAP` vs next-key (no gap qualifier) vs `GAP`.
-- App consequence: bad or missing indexes turn one `UPDATE … WHERE status = 'open'` into “lock the world.”
+- bad or missing indexes turn one `UPDATE … WHERE status = 'open'` into “lock the world.”
 
 ### Beat 4 — Gap locks & next-key locks (the RR star)
 
@@ -145,7 +159,7 @@ Each major section ends with a one-line **app consequence**.
 - Unique index + unique equality search → **record lock only** (no preceding gap). Non-unique or range → gap/next-key.
 - Insert intention locks: concurrent inserts into different positions of the same gap don’t block each other until they conflict.
 - RC: gap locking disabled for ordinary searches/scans (still used for FK + duplicate-key checks); fewer phantom-blocking locks, fewer wait edges — tradeoff already framed in article 09.
-- App consequence: a range `FOR UPDATE` on seats or SKUs locks **holes**, not just existing rows — that’s a feature (no phantom hold) and a concurrency cost.
+- a range `FOR UPDATE` on seats or SKUs locks **holes**, not just existing rows — that’s a feature (no phantom hold) and a concurrency cost.
 
 ### Beat 5 — `SELECT … FOR UPDATE` as the web-app primitive
 
@@ -154,7 +168,7 @@ Each major section ends with a one-line **app consequence**.
 - Requires an open transaction; locks live until `COMMIT`/`ROLLBACK`.
 - Subquery gotcha: outer `FOR UPDATE` does not lock rows in a subquery unless the subquery also has a locking clause.
 - `NOWAIT` → fail fast (`ERROR 3572`); `SKIP LOCKED` → omit locked rows (queues/workers; **not** general checkout integrity).
-- App consequence: never hold `FOR UPDATE` across slow Stripe/network calls — lock, decide, write, commit; do external I/O outside the txn (bridge to 08’s boundary lesson).
+- never hold `FOR UPDATE` across slow Stripe/network calls — lock, decide, write, commit; do external I/O outside the txn (bridge to 08’s boundary lesson).
 
 ### Beat 6 — Deadlocks: how concurrent carts create them
 
@@ -170,7 +184,7 @@ Detection:
 - High-concurrency option: disable detection and lean on `innodb_lock_wait_timeout` (default **50s** → **1205**) — rare app-level knob; mention for ops literacy.
 - Isolation level does **not** remove write deadlocks (`innodb-deadlocks`).
 
-App consequence: a correct checkout still needs a **retry layer**; deadlock ≠ logic bug by itself (though frequent deadlocks often mean bad lock order or over-broad scans).
+A correct checkout still needs a **retry layer**; deadlock ≠ logic bug by itself (though frequent deadlocks often mean bad lock order or over-broad scans).
 
 ### Beat 7 — Minimize & handle (production checklist)
 
@@ -208,76 +222,39 @@ From `innodb-deadlocks-handling`, translated to handlers:
 
 ## Interactive feature
 
-### Name
+Scatter **3–5 small client demos** under `src/components/interactive/mysql-lock-board/` (shared chrome from `schema-byte-budget/shared.tsx`). Embed each mid-article — split the old mega-board into focused toys. Pure TypeScript lock simulator + unit tests; label as simplified teaching model.
 
-**Two-Transaction Lock Board**  
-Suggested path: `src/components/interactive/mysql-lock-board/`  
-Import at top of `src/app/posts/mysql-locks/page.mdx`:
+### 1. Record-only FOR UPDATE
 
-```mdx
-import { MysqlLockBoard } from "@/components/interactive/mysql-lock-board";
+- **Goal:** Unique equality lookup takes record `X` only — adjacent gap stays free; insert beside locked key still allowed.
+- **Placement:** After “what statements lock” (§4).
+- **UX:** Minimal index strip (4 keys); one txn, one `FOR UPDATE`; gap cells unmarked. Single-focus, no second txn column.
 
-<MysqlLockBoard />
-```
+### 2. Next-key gap guard
 
-### Goal
+- **Goal:** Range `FOR UPDATE` locks next-key + gap; concurrent insert into gap waits.
+- **Placement:** After phantoms & gaps (§5).
+- **UX:** Stepper: range lock → insert attempt → wait → commit clears. Optional **RR vs RC** toggle (RC: gap not taken for search — callback 09).
 
-Give readers a RAID-grid-style board they can *play*: watch row + gap locks appear as two transactions step statements, drive into a deadlock, and see victim selection animate — before the prose defines every term.
+### 3. Crossed-order deadlock stepper
 
-### UX sketch (RAID-like)
+- **Goal:** Two txns, opposite lock order → cycle → victim rollback (1213).
+- **Placement:** Deadlocks section (§6).
+- **UX:** Two-column statement log + compact wait graph; animate victim (smaller txn by rows written). Inventory + coupon or item 10/20 — keep two resources max.
 
-- **Board (center):** one index pictured as an ordered strip of **cells**:
-  - Record cells for existing keys (e.g. seat or SKU ids `10 · 11 · 13 · 20`).
-  - Gap cells between them (and before first / after last → supremum).
-  - Each cell shows lock chips: `S` / `X` / `GAP` / `next-key` / `insert-intention`, colored by transaction (Txn A ink vs Txn B accent — match site interactives; no purple glow).
-- **Two side columns:** Txn A | Txn B — statement log, held locks list, status (`RUNNING` / `WAITING` / `ROLLED BACK`).
-- **Wait graph (compact):** A → B edge when one waits on the other’s record lock; flash cycle when deadlock detected.
-- **Stepper:** Prev / Next / Reset + optional autoplay (same muscle memory as RAID phases / isolation race).
-- **Scenario tabs:**
-  1. **Record lock only** — unique PK `FOR UPDATE` equality; gap cells stay free; B can insert adjacent keys.
-  2. **Next-key / phantom guard** — range `WHERE id > 100 FOR UPDATE`; gap + supremum lock; B’s insert into gap goes `WAITING`.
-  3. **Deadlock (crossed order)** — A locks row 10 then waits on 20; B locks 20 then waits on 10 → cycle → victim rollback animation.
-  4. *(Stretch)* **Duplicate-key S-lock trap** — simplified three-session insert collision from `innodb-locks-set` (optional; hide behind “Advanced”).
+### 4. RR vs RC gap toggle *(optional — fold into #2)*
 
-### Teaching script — Deadlock (must ship)
+- **Goal:** Same range script; RC lets insert proceed while A holds row lock only.
+- **Placement:** Gap section or observability callback to 09.
 
-Domain: `inventory(sku_id PK)` + `coupons(code PK)` or two item rows — keep it to two resources so the grid stays readable.
+### 5. Snapshot vs lock contrast *(optional — prose-first)*
 
-| Step | Txn A | Txn B | Board / graph |
-| --- | --- | --- | --- |
-| 0 | `START TRANSACTION` | `START TRANSACTION` | empty |
-| 1 | `SELECT … FROM inventory WHERE sku='tee-m' FOR UPDATE` | — | A: `X,REC` on tee-m |
-| 2 | — | `SELECT … FROM coupons WHERE code='SAVE10' FOR UPDATE` | B: `X,REC` on SAVE10 |
-| 3 | — | `UPDATE inventory … WHERE sku='tee-m'` | B **WAITING** on A’s X; wait edge B→A |
-| 4 | `UPDATE coupons … WHERE code='SAVE10'` | — | A **WAITING** on B; cycle; **deadlock** |
-| 5 | — | — | Animate detector: highlight cycle → pick victim (label: “smaller txn by rows written”) → victim chips clear + status `ROLLED BACK (1213)` → survivor’s WAITING → GRANTED |
+- **Goal:** Side-by-side: plain `SELECT` sees snapshot qty; `FOR UPDATE` blocks writer — pointer to 11, no MVCC replay.
+- **Placement:** Locks vs snapshots (§2). Cut if prose + one diagram suffice.
 
-Caption under board updates each step in plain English (“A holds exclusive record lock on tee-m; B wants it → wait”).
+**Non-goals:** full gap compatibility matrix, MVCC version pane, duplicate-key three-session trap in v1 unless cheap “Advanced” tab.
 
-### Teaching script — Next-key (must ship)
-
-Index values `90`, `102` (from manual, renamed to seat numbers or SKU sort keys):
-
-| Step | Action | Board |
-| --- | --- | --- |
-| 1 | A: `SELECT … WHERE id > 100 FOR UPDATE` → row 102 | Lock next-key on 102 + gap (90,102] / supremum as appropriate |
-| 2 | B: `INSERT … (id=101)` | Insert-intention in gap; **WAITING** |
-| 3 | A: `COMMIT` | Gaps clear; B proceeds |
-
-Toggle (small control): **Isolation RR vs RC** on the same script — under RC, show gap **not** taken for the search (footnote: FK/dup-key still can), so B’s insert succeeds while A is open. Reinforces article 09 without re-teaching isolation.
-
-### Implementation notes
-
-- `"use client"`; pure TypeScript lock simulator + unit tests (`lock-board.test.ts`) in the spirit of `raid.test.ts` — **no live MySQL**.
-- Model a minimal lock manager: grant/wait/compat for record `S`/`X`; gap presence; deadlock detection via wait-for cycle; victim heuristic = fewer undo/write ops in the script metadata.
-- Label the UI: “Simplified teaching model — InnoDB’s real lock system has more modes (intention, insert intention details, page-level structures).”
-- Accessibility: keyboard stepper; live region announces “Txn B waiting; deadlock — Txn A rolled back.”
-- Visual language: bordered ink grid, mono SQL logs, restrained motion (chip slide-in, wait pulse, victim fade) — 2–3 intentional motions, not noise.
-- Keep MVCC out of the widget (no dual “snapshot qty” pane — that’s article 09’s race visualizer).
-
-### Success criterion
-
-A reader who only uses the board can answer: (1) what’s the difference between a record lock and a gap lock, (2) why crossed `FOR UPDATE` order deadlocks, (3) what the app must do when it sees 1213.
+**A11y:** keyboard stepper; live region for wait/deadlock states.
 
 ---
 
@@ -447,15 +424,14 @@ Copy-paste for the end of the published post (and for the author’s own review 
 - [ ] Gives an **app retry** pattern and **consistent lock-order** rule.
 - [ ] Mentions `NOWAIT` / `SKIP LOCKED` with correct use cases (fail-fast vs queue).
 - [ ] Points to **RC** as a gap-lock / contention lever without restating all of article 09.
-- [ ] Interactive lock board ships at top; scripts cover record-only, next-key wait, and deadlock victim animation.
-- [ ] Forward links: buffer pool (13), FKs (16), online DDL (18), perf schema (20).
-- [ ] All refman cites use node id + `https://dev.mysql.com/doc/refman/9.7/en/<node>.html`.
+- [ ] Scatters mini-demos (record-only, next-key, deadlock) mid-article — not one top lock board.
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice.
 
 ---
 
 ## Open questions / author notes
 
-1. **Interactive fidelity for gap coexistence** — Manual says conflicting gap locks can be held by different txns and that S/X gap don’t conflict. For the board, simplify to “gap occupied / insert blocked” unless teaching insert-intention explicitly in scenario 2. Don’t overbuild a full gap compatibility matrix in v1.
+1. **Interactive scope** — Ship record-only + next-key + deadlock as three small embeds; don’t rebuild full gap compatibility matrix in v1.
 
 2. **Victim heuristic animation** — Real InnoDB uses “number of rows inserted, updated, or deleted.” Script metadata should tag each txn with a write-count so the animation isn’t arbitrary. Call out that “too deep wait-for graph” (≥200 txns) is an ops edge case, not interactive material.
 
@@ -473,5 +449,15 @@ Copy-paste for the end of the published post (and for the author’s own review 
 
 9. **Demo data for local try-along** — Optional `docker compose` / local MySQL snippet in a callout; not required for the interactive, which must work offline.
 
-10. **Naming** — Component working title `MysqlLockBoard`; post title stays “Row Locks, Gap Locks & Deadlocks”; H1 can shorten section titles (“Gap locks under RR”, “Deadlocks & retries”) for scannability.
+10. **Naming** — Component folder `mysql-lock-board/` with per-demo exports; post title stays “Row Locks, Gap Locks & Deadlocks.”
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Part B opener + 09/11/12 division; no MVCC deep dive
+- [ ] Scatter demos mid-article; no import-at-top mega-board
+- [ ] `<Cite />` / `<References />`; humanizer pass; no “App consequence:” stamps
+- [ ] Checkout deadlock + retry pattern with ERROR 1213 / 1205
+- [ ] Forward links: 13, 16, 18, 20
 )

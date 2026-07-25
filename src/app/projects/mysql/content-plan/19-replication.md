@@ -10,7 +10,19 @@
 | **Depends on** | 08 Transactions; 14 Durability (binlog vs redo mental model); light awareness of 18 Online DDL (DDL also ships through binlog). |
 | **Feeds into** | 20 Performance Schema forensics (replication Performance Schema tables as monitoring path); deferred ops/HA (Group Replication / InnoDB Cluster). |
 | **Published path** | `/posts/mysql-replication/` |
-| **Interactive** | Primary/replica timeline: write on primary → scrub lag → stale replica read vs forced primary read |
+| **Status** | Plan only |
+
+---
+
+## Authoring contract
+
+- **Status:** Plan only — stub wired; article not written yet.
+- **Voice:** First person, casual/jokey, flowing prose. Humanizer pass before publish.
+- **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” lists.
+- **Citations:** IEEE `<Cite />` + `<References items={[…]} />`. Source technical claims; paraphrase refman only.
+- **Interactives:** 3–5 small demos mid-article. Shared chrome from `schema-byte-budget/shared.tsx`.
+- **House defaults:** Integer cents; ULID public ids; `utf8mb4_0900_ai_ci`; Prisma primary ORM.
+- **Length:** Part B — skimmable prose over encyclopedia.
 
 ---
 
@@ -92,61 +104,59 @@ Public URL pattern: `https://dev.mysql.com/doc/refman/9.7/en/<node-id>.html`.
 | `point-in-time-recovery-binlog` | https://dev.mysql.com/doc/refman/9.7/en/point-in-time-recovery-binlog.html | One sentence: same binlog powers PITR after restore — dual-purpose reminder. |
 | `purge-binary-logs` | https://dev.mysql.com/doc/refman/9.7/en/purge-binary-logs.html | Ops callout: don’t purge source logs still needed by lagging replicas. |
 
-**Citation rule:** paraphrase + link; never paste Oracle wording into the published post.
+**Citation rule:** paraphrase + `<Cite />` / `<References />`; never paste Oracle wording into the published post.
 
 ---
 
 ## Article structure
 
-Proposed MDX flow (top interactive, then narrative). Keep spoon-fed: one mechanism per section, always ending in a request-handler implication.
+Suggested H2 spine — sentence-case. Scatter **named mini-demos** mid-article; no mega timeline at top.
 
-1. **Hook** — “Save worked, refresh showed old data”; name the culprit (async replica lag), not “MySQL is broken.”
-2. **Interactive** — Primary/replica timeline (see below); invite readers to scrub lag before the essay.
-3. **Why web apps add read replicas** — scale-out model from `replication-solutions-scaleout`; write path stays on primary; read fan-out.
-4. **The binary log is the stream** — events of data/schema change; not the query log; dual use with PITR (`binary-log`).
-5. **How a replica catches up** — dump thread → receiver → relay log → applier (`replication-implementation`, `replication-threads`, `replica-logs`).
-6. **Async by default (and what that means for HTTP)** — commit returns on primary before replicas apply; lag is normal; semisync footnote.
-7. **Formats & GTIDs (literacy pass)** — row-based default; GTID as transaction identity / “applied set,” not a full ops tutorial.
-8. **Read-your-writes after POST** — the classic bug; patterns that fix it (primary-after-write, sticky session, causal wait — see deep-dive beats).
-9. **App wiring: Rails / Prisma / Laravel** — reader/writer roles, when ORMs silently route to replica, how to force primary.
-10. **Monitoring lag without becoming a DBA** — `SHOW REPLICA STATUS` field decoder; when `Seconds_Behind_Source` lies; alert ideas.
-11. **InnoDB + replication gotchas (short)** — rolled-back txs don’t replicate; keep engines/FK behavior aligned (`innodb-and-mysql-replication`).
-12. **What this article is not** — Group Replication / InnoDB Cluster HA → later/ops; failover runbooks; article 20 for P_S tables.
-13. **Tie-back checklist** + further reading links.
-
-**Length target:** long-form deep dive (~3–4.5k words) + interactive. Denser than early Part A; lighter than a DBA replication handbook — app consistency patterns get equal page weight to the mechanism.
+1. **Part B opener + what today covers** — save-then-refresh stale read hook.
+2. **Why web apps add read replicas** — scale-out model.
+3. **The binary log is the stream** — not the query log. *(Embed **Binlog stream gutter** on write.)*
+4. **How a replica catches up** — pull, relay, apply.
+5. **Async by default** — commit ≠ visible on replica. *(Embed **Lag scrubber stale read**.)*
+6. **Formats & GTIDs (literacy pass)** — row-based; light GTID vocabulary.
+7. **Read-your-writes after POST** — patterns. *(Embed **Read target toggle** — replica vs primary.)*
+8. **App wiring: Rails / Prisma / Laravel** — force primary after mutation.
+9. **Monitoring lag** — `SHOW REPLICA STATUS`. *(Embed **Replica status decoder** — fields light up with scrubber.)*
+10. **InnoDB + replication gotchas (short)**
+11. **What this article is not** — Group Replication / HA deferral.
+12. **Tie-back checklist** + further reading.
+13. **References** — IEEE list.
 
 ---
 
 ## Deep-dive beats
 
-Teach these ideas in order. Each beat should end with “so in your app…”
+Teach these ideas in order. Weave handler implications into prose — no “App implication:” stamp lines.
 
 ### Beat A — Replicas buy read capacity, not a second primary
 
 - From `replication` / `replication-solutions-scaleout`: one source owns writes/updates; replicas absorb `SELECT` load; model fits browse-heavy sites.
 - Mental model diagram (prose or small SVG): `[App] --writes--> [Primary] ; [App] --reads--> [Replica₁…ₙ]`.
-- App implication: if your traffic is write-heavy (ingest pipelines, high-churn counters), replicas won’t magically fix primary CPU — you need different tools (sharding, queues, caching). Say this early so readers don’t cargo-cult “add replicas.”
+- If your traffic is write-heavy (ingest pipelines, high-churn counters), replicas won’t magically fix primary CPU — you need different tools (sharding, queues, caching). Say this early so readers don’t cargo-cult “add replicas.”
 
 ### Beat B — The binary log is the change tape
 
 - Primary records modifying events in the binary log (`binary-log`, `replication-implementation`).
 - `SELECT` does not go into the binlog — replicas never “replay reads.”
 - Binlog also enables point-in-time recovery after restore — same artifact, two jobs (`binary-log`, `point-in-time-recovery-binlog`).
-- App implication: anything that must exist on a replica had to commit on the primary (or be applied via replication). App-only caches are a separate consistency problem.
+- Anything that must exist on a replica had to commit on the primary (or be applied via replication). App-only caches are a separate consistency problem.
 
 ### Beat C — Pull, relay, apply (where lag lives)
 
 - Replica **pulls** binlog events (does not wait for a push) (`replication-implementation`).
 - Path: source **Binlog Dump** thread → replica **receiver (I/O)** → **relay log** → **applier (SQL)** (+ optional parallel workers) (`replication-threads`, `replica-logs`).
 - Lag can be network/IO (receiver behind), apply backlog (applier behind), or deliberate delay — teach the first two as the common web-app case.
-- App implication: “replica is up” ≠ “replica has my transaction.” Health checks that only ping `SELECT 1` miss apply lag.
+- “replica is up” ≠ “replica has my transaction.” Health checks that only ping `SELECT 1` miss apply lag.
 
 ### Beat D — Async commit vs visible-on-replica
 
 - Default replication is asynchronous: primary does not wait for replicas to apply before returning success to the client (`replication`).
 - Semisync (footnote): source can wait for **receipt/log** on ≥1 replica before commit returns — still not a guarantee the applier finished (`replication-semisync`). Fully sync / consensus HA is Group Replication / NDB territory → later/ops.
-- App implication: HTTP 200 on `POST` means “durable on primary” (subject to durability settings from article 14), not “safe to read from any replica.”
+- HTTP 200 on `POST` means “durable on primary” (subject to durability settings from article 14), not “safe to read from any replica.”
 
 ### Beat E — Read-your-writes is an application contract
 
@@ -191,20 +201,20 @@ Keep examples short and idiomatic — teach the *routing rule*, not every API.
   - `Seconds_Behind_Source` — useful heuristic, **not** precise wall time; weak on slow networks; multithreaded applier caveats (`show-replica-status`).
   - `Retrieved_Gtid_Set` vs `Executed_Gtid_Set` — received vs applied (when GTIDs enabled).
   - `Last_IO_Error` / `Last_SQL_Error` — “it’s broken,” not “it’s lagging.”
-- App implication: product metrics should alert on lag thresholds that match UX SLOs (e.g. p95 confirmation freshness), not only on thread death.
+- Product metrics should alert on lag thresholds that match UX SLOs (e.g. p95 confirmation freshness), not only on thread death.
 - Teaser: Performance Schema `replication_*` tables → article 20.
 
 ### Beat H — GTID literacy (light)
 
 - GTID = `SOURCE_UUID:TRANSACTION_ID` uniquely names a committed transaction across the topology (`replication-gtids-concepts`).
 - Consistency intuition: if every GTID committed on the source is in the replica’s executed set, they’re consistent for those transactions (`replication-gtids`).
-- App implication: you usually don’t manipulate GTIDs from Rails/Prisma — but managed DBs and failover tooling do. Enough vocabulary to read status output and vendor docs.
+- You usually don’t manipulate GTIDs from Rails/Prisma — but managed DBs and failover tooling do. Enough vocabulary to read status output and vendor docs.
 
 ### Beat I — InnoDB notes that prevent wrong mental models
 
 - Failed / rolled-back transactions are **not** written to the binary log, so replicas never see them (`innodb-and-mysql-replication`). Ties to article 08.
 - Engine mismatch / cascade surprises exist if replica tables aren’t InnoDB with the same FKs — one cautionary paragraph, link article 16; don’t derail into cascade thesis.
-- App implication: “I rolled back the checkout” does not need a compensating delete on replicas — it never replicated.
+- “I rolled back the checkout” does not need a compensating delete on replicas — it never replicated.
 
 ### Beat J — Later/ops box (explicit deferral)
 
@@ -216,55 +226,31 @@ Short callout, not a section series:
 
 ## Interactive feature
 
-### Name
+Scatter **4 small client demos** under `src/components/interactive/mysql-replication/` (shared chrome from `schema-byte-budget/shared.tsx`).
 
-**Primary / Replica Timeline** (working component name: `ReplicaLagTimeline` under `src/components/interactive/`).
+### 1. Binlog stream gutter
 
-### Learning goal
+- **Goal:** Write on primary → binlog event chip → relay → apply lights up as lag drains.
+- **Placement:** Binlog stream section (§3).
 
-Make async lag *felt*: after a write commits on the primary, a replica read can still be stale until the applier catches up — and forcing a primary read (or waiting for catch-up) fixes the user-visible bug.
+### 2. Lag scrubber stale read
 
-### Metaphor / UX
+- **Goal:** After commit, replica still shows old row until lag = 0.
+- **Placement:** Async default (§5) and read-your-writes (§7). **Primary wow moment.**
 
-Horizontal **time scrubber** + two panes (Primary | Replica). Reuse RAID-style phase rail if it fits, but the hero control is the lag scrubber.
+### 3. Read target toggle
 
-**Story seed (fixed demo data):**
+- **Goal:** Same query on replica (stale) vs primary (consistent confirmation page).
+- **Placement:** Read-your-writes (§7).
 
-| t | Event |
-| --- | ---: |
-| 0 | Both show `orders` row id=1001 `status=pending` |
-| 1 | User clicks **Place order** → primary runs `UPDATE … SET status='paid'` + commit |
-| 2 | Primary pane shows `paid` immediately; binlog event appears in a small “stream” gutter |
-| 3 | Replica pane still `pending` until lag reaches 0 |
-| 4 | User can **Read from replica** vs **Read from primary** |
+### 4. Replica status decoder
 
-**Controls:**
+- **Goal:** `Seconds_Behind_Source`, IO/SQL running badges update with lag scrubber — monitoring literacy.
+- **Placement:** Monitoring lag (§9).
 
-- **Place order (write on primary)** — advances story; disables until reset if already paid.
-- **Lag scrubber** — 0–10s (or 0–100% catch-up). Maps to “how far behind the applier is.” At lag > 0, replica row stays stale; at 0, replica matches primary.
-- **Read target toggle:** `Replica` | `Primary` — drives the “What does the app see?” result card.
-- **Auto-drain** — optional play button that animates lag → 0 over ~2s (respect `prefers-reduced-motion`: jump to states, no continuous animation).
-- **Reset**
+**Non-goals:** Group Replication, semisync ack, real MySQL, GTID wait API.
 
-**Result card copy (examples):**
-
-- Replica + lag > 0: “Stale read — UI shows `pending` even though checkout returned 200.”
-- Replica + lag = 0: “Caught up — replica matches primary.”
-- Primary (any lag): “Forced primary read — confirmation page is consistent.”
-
-**Visual details:**
-
-- Small event chips in the stream: `binlog event #N` → `relay` → `apply` lighting up as lag decreases.
-- Status badges: `IO: Yes` / `SQL: Yes` / `Seconds_Behind_Source: {n}` updating with the scrubber (teaching the monitoring fields).
-- Do **not** simulate Group Replication or multi-primary.
-
-**A11y / motion:** keyboard-operable scrubber + buttons; `aria-valuenow` on lag; reduced-motion skips auto-drain animation.
-
-**Non-goals for v1:** real MySQL connections, GTID wait API, semisync ack visualization, parallel applier reordering puzzles.
-
-### Placement
-
-Top of MDX (series pattern): interactive first, then essay sections that reference the scrubber (“what you just scrubbed is apply lag”).
+Embed demos mid-article — not at top.
 
 ---
 
@@ -426,13 +412,22 @@ Closing “so what do I do in my app?” list. Symptom → mechanism → action.
 5. **Semisync depth:** Cap at one paragraph; it tempts an HA digression. Emphasize “ack received ≠ applied.”
 6. **GTID depth:** Literacy only — format, executed set, why ops likes it. No `CHANGE REPLICATION SOURCE TO` workshop.
 7. **Group Replication temptation:** Series README already defers HA cluster topology. Keep the later/ops box short; do not compare consensus protocols.
-8. **Interactive fidelity:** Fabricated lag is fine; don’t connect to a real replica. Showing fake `Seconds_Behind_Source` tied to the scrubber teaches monitoring vocabulary.
+8. **Interactive fidelity:** Fabricated lag is fine; scatter embeds mid-article — not at top.
 9. **Terminology:** Prefer current terms **source/replica** (and `SHOW REPLICA STATUS`) while acknowledging older “master/slave” strings in legacy docs/tools once.
 10. **Coordination with 14 (durability):** Binlog flush vs InnoDB redo can confuse readers. One clarifying sentence: article 14 = crash safety on *this* server; this article = *copying* committed changes to another server. Cross-link, don’t retell redo.
 11. **Coordination with 18 (online DDL):** DDL also replicates; long DDL can spike lag. One sentence + link — no migration workshop here.
 12. **Legal:** Original teaching prose only; link refman nodes; local `sources/mysql-refman-9.7/` stays gitignored (`sources/README.md`).
 13. **Series glue:** Register slug `mysql-replication` in hub `seriesList.postSlugs` when publishing; place after online DDL (**18**), before Performance Schema (**20**).
-14. **Tone check:** Empower app developers to use replicas safely — not scare them into “never use replicas.” The win is intentional routing, not avoiding scale-out.
+14. **Tone check:** Empower app developers to use replicas safely — not scare them into “never use replicas.”
+
+---
+
+## Drafting checklist (when writing the post)
+
+- [ ] Scatter replication demos mid-article; lag scrubber makes stale read obvious
+- [ ] `<Cite />` / `<References />`; humanizer pass; first-person voice
+- [ ] Rails / Prisma / Laravel force-primary sketches; distinguish 14 (durability on primary) vs this article (copying commits)
+- [ ] Later/ops box for Group Replication — short
 
 ---
 
