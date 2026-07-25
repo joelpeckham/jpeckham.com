@@ -3,6 +3,7 @@ import {
   ProjectionDemo,
   SargabilityDemo,
 } from "@/components/interactive/mysql-select";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
 import { Cite, References } from "@/components/cite";
 
 ## The list query that ignored the index you just built
@@ -62,9 +63,13 @@ The function rule is worth thirty seconds of *why*, because it looks like optimi
 
 Constants on the *right* are fine. `WHERE id = POW(2, 3)` can still be a point lookup after constant folding. Nondeterministic junk like `WHERE id = FLOOR(1 + RAND() * 49)` cannot.<Cite n={5} />
 
-Toggle the presets. `YEAR(updated_at)` is the Eloquent footgun in cartoon form.
+One nuance before you poke the demo: `YEAR(updated_at)` on a composite that already has `org_id` and `status` equalities often still shows `ref` on those two parts — the date column is what freezes. Play the scan pointer: it walks every open leaf entry instead of seeking a 2026 range. That is the footgun, not a full table scan.
 
 <SargabilityDemo />
+
+<Takeaway>
+Bare column on the left. Play seek vs scan: a function on the column forces the pointer to visit every candidate leaf.
+</Takeaway>
 
 Those `ref` / `range` / `ALL` labels are teaching shorthand, not a promise from `EXPLAIN`. Steal the rewrite table:
 
@@ -95,6 +100,10 @@ List endpoints want card columns. Detail endpoints can ask for `body`. Same tabl
 
 <ProjectionDemo />
 
+<Takeaway>
+List endpoints want card columns. Fat `SELECT *` means fewer rows per page and more pages for the same `LIMIT`.
+</Takeaway>
+
 If the select list ever fits entirely inside a secondary index, MySQL may answer from the index without bouncing to the clustered row. That is a covering index.<Cite n={3} /><Cite n={8} /> Designing for it gets a whole article later in the series. Today, listing columns is how you keep that door open and stop shipping kilobytes of `body` to an inbox table.
 
 ## List vs detail
@@ -112,6 +121,10 @@ Detail can afford a wider row. List should not silently be detail. In Eloquent t
 Article 03 taught leftmost prefix on the index you build. Here the index is fixed; the predicates move. Equality on left parts, then one range; skip a middle column and the walk stops.<Cite n={4} />
 
 <PrefixLengthDemo />
+
+<Takeaway>
+With the index fixed, predicates decide how much left prefix lights. Gaps and mid-key ranges stop the walk.
+</Takeaway>
 
 When you peek at `EXPLAIN` later, `key_len` is the rough "how much of this key did we use?" number. Fluency comes later in the series. For now, if your filters don't light the prefix you expected, fix the `WHERE` before you add another index.
 
@@ -159,7 +172,13 @@ WHERE org_id = 42
   AND updated_at >= '2026-01-01';
 ```
 
-Glance at `type` (`ref` / `range` are friends; `ALL` is a dare), `key` (which index), `key_len` (how much prefix), `rows` (estimate), and `Extra` (`Using index condition` vs blank vs filesort later).<Cite n={10} /><Cite n={11} /> We'll read these properly in the EXPLAIN article. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
+On a healthy tickets table with `idx_org_status_updated (org_id, status, updated_at)`, a tabular `EXPLAIN` often looks roughly like this (columns trimmed):
+
+| id | select_type | table   | type  | possible_keys            | key                      | key_len | ref         | rows | Extra |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | SIMPLE | tickets | range | idx_org_status_updated | idx_org_status_updated | 10      | const,const | 820  | Using index condition |
+
+Read it left to right: `type = range` (friend), `key` names the composite you meant, `key_len` says how much of that key participated, `rows` is an estimate, and `Extra` here is ICP — not covering (`Using index` would mean index-only).<Cite n={10} /><Cite n={11} /> Contrast that with the bad list below (`YEAR(updated_at)`): you may still see a `ref` on `org_id`/`status` with a shorter `key_len` and no useful range on the date part. We'll read these properly in the EXPLAIN article. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
 
 `ANALYZE TABLE` keeps stats from lying after big loads. One sentence; ops depth later.<Cite n={12} />
 
@@ -211,6 +230,10 @@ WHERE org_id = ?
   AND status = ?
   AND YEAR(updated_at) = ?;
 ```
+
+<TryIt>
+Take one list handler. Rewrite any `whereDate` / `whereYear` / `SELECT *` into a bare-column range plus an explicit select list. Run `EXPLAIN` on staging data shaped like prod and confirm `key` / `key_len` match the prefix the demos lit for that WHERE.
+</TryIt>
 
 ## Checklist before you merge the handler
 

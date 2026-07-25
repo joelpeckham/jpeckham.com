@@ -2,10 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  SortedKeyStrip,
+  type KeyHighlight,
+} from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_INDEX_COLS,
   PREFIX_PRESETS,
+  buildLeftPrefixKeyScene,
   evaluateLeftPrefix,
   moveCol,
   predicateSqlLines,
@@ -56,6 +61,23 @@ export function LeftPrefixDemo() {
     () => predicateSqlLines(indexCols, predicates),
     [indexCols, predicates],
   );
+
+  const keyScene = useMemo(
+    () => buildLeftPrefixKeyScene(indexCols, predicates, verdict),
+    [indexCols, predicates, verdict],
+  );
+
+  const highlight: KeyHighlight = useMemo(() => {
+    if (keyScene.mode === "none") return { kind: "none" };
+    if (keyScene.mode === "interleaved") {
+      return { kind: "interleaved", matches: keyScene.matches };
+    }
+    return {
+      kind: "contiguous",
+      start: keyScene.walkStart,
+      end: keyScene.walkEnd,
+    };
+  }, [keyScene]);
 
   function applyPreset(id: string) {
     const preset = PREFIX_PRESETS.find((p) => p.id === id);
@@ -196,6 +218,26 @@ export function LeftPrefixDemo() {
           <Chip tone="warn">yellow = predicate frozen</Chip>
         </div>
       </div>
+
+      <SortedKeyStrip
+        keys={keyScene.keys}
+        columns={keyScene.columns}
+        highlight={highlight}
+        label={
+          keyScene.mode === "interleaved"
+            ? "Sorted keys — range froze status (interleaved)"
+            : keyScene.mode === "none"
+              ? "Sorted keys — no usable walk"
+              : "Sorted keys — contiguous left-prefix walk"
+        }
+      />
+      {keyScene.mode === "interleaved" ? (
+        <p className="font-mono text-[10px] text-grey">
+          Highlighted rows match status = open, but they are not one contiguous
+          run after the date range — the B-tree cannot walk them as a single
+          interval.
+        </p>
+      ) : null}
 
       <OutcomeBanner
         tone={verdict.tone}

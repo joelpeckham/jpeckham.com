@@ -3,6 +3,7 @@ import {
   LeftPrefixDemo,
   SelectivityDemo,
 } from "@/components/interactive/mysql-indexes";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
 import { Cite, References } from "@/components/cite";
 
 ## The inbox that was fine until it wasn't
@@ -73,9 +74,13 @@ If the rule feels arbitrary, picture a phone book. It's sorted by last name, the
 
 Equalities (and `IN`, and prefix `LIKE`) can stack from the left. A range on a middle column uses that column, then freezes the suffix for the index *range walk*. The freeze isn't spite; it's the same sort order doing its job. Within one `(org_id, status)` pair the entries are sorted by `assignee_id`, but across a *range* of statuses those `assignee_id` values are many interleaved runs, not one sorted one, so the walk can't use them to narrow further. Later columns may still get filtered after the fact, but they do not tighten the walk the way people hope.<Cite n={5} /> Heuristic for web list queries: equalities first, range last.
 
-Reorder the index. Cycle the predicates. Try the "Range freezes status" preset.
+Reorder the index. Cycle the predicates. Try the "Range freezes status" preset — the sorted key strip shows why status becomes interleaved runs the walk cannot span.
 
 <LeftPrefixDemo />
+
+<Takeaway>
+Composite = one sorted phone book. Leftmost prefix only. A range in the middle freezes the suffix for the index walk.
+</Takeaway>
 
 These are illustrative rules, not a promise the optimizer will never table-scan anyway (stats, `LIMIT`, buffering). You want the muscle memory.
 
@@ -102,6 +107,10 @@ Drag the sliders. Watch "status alone" stay huge until you scope the org.
 
 <SelectivityDemo />
 
+<Takeaway>
+Low-cardinality flags make weak *leading* keys. Scope the tenant (or other high-cardinality equality) first, then status.
+</Takeaway>
+
 Toy math. Production wants realistic volumes in staging. Twenty-row fixtures will lie to you about indexes.
 
 ## One composite vs many single-column indexes
@@ -110,9 +119,13 @@ Back to the inbox. Three singles give MySQL a chance at Index Merge: intersect r
 
 One composite that matches the left prefix of the query is usually the design you wanted. Column order is which filters are always present vs optional. That call belongs to the product shape of the API, not to DBA folklore.
 
-Toggle the cartoon and notice the write tax.
+Toggle the cartoon, play the staged plan, and notice the write tax: one INSERT maintains every secondary.
 
 <CompositeVsSinglesDemo />
+
+<Takeaway>
+One matching composite beats three skinny indexes hoping for Index Merge. Indexes you don't need still charge rent on every write.
+</Takeaway>
 
 ## Indexes you do not need still charge rent
 
@@ -238,6 +251,10 @@ LIMIT 20;
 ```
 
 Equality then range on the trailing column. Indexing only `created_at` helps nobody's "my orders" page.
+
+<TryIt>
+Paste your hottest list query into a scratch file. Write the composite that matches its left prefix (equalities first, range last). Open the left-prefix demo, rebuild that key order, and confirm the walk lights what you expect — especially if you put a date range in the middle.
+</TryIt>
 
 ## Checklist before you merge the migration
 

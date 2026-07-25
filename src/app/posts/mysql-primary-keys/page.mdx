@@ -4,6 +4,7 @@ import {
   PkWidthTaxDemo,
   SecondaryBounceDemo,
 } from "@/components/interactive/mysql-clustered-index";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
 import { Cite, References } from "@/components/cite";
 
 ## The table is sorted. That is not a metaphor.
@@ -31,6 +32,10 @@ When people say InnoDB "walks the index," they mean this root-to-leaf trip. "Lea
 Pick a key and watch the path light up. Interior pages only steer. The value shows up at the bottom.
 
 <BtreeDescentDemo />
+
+<Takeaway>
+Play the descent: interior pages only steer. In a clustered index the leaf holds the whole row — that is the punchline for `WHERE id = ?`.
+</Takeaway>
 
 Secondary indexes (next article) are also B-trees. Same descent. Different stuff sitting in the leaf. We'll get there.
 
@@ -80,9 +85,46 @@ People call step 2 the **bounce** (or PK lookup). Click an email below. Two hops
 
 <SecondaryBounceDemo />
 
+<Takeaway>
+Secondary lookup = two hops: indexed cols → PK, then PK → row. Your MRN/email/`public_id` filters take this path.
+</Takeaway>
+
 Because every secondary entry carries a copy of the PK, a long primary key makes every secondary index use more space.<Cite n={1} /> A `CHAR(36)` UUIDv4 as the clustered key is not just 36 bytes on the table row. It is 36 bytes stuffed into `idx_orders_account`, `idx_orders_status`, and every child-table foreign key column that stores the parent id.<Cite n={2} /> Skinny PKs are a kindness to every index you haven't written yet.
 
+Worked luggage: `CHAR(36)` PK × 3 secondaries × ~44B per secondary entry × 10M rows ≈ **1.2 GB** of secondary index before you count the clustered table. Same shape with `BIGINT` (8B PK + 8B idx ≈ 16B) is roughly **480 MB**. The slider in the demo multiplies it live.
+
+```sql
+-- Anti-pattern: wide clustered key copied into every secondary
+CREATE TABLE orders_wide_pk (
+  id CHAR(36) NOT NULL,                 -- UUIDv4 string as PK
+  account_id BIGINT UNSIGNED NOT NULL,
+  status TINYINT UNSIGNED NOT NULL,
+  created_at DATETIME(3) NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_orders_account (account_id),
+  KEY idx_orders_status (status),
+  KEY idx_orders_created (created_at)
+) ENGINE=InnoDB;
+
+-- Prefer: skinny clustered key + opaque public id
+CREATE TABLE orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  public_id CHAR(26) NOT NULL,
+  account_id BIGINT UNSIGNED NOT NULL,
+  status TINYINT UNSIGNED NOT NULL,
+  created_at DATETIME(3) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_orders_public_id (public_id),
+  KEY idx_orders_account (account_id),
+  KEY idx_orders_status_created (account_id, status, created_at)
+) ENGINE=InnoDB;
+```
+
 <PkWidthTaxDemo />
+
+<Takeaway>
+Fat PK × every secondary × row count. Prefer 8-byte bigint clustering unless clients must mint ids (then UUIDv7/ULID, not random `CHAR(36)`).
+</Takeaway>
 
 Sometimes a secondary index already contains every column your query needs, so MySQL can retrieve values from the index tree without consulting the data rows. That is a covering index.<Cite n={4} /> Later article. Today you just need the setup burned in: secondary → PK → row.
 
@@ -103,6 +145,10 @@ Toggle the shapes. BIGINT hugs the right edge. UUIDv4 paints the whole tree like
 
 <InsertLocalityDemo />
 
+<Takeaway>
+Play inserts: BIGINT appends; UUIDv4 sprays and splits. Random clustered keys on write-heavy tables are expensive before `EXPLAIN` ever enters the chat.
+</Takeaway>
+
 Those fills are a teaching toy, not `INFORMATION_SCHEMA`. The qualitative point is real: random clustered keys on a write-heavy table make inserts weirdly expensive long before anyone opens `EXPLAIN`.
 
 ## Design recipes I will actually defend
@@ -110,7 +156,16 @@ Those fills are a teaching toy, not `INFORMATION_SCHEMA`. The qualitative point 
 Default for most MySQL web tables:
 
 ```sql
-id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
+CREATE TABLE orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  public_id CHAR(26) NOT NULL,
+  account_id BIGINT UNSIGNED NOT NULL,
+  status TINYINT UNSIGNED NOT NULL,
+  total_cents INT UNSIGNED NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_orders_public_id (public_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
 Cheap joins. Cheap secondaries. Internal admin URLs like `/orders/42` stay one clustered hop. This is exactly what Laravel's `$table->id()` gives you, and every `$table->foreignId('user_id')` copies the same skinny 8 bytes into the child table, so the whole schema stays cheap to relate. If there is no natural unique key, MySQL's own guidance is to add an auto-increment column and keep the primary key short, because long primary keys bloat every secondary index.<Cite n={1} /><Cite n={8} />
@@ -136,6 +191,10 @@ Use an integer type large enough for the sequence you need. When the column hits
 Import scripts, quick dumps, and "I'll add it later" migrations sometimes create tables with no `PRIMARY KEY`. The Laravel classic is the hand-rolled pivot table: `Schema::create('role_user', ...)` with two `foreignId` columns and no key in sight. (`$table->primary(['role_id', 'user_id'])` fixes it and deduplicates attachments as a bonus.) InnoDB still clusters keyless tables somehow: a hidden `GEN_CLUST_INDEX` row id, or (if enabled) a generated invisible PK.<Cite n={1} /><Cite n={6} /> Replication, foreign keys, and "what is the id of this row?" get awkward fast.
 
 If `SHOW CREATE TABLE` does not show a primary key you meant to have, fix it before the table is large. Changing the clustered key later rebuilds the table and every secondary index. That pain is its own article. For v1: choose on purpose.
+
+<TryIt>
+Run `SHOW CREATE TABLE` on your hottest write table. Is the primary key skinny and sequential, or a random UUID string? Multiply PK width × secondary count × approximate row count (napkin math). If the answer makes you wince, sketch the bigint + `public_id` split before the table grows another order of magnitude.
+</TryIt>
 
 ## Checklist before you merge the migration
 

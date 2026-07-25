@@ -94,6 +94,83 @@ export function sargPreset(id: SargPresetId): SargPreset {
   return found;
 }
 
+export type SargKeyScene = {
+  columns: string[];
+  keys: { parts: string[]; id: number }[];
+  /** Contiguous lit range for seek; for scan, all rows in open+org are "candidates" that must be visited. */
+  litStart: number;
+  litEnd: number;
+  /** Pointer path indexes through keys (seek jumps to start then walks lit; scan walks every open+org row). */
+  pointerPath: number[];
+  pointerMode: "seek" | "scan";
+};
+
+/**
+ * Toy leaf for sargability: org=42, status runs, dates.
+ * Seek presets jump to the open/2026 range; YEAR() forces a scan of every open row.
+ */
+export function buildSargKeyScene(id: SargPresetId): SargKeyScene {
+  const columns = ["org_id", "status", "updated_at"];
+  const keys: SargKeyScene["keys"] = [];
+  let n = 1;
+  // Sorted as (org, status, updated_at): closed…, open 2025…, open 2026…, pending…
+  for (const status of ["closed", "open", "pending"] as const) {
+    const years =
+      status === "open" ? ([2025, 2026] as const) : ([2026] as const);
+    for (const year of years) {
+      const perYear = status === "open" ? 3 : 4;
+      for (let d = 0; d < perYear; d++) {
+        const day = String(10 + d).padStart(2, "0");
+        keys.push({
+          parts: ["42", status, `${year}-03-${day}`],
+          id: n++,
+        });
+      }
+    }
+  }
+
+  const openIndexes = keys
+    .map((k, i) => (k.parts[1] === "open" ? i : -1))
+    .filter((i) => i >= 0);
+  const open2026 = openIndexes.filter((i) =>
+    keys[i].parts[2].startsWith("2026"),
+  );
+
+  if (id === "year-fn") {
+    // Function on column: must visit every open leaf entry, filter YEAR after.
+    return {
+      columns,
+      keys,
+      litStart: openIndexes[0] ?? 0,
+      litEnd: (openIndexes[openIndexes.length - 1] ?? 0) + 1,
+      pointerPath: openIndexes,
+      pointerMode: "scan",
+    };
+  }
+
+  if (id === "sargable-year" || id === "org-status-range") {
+    // Bare column range: seek straight to the 2026 open run.
+    return {
+      columns,
+      keys,
+      litStart: open2026[0] ?? 0,
+      litEnd: (open2026[open2026.length - 1] ?? 0) + 1,
+      pointerPath: open2026,
+      pointerMode: "seek",
+    };
+  }
+
+  // LIKE presets: org_id prefix only — land at the start of the org block.
+  return {
+    columns,
+    keys,
+    litStart: 0,
+    litEnd: keys.length,
+    pointerPath: [0],
+    pointerMode: "seek",
+  };
+}
+
 /** Toy column widths for projection demo (bytes per row, illustrative). */
 export type ProjectCol = {
   id: string;

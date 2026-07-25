@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INDEX_COLS,
+  buildLeftPrefixKeyScene,
   estimateSelectivity,
   evaluateLeftPrefix,
   moveCol,
@@ -125,5 +126,38 @@ describe("strategyStory", () => {
   it("prefers composite over singles for tone", () => {
     expect(strategyStory("composite").tone).toBe("ok");
     expect(strategyStory("singles").tone).toBe("warn");
+    expect(strategyStory("singles").insertWriteCount).toBeGreaterThan(
+      strategyStory("composite").insertWriteCount,
+    );
+  });
+});
+
+describe("buildLeftPrefixKeyScene", () => {
+  it("uses interleaved mode when a range freezes status", () => {
+    const indexCols = ["org_id", "updated_at", "status"] as const;
+    const predicates = {
+      org_id: "eq" as const,
+      updated_at: "gt" as const,
+      status: "eq" as const,
+    };
+    const verdict = evaluateLeftPrefix(indexCols, predicates);
+    const scene = buildLeftPrefixKeyScene(indexCols, predicates, verdict);
+    expect(scene.mode).toBe("interleaved");
+    expect(scene.matches.some(Boolean)).toBe(true);
+    expect(scene.matches.every(Boolean)).toBe(false);
+  });
+
+  it("uses a contiguous walk for a clean equality prefix", () => {
+    const verdict = evaluateLeftPrefix(DEFAULT_INDEX_COLS, {
+      org_id: "eq",
+      status: "eq",
+    });
+    const scene = buildLeftPrefixKeyScene(
+      DEFAULT_INDEX_COLS,
+      { org_id: "eq", status: "eq" },
+      verdict,
+    );
+    expect(scene.mode).toBe("contiguous");
+    expect(scene.walkEnd).toBeGreaterThan(scene.walkStart);
   });
 });

@@ -58,6 +58,78 @@ function formatMoney(cents: number): string {
   return `${sign}$${(abs / 100).toFixed(2)}`;
 }
 
+/** Accumulated |float error| in cents as line count grows (toy sparkline). */
+function DriftSparkline({
+  mode,
+  lineCount,
+  exact,
+}: {
+  mode: MoneyMode;
+  lineCount: number;
+  exact: boolean;
+}) {
+  const points = useMemo(() => {
+    const samples = 24;
+    const xs: number[] = [];
+    for (let i = 1; i <= samples; i++) {
+      const n = Math.max(1, Math.round((lineCount * i) / samples));
+      const s = sumMoneyLines(mode, n, UNIT_CENTS);
+      const err =
+        mode === "double"
+          ? Math.abs((s.floatRaw ?? 0) * 100 - s.expectedCents)
+          : 0;
+      xs.push(err);
+    }
+    return xs;
+  }, [mode, lineCount]);
+
+  const max = Math.max(...points, 0.01);
+  const w = 240;
+  const h = 40;
+  const path = points
+    .map((y, i) => {
+      const x = (i / Math.max(1, points.length - 1)) * w;
+      const py = h - (y / max) * (h - 4) - 2;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${py.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="border-2 border-ink bg-white p-3">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-grey">
+          Accumulated float drift
+        </p>
+        <p
+          className={cn(
+            "font-mono text-[11px] font-bold tabular-nums",
+            exact ? "text-blue" : "text-red",
+          )}
+        >
+          {exact ? "0¢ error" : `${points[points.length - 1]?.toFixed(2)}¢ raw`}
+        </p>
+      </div>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-12 w-full border border-ink/20 bg-paper"
+        role="img"
+        aria-label="Drift over line count"
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke={exact ? "var(--blue, #1d4ed8)" : "var(--red, #dc2626)"}
+          strokeWidth="2"
+        />
+      </svg>
+      <p className="mt-1 font-mono text-[10px] text-grey">
+        Error vs exact cents as the cart grows to {lineCount} lines. INT/DECIMAL
+        stay flat at zero.
+      </p>
+    </div>
+  );
+}
+
 export function MoneyModeDemo() {
   const [mode, setMode] = useState<MoneyMode>("double");
   const [lineCount, setLineCount] = useState(100);
@@ -187,31 +259,7 @@ export function MoneyModeDemo() {
         </Panel>
       </div>
 
-      <div
-        className={cn(
-          "flex h-10 items-stretch overflow-hidden border-2 border-ink",
-          exact ? "bg-blue/15" : "bg-red/15",
-        )}
-        role="img"
-        aria-label="Balance meter"
-      >
-        <div
-          className={cn(
-            "flex items-center px-3 font-mono text-xs font-bold",
-            exact ? "bg-blue text-white" : "bg-red text-white",
-          )}
-          style={{ width: exact ? "100%" : "70%" }}
-        >
-          {exact ? "Balanced" : "Ledger mismatch"}
-        </div>
-        {!exact ? (
-          <div className="flex flex-1 items-center justify-end px-3 font-mono text-xs font-bold text-red">
-            {sum.driftCents !== 0
-              ? `${sum.driftCents}¢`
-              : "float ≠ decimal"}
-          </div>
-        ) : null}
-      </div>
+      <DriftSparkline mode={mode} lineCount={lineCount} exact={exact} />
 
       <ByteStrip columns={[estimate]} />
 

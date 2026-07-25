@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   btreeDescentPath,
+  btreeDescentSteps,
   childIndexForKey,
   insertLocality,
   insertPageIndex,
+  insertSequence,
+  luggageAtScaleMb,
   makeToyRows,
   pkWidthBytes,
   secondaryLuggageBytes,
   toyBtree,
+  toyClusteredRow,
   TOY_BTREE_PICK_KEYS,
 } from "./model";
 
@@ -102,5 +106,47 @@ describe("toy B-tree descent", () => {
 
   it("returns empty path for missing keys", () => {
     expect(btreeDescentPath(toyBtree(), 99)).toEqual([]);
+  });
+
+  it("emits stepped comparisons ending in the leaf", () => {
+    const steps = btreeDescentSteps(toyBtree(), 5);
+    expect(steps).toHaveLength(3);
+    expect(steps[0].comparison).toContain("go left");
+    expect(steps[2].direction).toBe("leaf");
+    expect(toyClusteredRow(5).email).toBe("user5@example.com");
+  });
+});
+
+describe("insertSequence", () => {
+  it("lands bigint inserts toward later pages and uuid-v4 more widely", () => {
+    const ai = insertSequence("bigint-ai");
+    const v4 = insertSequence("uuid-v4");
+    expect(ai.length).toBe(24);
+    const aiPages = new Set(ai.map((s) => s.pageIndex));
+    const v4Pages = new Set(v4.map((s) => s.pageIndex));
+    expect(v4Pages.size).toBeGreaterThanOrEqual(aiPages.size);
+  });
+
+  it("flags page splits when a leaf overflows", () => {
+    // Many random inserts into few small pages forces overflows.
+    const v4 = insertSequence("uuid-v4", 40, 4, 4);
+    expect(v4.some((s) => s.causesSplit)).toBe(true);
+  });
+});
+
+describe("luggageAtScaleMb", () => {
+  it("shows CHAR(36) heavier than BIGINT at 10M rows", () => {
+    const fat = luggageAtScaleMb({
+      pkShape: "uuid-v4-char36",
+      secondaryCount: 3,
+      rowCount: 10_000_000,
+    });
+    const skinny = luggageAtScaleMb({
+      pkShape: "bigint",
+      secondaryCount: 3,
+      rowCount: 10_000_000,
+    });
+    expect(fat).toBeGreaterThan(skinny);
+    expect(Math.round(fat)).toBe(1259); // 44 * 3 * 10M / 1MiB
   });
 });

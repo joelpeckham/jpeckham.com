@@ -178,30 +178,65 @@ export function IdWidthDemo() {
         />
       </label>
 
-      <Panel label="Tradeoff scorecard">
-        <TradeoffRow
-          label="Clustered key"
-          value={`~${estimate.clusteredKeyBytes}B`}
-        />
-        <TradeoffRow
-          label="Copied into secondary indexes"
-          value={`~${indexTax.toLocaleString()}B`}
-          tone={indexTax > 200 ? "bad" : indexTax > 40 ? "warn" : "ok"}
-        />
-        <TradeoffRow
-          label="URL guessability"
-          value={scavengerHunt ? "Easy scavenger hunt" : "Opaque"}
-          tone={scavengerHunt ? "bad" : "ok"}
-        />
-        <TradeoffRow
-          label="Frontend precision"
-          value={
-            estimate.jsPrecisionRisk
-              ? "Can silently round"
-              : "Safe as string / small int"
-          }
-          tone={estimate.jsPrecisionRisk ? "bad" : "ok"}
-        />
+      <Panel label="PK copied into each secondary">
+        {secondaryIndexes === 0 ? (
+          <p className="font-mono text-xs text-grey">
+            No secondaries — no luggage tax yet.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {Array.from({ length: secondaryIndexes }, (_, i) => {
+              const maxBar = Math.max(estimate.clusteredKeyBytes + 8, 44);
+              return (
+                <div
+                  key={i}
+                  className="flex h-7 w-full overflow-hidden border-2 border-ink"
+                >
+                  <div
+                    className="flex items-center justify-center bg-ink font-mono text-[9px] text-white"
+                    style={{ width: `${(8 / maxBar) * 100}%` }}
+                  >
+                    idx{i + 1}
+                  </div>
+                  <div
+                    className={cn(
+                      "flex items-center justify-center font-mono text-[9px] transition-all duration-200",
+                      estimate.clusteredKeyBytes >= 26
+                        ? "bg-red text-white"
+                        : estimate.clusteredKeyBytes > 8
+                          ? "bg-yellow text-ink"
+                          : "bg-blue text-white",
+                    )}
+                    style={{
+                      width: `${(estimate.clusteredKeyBytes / maxBar) * 100}%`,
+                    }}
+                  >
+                    PK {estimate.clusteredKeyBytes}B
+                  </div>
+                </div>
+              );
+            })}
+            <TradeoffRow
+              label="Copied per row (toy)"
+              value={`~${indexTax.toLocaleString()}B`}
+              tone={indexTax > 200 ? "bad" : indexTax > 40 ? "warn" : "ok"}
+            />
+            <TradeoffRow
+              label="URL guessability"
+              value={scavengerHunt ? "Easy scavenger hunt" : "Opaque"}
+              tone={scavengerHunt ? "bad" : "ok"}
+            />
+            <TradeoffRow
+              label="Frontend precision"
+              value={
+                estimate.jsPrecisionRisk
+                  ? "Can silently round"
+                  : "Safe as string / small int"
+              }
+              tone={estimate.jsPrecisionRisk ? "bad" : "ok"}
+            />
+          </div>
+        )}
       </Panel>
 
       <div className="flex flex-wrap gap-2">

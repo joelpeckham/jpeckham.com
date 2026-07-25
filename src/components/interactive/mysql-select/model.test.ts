@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSargKeyScene,
   estimateProjection,
   evaluatePrefixHighlight,
   projectionSelectSql,
@@ -39,6 +40,19 @@ describe("projectionSelectSql", () => {
     const list = projectionSelectSql("list");
     expect(list).toContain("subject");
     expect(list).not.toContain("body");
+  });
+});
+
+describe("buildSargKeyScene", () => {
+  it("scans open rows for YEAR() and seeks for a bare range", () => {
+    const scan = buildSargKeyScene("year-fn");
+    const seek = buildSargKeyScene("sargable-year");
+    expect(scan.pointerMode).toBe("scan");
+    expect(seek.pointerMode).toBe("seek");
+    expect(scan.pointerPath.length).toBeGreaterThan(seek.pointerPath.length);
+    expect(seek.litEnd - seek.litStart).toBeLessThanOrEqual(
+      scan.litEnd - scan.litStart,
+    );
   });
 });
 

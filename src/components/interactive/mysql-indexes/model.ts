@@ -324,6 +324,8 @@ export type StrategyStory = {
   detail: string;
   pathLabel: string;
   writeTax: string;
+  /** Clustered + secondary index writes per INSERT (toy). */
+  insertWriteCount: number;
 };
 
 export function strategyStory(strategy: IndexStrategy): StrategyStory {
@@ -336,6 +338,7 @@ export function strategyStory(strategy: IndexStrategy): StrategyStory {
         "MySQL may Index Merge (intersect) org_id ∩ status ∩ assignee_id, then sort. Sometimes fine. Often worse than one matching composite.",
       pathLabel: "Index Merge hope → sort → bounce",
       writeTax: "Every ticket update maintains 3 B-trees",
+      insertWriteCount: 4, // clustered + 3 secondaries
     };
   }
 
@@ -347,5 +350,115 @@ export function strategyStory(strategy: IndexStrategy): StrategyStory {
       "Left prefix (org_id, status, assignee_id, updated_at) matches the inbox query. One descent, rows already near the ORDER BY order.",
     pathLabel: "Single range scan → bounce",
     writeTax: "One extra B-tree on write",
+    insertWriteCount: 2, // clustered + 1 composite
+  };
+}
+
+export type SortedKeyScene = {
+  /** Column headers for the strip. */
+  columns: string[];
+  /** Toy key tuples already sorted. */
+  keys: { parts: string[]; id: number }[];
+  /** Contiguous walk vs interleaved freeze picture. */
+  mode: "contiguous" | "interleaved" | "none";
+  /** For contiguous: inclusive start / exclusive end into keys. */
+  walkStart: number;
+  walkEnd: number;
+  /** For interleaved: which rows match the frozen predicate. */
+  matches: boolean[];
+};
+
+/**
+ * Build a phone-book leaf scene for the left-prefix demo.
+ * Range-freeze (status after a date range) uses interleaved status runs.
+ */
+export function buildLeftPrefixKeyScene(
+  indexCols: readonly TicketCol[],
+  predicates: PredicateMap,
+  verdict: PrefixVerdict,
+): SortedKeyScene {
+  const columns = indexCols.slice(0, 3).map(String);
+  const frozen =
+    verdict.status === "partial" &&
+    verdict.frozenPredCols.includes("status") &&
+    predicates.updated_at === "gt";
+
+  if (verdict.status === "none") {
+    const keys = Array.from({ length: 16 }, (_, i) => ({
+      parts: indexCols.slice(0, 3).map((c, ci) => {
+        if (c === "org_id") return "42";
+        if (c === "status") return ["open", "closed", "pending"][i % 3];
+        if (c === "updated_at") return `03-${String(10 + i).padStart(2, "0")}`;
+        if (c === "assignee_id") return String(100 + (i % 5));
+        if (c === "subject") return i % 2 === 0 ? "refund…" : "hello…";
+        return String(i);
+      }),
+      id: i + 1,
+    }));
+    return {
+      columns,
+      keys,
+      mode: "none",
+      walkStart: 0,
+      walkEnd: 0,
+      matches: keys.map(() => false),
+    };
+  }
+
+  if (frozen) {
+    // Interleaved: org · date · status — dates sorted, status mixed under each date.
+    const statuses = ["open", "closed", "pending"] as const;
+    const keys: SortedKeyScene["keys"] = [];
+    for (let day = 10; day < 16; day++) {
+      for (const status of statuses) {
+        keys.push({
+          parts: ["42", `03-${day}`, status],
+          id: keys.length + 1,
+        });
+      }
+    }
+    const matches = keys.map((k) => k.parts[2] === "open");
+    return {
+      columns: ["org_id", "updated_at", "status"],
+      keys,
+      mode: "interleaved",
+      walkStart: 0,
+      walkEnd: keys.length,
+      matches,
+    };
+  }
+
+  // Contiguous runs: equality prefix groups (org, status, …).
+  const statuses = ["open", "closed", "pending"] as const;
+  const keys: SortedKeyScene["keys"] = [];
+  let id = 1;
+  for (const status of statuses) {
+    for (let d = 0; d < 5; d++) {
+      const parts = indexCols.slice(0, 3).map((c) => {
+        if (c === "org_id") return "42";
+        if (c === "status") return status;
+        if (c === "updated_at") return `03-${String(10 + d).padStart(2, "0")}`;
+        if (c === "assignee_id") return String(100 + d);
+        if (c === "subject") return status === "open" ? "refund…" : "hello…";
+        return "?";
+      });
+      keys.push({ parts, id: id++ });
+    }
+  }
+
+  // Light the open + org=42 run (first 5 rows when status is second/third).
+  const openIndexes = keys
+    .map((k, i) => (k.parts.includes("open") ? i : -1))
+    .filter((i) => i >= 0);
+  const walkStart = openIndexes[0] ?? 0;
+  const walkEnd = (openIndexes[openIndexes.length - 1] ?? 0) + 1;
+
+  return {
+    columns,
+    keys,
+    mode: "contiguous",
+    walkStart,
+    walkEnd: verdict.usableCols.length > 0 ? walkEnd : 0,
+    matches: keys.map((_, i) => i >= walkStart && i < walkEnd),
   };
 }

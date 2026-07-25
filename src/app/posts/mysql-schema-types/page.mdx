@@ -1,10 +1,12 @@
 import {
   IdWidthDemo,
   MoneyModeDemo,
+  NullSemanticsDemo,
   RowBudgetDemo,
   TimeTypeDemo,
   VarcharCharsetDemo,
 } from "@/components/interactive/schema-byte-budget";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
 import { Cite, References } from "@/components/cite";
 
 ## Come on in, the water's fine.
@@ -55,6 +57,10 @@ Poke the strategies yourself. Watch the URL, the JSON round-trip, and how hard t
 
 <IdWidthDemo />
 
+<Takeaway>
+Skinny clustered `BIGINT` + opaque `public_id` for APIs. Never ship huge integers as bare JSON numbers.
+</Takeaway>
+
 ### Money: floats are for physics homework, not invoices
 
 JavaScript's `Number` (and MySQL's `FLOAT` / `DOUBLE`) live in approximate binary floating-point land.<Cite n={4} /><Cite n={5} /> That's fine for "model confidence score" and "how spicy is this recommendation." It is a deeply unserious place to keep money. Store currency in a float and you are volunteering for a support ticket that says "the total is off by a cent," plus a finance person who does not care that IEEE 754 is hard.
@@ -72,6 +78,10 @@ Ring up a cart of dime line items. Bytes barely move. The invoice either balance
 
 <MoneyModeDemo />
 
+<Takeaway>
+Integer cents or `DECIMAL` — never `FLOAT`/`DOUBLE`. Watch the drift sparkline grow with line count.
+</Takeaway>
+
 ### Choosing time types
 
 MySQL mostly gives you two ways to store "a moment," and they lie differently.<Cite n={8} /> `TIMESTAMP` converts on the way in and out using the session `time_zone`. Change the connection timezone (or move regions and forget to pin it) and the same stored instant can *display* as a different local time. `DATETIME` just keeps the digits you gave it, no conversion. That's great for wall-clock meaning if you also know which timezone that clock lives in, and terrible if you assumed "those digits are UTC" when they weren't.
@@ -85,6 +95,10 @@ One more reason I lean away from `TIMESTAMP` for schedules: it still hits a wall
 Here's the TZ shapeshift as a job outcome. Write a Phoenix midnight, run the worker from New York, and watch whether meds fire on the right clock:
 
 <TimeTypeDemo />
+
+<Takeaway>
+Event time → `DATETIME`. Audit stamps can be `TIMESTAMP` if you want session-TZ conversion — know which job the column has.
+</Takeaway>
 
 ### Choosing string types
 
@@ -106,9 +120,17 @@ Drag the length, flip the charset, and watch the kilobyte thermometer plus how m
 
 <VarcharCharsetDemo />
 
+<Takeaway>
+`utf8mb4` for user text. `VARCHAR(n)` is characters; worst-case bytes are `n ×` charset width. Lengths come from the product, not folklore.
+</Takeaway>
+
 ### NULL is a third state (not "empty," not "zero," not "the frontend forgot")
 
 SQL `NULL` means unknown / not applicable.<Cite n={16} /> It is not `''`. It is not `0`. Comparisons against it return neither true nor false but *unknown*, and `WHERE` only keeps rows that are actually true. So `WHERE discount_code != 'BLACKFRIDAY'` silently drops every row where `discount_code` is NULL, which is technically correct three-valued logic and practically a bug report.<Cite n={16} />
+
+Toggle the filter and watch the NULL discount codes disappear under `!=`:
+
+<NullSemanticsDemo />
 
 Unique indexes have their own NULL surprise: MySQL allows multiple NULLs in a unique nullable column.<Cite n={20} /> `$table->string('external_id')->nullable()->unique()` compiles fine, migrates fine, and then lets a thousand rows share "no external id" while everyone assumes it means one. Sometimes that's exactly what you want. Decide, don't discover.
 
@@ -127,6 +149,10 @@ Remember the "rows live in pages" bit? Now stack the choices.
 Every column type is a little vote for how wide a row is. Fatter rows mean fewer rows per InnoDB page, which means more I/O and cache pressure for the same "show me a page of results" API. Flip the presets and watch rows-per-page (and pages touched for a `LIMIT 50`) jump:
 
 <RowBudgetDemo />
+
+<Takeaway>
+Fatter rows → fewer rows per 16KB page → more I/O for the same `LIMIT`. Stack type choices with the list endpoint in mind.
+</Takeaway>
 
 ## A marketplace schema that holds up
 
@@ -217,6 +243,10 @@ What I optimized for: exact money, event time that doesn't shapeshift with sessi
 You can express all of that in the schema builder without dropping to raw SQL: `$table->id()`, `$table->char('public_id', 26)->unique()`, `$table->string('title', 140)`, `$table->text('description')`, `$table->unsignedInteger('price_cents')`, `$table->char('currency', 3)`, `$table->dateTime('starts_at')`, `$table->json('attrs')->nullable()`. The builder isn't the enemy. Unread defaults are.
 
 Secondary indexes and foreign keys get their own episodes. Don't bolt them on here and call it a day. I'll earn those later.
+
+<TryIt>
+Open your last migration (or `php artisan migrate --pretend`). Find one `$table->float`, bare `$table->string('…')` with no length, or `timestamp` used for event time. Rewrite that column the way this article would, then load the matching preset in the row-budget demo and compare pages for a `LIMIT 50`.
+</TryIt>
 
 ## Checklist before you migrate
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { StepPlayer } from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
 import {
-  btreeDescentPath,
   TOY_BTREE_PICK_KEYS,
+  btreeDescentSteps,
   toyBtree,
+  toyClusteredRow,
   type BtreeNode,
 } from "./model";
 import { DemoShell, OutcomeBanner } from "./shared";
@@ -14,16 +16,35 @@ import { DemoShell, OutcomeBanner } from "./shared";
 export function BtreeDescentDemo() {
   const tree = useMemo(() => toyBtree(), []);
   const [target, setTarget] = useState<(typeof TOY_BTREE_PICK_KEYS)[number]>(8);
-  const path = useMemo(
-    () => btreeDescentPath(tree, target),
+  const [step, setStep] = useState(-1);
+
+  const steps = useMemo(
+    () => btreeDescentSteps(tree, target),
     [tree, target],
   );
-  const leafId = path[path.length - 1];
+
+  useEffect(() => {
+    setStep(-1);
+  }, [target]);
+
+  const revealedThrough = step;
+  const pathIds = steps
+    .slice(0, Math.max(0, revealedThrough + 1))
+    .map((s) => s.nodeId);
+  const current = step >= 0 ? steps[step] : undefined;
+  const leafReached =
+    step >= 0 && steps[step]?.direction === "leaf";
+  const row = leafReached ? toyClusteredRow(target) : null;
+
+  const caption =
+    step < 0
+      ? "Play or step: walk root → branch → leaf"
+      : (current?.comparison ?? "");
 
   return (
     <DemoShell
       title="B-tree descent"
-      blurb="Pick a key. The path lights up: root → branch → leaf. Interior pages only steer."
+      blurb="Pick a key. Step the walk: each interior page only steers. The leaf is the row."
       accent="ink"
     >
       <div className="flex flex-wrap gap-2">
@@ -40,24 +61,57 @@ export function BtreeDescentDemo() {
         ))}
       </div>
 
-      <OutcomeBanner
-        tone="ok"
-        title={`Found ${target} in the leaf`}
-        detail="In a clustered index that leaf holds the whole row, not a pointer. Next section is that punchline."
+      <StepPlayer
+        stepCount={steps.length}
+        step={step}
+        onStepChange={setStep}
+        intervalMs={550}
+        caption={caption}
       />
 
-      <div className="space-y-2 border-2 border-ink bg-white p-3">
+      <OutcomeBanner
+        tone="ok"
+        title={
+          leafReached
+            ? `Found ${target} — leaf holds the whole row`
+            : `Seeking key ${target}`
+        }
+        detail={
+          leafReached
+            ? "Clustered index: that leaf entry is the row payload, not a pointer to a heap."
+            : "Interior separators only choose a child. Play the descent to see each comparison."
+        }
+      />
+
+      <div className="space-y-0 border-2 border-ink bg-white p-3">
         <TreeRow
           nodes={[tree.root]}
-          path={path}
+          pathIds={pathIds}
+          currentId={current?.nodeId}
           target={target}
-          leafId={leafId}
+          direction={current?.direction}
+        />
+        <EdgeRow
+          activeLeft={pathIds.includes("b-left")}
+          activeRight={pathIds.includes("b-right")}
+          fromCurrent={current?.nodeId === "root"}
+          direction={current?.nodeId === "root" ? current.direction : undefined}
         />
         <TreeRow
           nodes={[tree["b-left"], tree["b-right"]]}
-          path={path}
+          pathIds={pathIds}
+          currentId={current?.nodeId}
           target={target}
-          leafId={leafId}
+          direction={current?.direction}
+        />
+        <EdgeRow
+          four
+          activeSlots={[
+            pathIds.includes("leaf-a"),
+            pathIds.includes("leaf-b"),
+            pathIds.includes("leaf-c"),
+            pathIds.includes("leaf-d"),
+          ]}
         />
         <TreeRow
           nodes={[
@@ -66,26 +120,103 @@ export function BtreeDescentDemo() {
             tree["leaf-c"],
             tree["leaf-d"],
           ]}
-          path={path}
+          pathIds={pathIds}
+          currentId={current?.nodeId}
           target={target}
-          leafId={leafId}
+          direction={current?.direction}
+          showRowBadge={leafReached}
         />
       </div>
+
+      {row ? (
+        <div className="border-2 border-ink bg-blue px-3 py-2 font-mono text-xs text-white transition-colors duration-300">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-white/70">
+            Clustered leaf payload
+          </p>
+          <p className="mt-1">
+            id={row.id} · email={row.email} · status={row.status}
+          </p>
+        </div>
+      ) : null}
     </DemoShell>
+  );
+}
+
+function EdgeRow({
+  activeLeft,
+  activeRight,
+  four,
+  activeSlots,
+  fromCurrent,
+  direction,
+}: {
+  activeLeft?: boolean;
+  activeRight?: boolean;
+  four?: boolean;
+  activeSlots?: boolean[];
+  fromCurrent?: boolean;
+  direction?: "left" | "right" | "leaf";
+}) {
+  if (four && activeSlots) {
+    return (
+      <div className="grid grid-cols-4 gap-1.5 py-1">
+        {activeSlots.map((on, i) => (
+          <div
+            key={i}
+            className={cn(
+              "flex justify-center font-mono text-sm transition-colors",
+              on ? "text-blue" : "text-ink/20",
+            )}
+          >
+            ↓
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-1.5 py-1">
+      <div
+        className={cn(
+          "flex justify-center font-mono text-sm transition-colors",
+          activeLeft || (fromCurrent && direction === "left")
+            ? "text-blue"
+            : "text-ink/20",
+        )}
+      >
+        ↓
+      </div>
+      <div
+        className={cn(
+          "flex justify-center font-mono text-sm transition-colors",
+          activeRight || (fromCurrent && direction === "right")
+            ? "text-blue"
+            : "text-ink/20",
+        )}
+      >
+        ↓
+      </div>
+    </div>
   );
 }
 
 function TreeRow({
   nodes,
-  path,
+  pathIds,
+  currentId,
   target,
-  leafId,
+  direction,
+  showRowBadge,
 }: {
   nodes: BtreeNode[];
-  path: string[];
+  pathIds: string[];
+  currentId: string | undefined;
   target: number;
-  leafId: string | undefined;
+  direction?: "left" | "right" | "leaf";
+  showRowBadge?: boolean;
 }) {
+  void direction;
   return (
     <div
       className={cn(
@@ -96,14 +227,17 @@ function TreeRow({
       )}
     >
       {nodes.map((node) => {
-        const onPath = path.includes(node.id);
-        const isLeafHit = node.id === leafId;
+        const onPath = pathIds.includes(node.id);
+        const isCurrent = node.id === currentId;
+        const isLeafHit = showRowBadge && node.level === "leaf" && onPath;
         return (
           <div
             key={node.id}
             className={cn(
-              "border-2 border-ink px-1.5 py-1 font-mono text-[10px] transition-colors",
-              onPath ? "bg-blue text-white" : "bg-paper text-ink opacity-45",
+              "border-2 border-ink px-1.5 py-1 font-mono text-[10px] transition-colors duration-200",
+              isCurrent && "bg-ink text-white",
+              onPath && !isCurrent && "bg-blue text-white",
+              !onPath && "bg-paper text-ink opacity-40",
             )}
           >
             {node.level === "leaf" ? (

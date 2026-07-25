@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  SortedKeyStrip,
+  StepPlayer,
+} from "@/components/interactive/mysql-shared";
 import { cn } from "@/lib/utils";
 import {
   SARG_PRESETS,
   TICKETS_INDEX,
+  buildSargKeyScene,
   sargPreset,
   type SargPresetId,
 } from "./model";
@@ -13,12 +18,32 @@ import { Chip, DemoShell, OutcomeBanner } from "./shared";
 
 export function SargabilityDemo() {
   const [id, setId] = useState<SargPresetId>("year-fn");
+  const [step, setStep] = useState(-1);
   const preset = useMemo(() => sargPreset(id), [id]);
+  const scene = useMemo(() => buildSargKeyScene(id), [id]);
+
+  useEffect(() => {
+    setStep(-1);
+  }, [id]);
+
+  const pointerIndex =
+    step >= 0 && step < scene.pointerPath.length
+      ? scene.pointerPath[step]
+      : -1;
+
+  const caption =
+    step < 0
+      ? scene.pointerMode === "scan"
+        ? "Play: pointer visits every open row (YEAR can't seek)"
+        : "Play: pointer seeks to the matching range"
+      : scene.pointerMode === "scan"
+        ? `Scanning open leaf ${step + 1}/${scene.pointerPath.length} — filter YEAR after`
+        : `Range walk ${step + 1}/${scene.pointerPath.length}`;
 
   return (
     <DemoShell
       title="Sargability toggles"
-      blurb="Same inbox intent, different WHERE shapes. Watch which index parts stay usable."
+      blurb="Same inbox intent, different WHERE shapes. Watch the pointer seek a range — or scan every leaf."
       accent="blue"
     >
       <div className="flex flex-wrap gap-2">
@@ -67,7 +92,35 @@ export function SargabilityDemo() {
           access ≈ {preset.access}
         </Chip>
         <Chip tone="ink">{preset.litSegments}/3 prefix lit</Chip>
+        <Chip tone={scene.pointerMode === "scan" ? "warn" : "ok"}>
+          {scene.pointerMode === "scan" ? "scan pointer" : "seek pointer"}
+        </Chip>
       </div>
+
+      <StepPlayer
+        stepCount={scene.pointerPath.length}
+        step={step}
+        onStepChange={setStep}
+        intervalMs={scene.pointerMode === "scan" ? 380 : 500}
+        caption={caption}
+      />
+
+      <SortedKeyStrip
+        keys={scene.keys}
+        columns={scene.columns}
+        highlight={{
+          kind: "contiguous",
+          start: scene.litStart,
+          end: scene.litEnd,
+        }}
+        pointerIndex={pointerIndex}
+        pointerMode={scene.pointerMode}
+        label={
+          scene.pointerMode === "scan"
+            ? "Sorted keys — YEAR() forces a scan of the open run"
+            : "Sorted keys — sargable range seek"
+        }
+      />
 
       <OutcomeBanner
         tone={preset.tone}

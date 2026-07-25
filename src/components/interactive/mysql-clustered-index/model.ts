@@ -261,3 +261,98 @@ export function btreeDescentPath(
 
   return [];
 }
+
+export type DescentStep = {
+  nodeId: string;
+  /** Comparison shown at this hop (empty on leaf). */
+  comparison: string;
+  /** Direction taken after the comparison. */
+  direction: "left" | "right" | "leaf";
+};
+
+/** Step-by-step descent with human-readable comparisons for the player. */
+export function btreeDescentSteps(
+  tree: Record<string, BtreeNode>,
+  key: number,
+  rootId: string = TOY_BTREE_ROOT,
+): DescentStep[] {
+  const path = btreeDescentPath(tree, key, rootId);
+  const steps: DescentStep[] = [];
+
+  for (let i = 0; i < path.length; i++) {
+    const node = tree[path[i]];
+    if (!node) continue;
+
+    if (node.level === "leaf") {
+      steps.push({
+        nodeId: node.id,
+        comparison: `leaf holds key ${key} (+ full row)`,
+        direction: "leaf",
+      });
+      continue;
+    }
+
+    const sep = node.separators[0];
+    const goLeft = key <= sep;
+    steps.push({
+      nodeId: node.id,
+      comparison: goLeft
+        ? `${key} ≤ ${sep} → go left`
+        : `${key} > ${sep} → go right`,
+      direction: goLeft ? "left" : "right",
+    });
+  }
+
+  return steps;
+}
+
+/** Toy clustered row payload revealed at the leaf. */
+export function toyClusteredRow(key: number): {
+  id: number;
+  email: string;
+  status: string;
+} {
+  return {
+    id: key,
+    email: `user${key}@example.com`,
+    status: key % 3 === 0 ? "closed" : key % 2 === 0 ? "open" : "pending",
+  };
+}
+
+/** Sequence of (pageIndex, causesSplit) for animated insert locality. */
+export function insertSequence(
+  shape: InsertShape,
+  rowCount = DEMO_INSERT_ROWS,
+  pageCount = DEMO_PAGE_COUNT,
+  slotsPerPage = DEMO_SLOTS_PER_PAGE,
+): { pageIndex: number; causesSplit: boolean }[] {
+  const counts = Array.from({ length: pageCount }, () => 0);
+  const seq: { pageIndex: number; causesSplit: boolean }[] = [];
+
+  for (let i = 0; i < rowCount; i++) {
+    const pageIndex = insertPageIndex(shape, i, pageCount);
+    const before = counts[pageIndex];
+    const causesSplit = before >= slotsPerPage;
+    if (!causesSplit) counts[pageIndex] += 1;
+    else {
+      // Split: half stay, new row goes to "same" page metaphorically — still count.
+      counts[pageIndex] = Math.floor(slotsPerPage / 2) + 1;
+    }
+    seq.push({ pageIndex, causesSplit });
+  }
+
+  return seq;
+}
+
+/** MB of secondary luggage at scale (illustrative). */
+export function luggageAtScaleMb(options: {
+  pkShape: PkShape;
+  secondaryCount: number;
+  rowCount: number;
+  indexedColBytesPerSecondary?: number;
+}): number {
+  const { perSecondaryBytes } = secondaryLuggageBytes(options);
+  const totalBytes =
+    perSecondaryBytes * options.secondaryCount * options.rowCount;
+  return totalBytes / (1024 * 1024);
+}
