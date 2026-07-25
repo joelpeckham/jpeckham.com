@@ -42,6 +42,18 @@ export type ContentItem = {
   interactive?: boolean;
   art: CoverArtSpec;
   tags?: string[];
+  /** When set, this item belongs to a series (usually a topic post). */
+  seriesId?: string;
+};
+
+export type Series = {
+  id: string;
+  title: string;
+  description: string;
+  /** Project slug for the series homepage. */
+  hubSlug: string;
+  /** Ordered topic post slugs. */
+  postSlugs: string[];
 };
 
 export const projects: ContentItem[] = [
@@ -164,9 +176,88 @@ export const projects: ContentItem[] = [
       variant: "stamp",
     },
   },
+  {
+    slug: "mysql",
+    href: "/projects/mysql/",
+    title: "Learn MySQL",
+    description:
+      "An interactive series on MySQL — queries, indexes, joins, and the features that matter when you go deeper than SELECT *.",
+    date: "2026-07-24",
+    kind: "project",
+    tags: ["MySQL", "Databases", "Series"],
+    art: {
+      bg: "blue",
+      headline: ["LEARN", "MYSQL"],
+      icon: "stack",
+      variant: "band",
+    },
+  },
 ];
 
-export const posts: ContentItem[] = [];
+export const posts: ContentItem[] = [
+  {
+    slug: "mysql-select",
+    href: "/posts/mysql-select/",
+    title: "SELECT and Filtering",
+    description:
+      "How MySQL reads rows: SELECT, WHERE, ORDER BY, LIMIT, and the mental model behind a result set.",
+    date: "2026-07-24",
+    kind: "post",
+    seriesId: "mysql",
+    tags: ["MySQL", "SQL"],
+    art: {
+      bg: "paper",
+      headline: ["SELECT"],
+      icon: "stack",
+      variant: "stamp",
+    },
+  },
+  {
+    slug: "mysql-indexes",
+    href: "/posts/mysql-indexes/",
+    title: "Indexes",
+    description:
+      "What B-tree indexes actually do, when they help, and how to read EXPLAIN without guessing.",
+    date: "2026-07-24",
+    kind: "post",
+    seriesId: "mysql",
+    tags: ["MySQL", "Performance"],
+    art: {
+      bg: "yellow",
+      headline: ["INDEXES"],
+      icon: "stack",
+      variant: "split",
+    },
+  },
+  {
+    slug: "mysql-joins",
+    href: "/posts/mysql-joins/",
+    title: "Joins",
+    description:
+      "INNER, LEFT, and multi-table joins — how MySQL matches rows and how join order shapes the plan.",
+    date: "2026-07-24",
+    kind: "post",
+    seriesId: "mysql",
+    tags: ["MySQL", "SQL"],
+    art: {
+      bg: "red",
+      headline: ["JOINS"],
+      icon: "stack",
+      variant: "band",
+    },
+  },
+];
+
+export const seriesList: Series[] = [
+  {
+    id: "mysql",
+    title: "Learn MySQL",
+    description:
+      "Interactive articles on MySQL topics — start here, then move through each post in order.",
+    hubSlug: "mysql",
+    postSlugs: ["mysql-select", "mysql-indexes", "mysql-joins"],
+  },
+];
 
 export type ContentSlug =
   | (typeof projects)[number]["slug"]
@@ -175,6 +266,49 @@ export type ContentSlug =
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),
 );
+
+export function getSeries(id: string): Series | undefined {
+  return seriesList.find((s) => s.id === id);
+}
+
+export function getSeriesPosts(seriesId: string): ContentItem[] {
+  const series = getSeries(seriesId);
+  if (!series) return [];
+  return series.postSlugs.map((slug) => {
+    const item = allContent.find((c) => c.slug === slug);
+    if (!item) throw new Error(`Unknown series post slug: ${slug}`);
+    return item;
+  });
+}
+
+export type SeriesAdjacent = {
+  series: Series;
+  hub: ContentItem;
+  prev: ContentItem | null;
+  next: ContentItem | null;
+};
+
+export function getAdjacentInSeries(slug: string): SeriesAdjacent | null {
+  const item = allContent.find((c) => c.slug === slug);
+  if (!item?.seriesId) return null;
+
+  const series = getSeries(item.seriesId);
+  if (!series) return null;
+
+  const hub = allContent.find((c) => c.slug === series.hubSlug);
+  if (!hub) throw new Error(`Unknown series hub slug: ${series.hubSlug}`);
+
+  const ordered = getSeriesPosts(series.id);
+  const index = ordered.findIndex((p) => p.slug === slug);
+  if (index === -1) return null;
+
+  return {
+    series,
+    hub,
+    prev: index > 0 ? ordered[index - 1]! : null,
+    next: index < ordered.length - 1 ? ordered[index + 1]! : null,
+  };
+}
 
 export function contentSectionLabel(kind: ContentItem["kind"]): string {
   return kind === "post" ? "Writing" : "Project";

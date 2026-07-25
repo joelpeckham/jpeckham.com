@@ -1,4 +1,9 @@
-import type { ContentItem } from "@/lib/content";
+import {
+  contentSectionHref,
+  contentSectionName,
+  getAdjacentInSeries,
+  type ContentItem,
+} from "@/lib/content";
 import { siteName, siteUrl } from "@/lib/site";
 
 type JsonLdProps = {
@@ -97,6 +102,44 @@ export function articleJsonLd(item: ContentItem) {
 }
 
 export function breadcrumbJsonLd(item: ContentItem) {
+  const adjacent = getAdjacentInSeries(item.slug);
+
+  if (adjacent) {
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: `${siteUrl}/`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Projects",
+          item: `${siteUrl}/projects/`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: adjacent.hub.title,
+          item: `${siteUrl}${adjacent.hub.href}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 4,
+          name: item.title,
+          item: `${siteUrl}${item.href}`,
+        },
+      ],
+    };
+  }
+
+  const sectionName = contentSectionName(item.kind);
+  const sectionHref = contentSectionHref(item.kind);
+
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -110,8 +153,8 @@ export function breadcrumbJsonLd(item: ContentItem) {
       {
         "@type": "ListItem",
         position: 2,
-        name: "Projects",
-        item: `${siteUrl}/projects/`,
+        name: sectionName,
+        item: `${siteUrl}${sectionHref}`,
       },
       {
         "@type": "ListItem",

@@ -8,12 +8,14 @@ import {
   webFontDisplay,
   webFontMono,
 } from "@/components/cover-art";
+import { SeriesNav } from "@/components/series-nav";
 import {
   allContent,
   contentSectionHref,
   contentSectionLabel,
   contentSectionName,
   formatDate,
+  getAdjacentInSeries,
   type ContentItem,
   type ContentSlug,
 } from "@/lib/content";
@@ -59,13 +61,17 @@ export function articleMetadata(slug: ContentSlug): Metadata {
   };
 }
 
-export function createProjectLayout(slug: ContentSlug) {
+export function createArticleLayout(slug: ContentSlug) {
   return {
     metadata: articleMetadata(slug),
     Layout({ children }: { children: React.ReactNode }) {
       return <ArticleShell slug={slug}>{children}</ArticleShell>;
     },
   };
+}
+
+export function createProjectLayout(slug: ContentSlug) {
+  return createArticleLayout(slug);
 }
 
 export function ArticleShell({
@@ -76,8 +82,11 @@ export function ArticleShell({
   children: React.ReactNode;
 }) {
   const item = itemForSlug(slug);
-  const section = contentSectionName(item.kind);
-  const sectionHref = contentSectionHref(item.kind);
+  const adjacent = getAdjacentInSeries(slug);
+  const backHref = adjacent ? adjacent.hub.href : contentSectionHref(item.kind);
+  const backLabel = adjacent
+    ? adjacent.series.title
+    : `All ${contentSectionName(item.kind)}`;
 
   return (
     <>
@@ -103,13 +112,13 @@ export function ArticleShell({
       <article className="mx-auto w-full min-w-0 max-w-[960px] px-5 py-12 sm:px-8">
         <nav className="mb-10" aria-label="Breadcrumb">
           <BackToListLink
-            href={sectionHref}
+            href={backHref}
             className="group inline-flex items-center gap-[0.5em] border-b-2 border-transparent pb-0.5 font-mono text-sm font-medium uppercase tracking-[0.04em] transition-colors hover:border-ink"
           >
             <span className="inline-block transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:-translate-x-[5px]">
               ←
             </span>
-            All {section}
+            {backLabel}
           </BackToListLink>
         </nav>
 
@@ -138,6 +147,8 @@ export function ArticleShell({
         <div className="prose prose-lg max-w-none prose-headings:scroll-mt-24 prose-pre:bg-[#1c1d21]">
           {children}
         </div>
+
+        {adjacent ? <SeriesNav adjacent={adjacent} /> : null}
       </article>
     </>
   );
