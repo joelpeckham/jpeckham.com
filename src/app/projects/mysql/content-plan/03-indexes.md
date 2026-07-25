@@ -3,26 +3,45 @@
 | Field | Value |
 | --- | --- |
 | **Number** | 03 |
-| **Title** | Secondary Indexes |
+| **Title** | Composite Indexes & the Left Prefix *(clarity over short; slug unchanged)* |
 | **Slug** | `mysql-indexes` *(existing stub)* |
 | **Tier** | Foundations (Part A) |
 | **Audience** | Web app programmers; spoon-fed; real-world request/response use cases |
 | **Published path** | `/posts/mysql-indexes/` |
 | **Depends on** | 01 schema/types, 02 primary keys & clustered index |
 | **Feeds** | 04 SELECT/filtering, 05 pagination, 10 EXPLAIN, **15 covering indexes** (tease only) |
-| **Status** | Plan only |
+| **Status** | Shipped draft — MDX + 3 demos 2026-07-25 |
+
+---
+
+## Author decisions (locked)
+
+| Call | Decision |
+| --- | --- |
+| **Open** | Cold open on the tenant inbox / list API (no BetterRX anecdote this article). |
+| **Main schema** | Multi-tenant **tickets**. Secondary short example: “my orders” (`customer_id`, `created_at`). |
+| **Tenant lead** | Almost every tickets composite starts with `org_id`. Orders example shows the non-tenant twin of the same pattern. |
+| **Teaching style** | Prose stays tight; **demos carry** left-prefix / selectivity / composite-vs-singles muscle memory. |
+| **Optional filters** | **Nuanced:** design for the common path; name when a second index earns its keep vs when one workhorse + accept weaker optional paths. |
+| **Teasers (04/05/10/15)** | Explain the idea clearly in a short beat; do **not** deep-dive covering, EXPLAIN literacy, or keyset pagination. |
+| **ORM** | **Eloquent / Laravel first** (day job). Short contrasts for Prisma / Rails / Django. |
+| **ORM footguns (dealer’s)** | Eloquent `$table->index()` / `foreignId()->index()` pile-up; wrong `index([...])` order vs query scopes; `whereDate` / `whereYear` (functions); `LIKE '%…%'`; redundant singles that Index Merge won’t save. |
+| **Demos (ship)** | (1) Left-prefix matcher w/ equality-before-range preset, (2) Selectivity scrubber, (3) Composite vs singles. **Cut** secondary bounce meter (art. 02 already owns it — one prose callback + link). |
+| **Tone** | Match article 02 — casual/jokey, first person. |
+| **Title** | Lean clarity: **Composite Indexes & the Left Prefix** (hub blurb can keep “Secondary Indexes” as series name). |
+| **Length** | Allow longer than a 10-minute skim when composite / optional-filter nuance needs worked examples. |
 
 ---
 
 ## Authoring contract
 
-- **Status:** Plan only — stub wired; article not written yet.
-- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **Status:** Shipped draft — MDX + demos landed; humanizer pass done 2026-07-25.
+- **Voice:** First person, casual/jokey, flowing prose (art. 02 level). Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
 - **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
 - **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
-- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
-- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
-- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
+- **Interactives:** Exactly the three shipped demos above, mid-article next to their beat (motivate → explain → embed). Keep UI playful; label math as illustrative.
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`. **This article:** Eloquent snippets primary; Prisma/Rails/Django one-liners for contrast.
+- **Length:** Prefer complete teaching over arbitrary skim time; still cut anything that doesn’t earn space.
 
 ---
 
@@ -38,13 +57,13 @@ After this article, a reader should be able to:
 4. Name the write/space/optimizer costs of **over-indexing**, and know that invisible indexes exist for safe removal experiments.
 5. Spot common ORM footguns (wrong column order, leading wildcards, functions on columns, redundant single-column indexes).
 
-**Explicitly out of scope (tease, don’t steal):** covering indexes, index-only scans, and Index Condition Pushdown — those are article **15**. Mention once as “next level: sometimes the index can answer the query without visiting the row.” Full `EXPLAIN` literacy is article **10**; here we only show enough to verify “is my index used?”
+**Explicitly out of scope (deep dives elsewhere):** covering indexes / ICP → **15**; full `EXPLAIN` literacy → **10**; keyset pagination & deep `ORDER BY` → **05**. Each gets a clear short teaser so readers know the name and why they’ll care later — not a half-article.
 
 ---
 
 ## Real-world hook
 
-Place the inbox/list story in the section where composite indexes land — not forced as a cold open unless it’s the best hook.
+**Cold open** with the inbox/list story (then series beat + what today owns). No day-job anecdote this piece.
 
 **Opening scenario — tenant inbox / admin list API:**
 
@@ -114,23 +133,24 @@ Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md`. Cite public HTML in the 
 
 ## Article structure
 
-Suggested H2 spine for `page.mdx` — sentence-case, conversational. Scatter **named mini-demos** mid-article (see Interactive feature); no mega-lab at the top.
+Suggested H2 spine for `page.mdx` — sentence-case, conversational. Scatter the **three** demos mid-article; no mega-lab at the top.
 
-1. **Series beat + what today covers** — secondary indexes as the daily performance lever; callback to 02 clustered/PK bounce in one paragraph.
-2. **The list endpoint that got slow** — tenant inbox hook; ORM SQL; why column order is a product decision.
-3. **Refresh: clustered vs secondary** — secondary leaf = indexed cols + PK; two-hop lookup; short PK ⇒ cheaper secondaries. *(Optional mini-demo: **Secondary bounce meter** — toy bytes-per-entry when PK width changes.)*
-4. **What a B-tree secondary index is good for** — equality, ranges, `IN`, prefix `LIKE`; preview sort alignment for 05.
-5. **Composite indexes and the leftmost-prefix rule** *(heart)* — sorted concatenation; works/fails examples; range freezes suffix. *(Embed **Left-prefix matcher** here.)*
-6. **Selectivity: why `status` alone is a trap** — cardinality intuition; tenant scope first. *(Embed **Selectivity scrubber** here.)*
-7. **One composite vs many single-column indexes** — Index Merge as consolation prize; ORM FK indexing. *(Embed **Composite vs singles** here.)*
-8. **The cost of indexes you don’t need** — write amplification; invisible indexes for safe drops.
-9. **How ORMs create bad indexes** — Prisma-first gallery with one-line Rails/Django contrasts.
-10. **Teaser: covering indexes** — ½ paragraph → article 15.
-11. **Worked schema: tickets / orders** — copy-pasteable examples from below.
-12. **Tie-back checklist** — practical review questions.
-13. **References** — IEEE list; natural bridge to 04 (filters/projection) and 05 (`ORDER BY` + `LIMIT` need index alignment).
+1. **Cold open: the list endpoint that got slow** — inbox hook + the three-skinny-indexes “fix”; thesis that column order is a product decision.
+2. **Series beat + what today covers** — secondary indexes as the daily lever; one-paragraph callback to 02 (clustered leaf, bounce, fat PK tax) with link — no bounce demo.
+3. **Refresh: clustered vs secondary** — secondary leaf = indexed cols + PK; two-hop lookup; short PK ⇒ cheaper secondaries (prose only).
+4. **What a B-tree secondary index is good for** — equality, ranges, `IN`, prefix `LIKE`; short preview that matching `ORDER BY` avoids filesort (→ 05).
+5. **Composite indexes and the leftmost-prefix rule** *(heart)* — sorted concatenation; works/fails; range freezes suffix. *(Embed **Left-prefix matcher** + equality-before-range preset.)*
+6. **Optional filters without lying to yourself** — common path vs optional `assigneeId`; when one workhorse index is enough; when a second index with a clear role is worth the write tax. Nuance over slogans.
+7. **Selectivity: why `status` alone is a trap** — cardinality intuition; tenant scope first. *(Embed **Selectivity scrubber**.)*
+8. **One composite vs many single-column indexes** — Index Merge as consolation prize; Eloquent FK indexing habits. *(Embed **Composite vs singles**.)*
+9. **The cost of indexes you don’t need** — write amplification; invisible indexes for safe drops; one-line online DDL → 18.
+10. **How ORMs create bad indexes** — Eloquent-first gallery; Prisma / Rails / Django contrasts.
+11. **Teasers (short, clear)** — covering (15); “is my index used?” via `EXPLAIN` key/key_len (10); list `ORDER BY`+`LIMIT` alignment (05).
+12. **Worked schema: tickets + short orders** — copy-pasteable examples from below.
+13. **Tie-back checklist** — practical review questions.
+14. **References** — IEEE list; bridge to 04.
 
-Target length: ~10 minutes skim; deeper only where composite design needs it.
+Length: as long as the composite / optional-filter teaching needs; cut padding, not examples.
 
 ---
 
@@ -158,42 +178,32 @@ Mechanisms and pitfalls that elevate this beyond “add an index”:
 
 **Folder:** `src/components/interactive/mysql-indexes/` (re-export shared chrome from `schema-byte-budget/shared.tsx` as needed).
 
-**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Client-only; label math as illustrative (≠ `INFORMATION_SCHEMA` / real optimizer).
+**Ship three demos** — fun, single-focus, mid-article. Client-only; label math as illustrative (≠ `INFORMATION_SCHEMA` / real optimizer).
 
-Scatter **3–5 single-focus demos** mid-article — not one mega-lab at the top.
+### 1. Left-prefix matcher *(must — the toy people will poke)*
 
-### 1. Left-prefix matcher
+- **Goal:** Muscle memory for which `WHERE` shapes use a composite’s left prefix; bake in equality-before-range.
+- **Placement:** Composite / left-prefix section.
+- **UX:** Fixed `tickets` table; drag/reorder index columns (chips); toggle predicates (`=`, `>`, `IN`, `LIKE 'x%'`, `LIKE '%x'`). Verdict: uses index / partial prefix / cannot use — highlight usable prefix segments + one-line reason. Include a **preset**: `org_id = ? AND updated_at > ? AND status = ?` on `(org_id, updated_at, status)` so `status` freezes after the range.
+- **Keep simple:** Pure TS rules engine; unit-test matcher; no covering / “Using index” UI (article 15).
 
-- **Goal:** Build muscle memory for which `WHERE` shapes use a composite index’s left prefix.
-- **Placement:** Section 5 (composite indexes & left-prefix).
-- **UX:** Fixed `tickets` table; user builds index column order (chips); toggles predicates (`=`, `>`, `IN`, `LIKE 'x%'`, `LIKE '%x'`). Verdict: uses index / partial prefix / cannot use — with highlighted prefix segments and one-line reason.
-- **Keep simple:** Pure TS rules engine; unit-test matcher; no covering-index / “Using index” UI (article 15).
+### 2. Selectivity scrubber *(slider candy)*
 
-### 2. Selectivity scrubber
+- **Goal:** Feel why low-cardinality `status` alone is weak vs scoped under `org_id`.
+- **Placement:** Selectivity section.
+- **UX:** Sliders for distinctness of `status` vs `assignee_id` (and org scope on/off); toy “rows touched” estimate. Label as illustrative.
 
-- **Goal:** Feel why low-cardinality leading columns (e.g. `status`) are weak alone vs scoped under `org_id`.
-- **Placement:** Section 6 (selectivity).
-- **UX:** Slider for distinctness of `status` vs `assignee_id`; toy “rows touched” estimate. Label as illustrative, not the cost-based optimizer.
+### 3. Composite vs singles *(cartoon fight)*
 
-### 3. Composite vs singles
+- **Goal:** Three FK indexes ≠ one composite for the inbox query shape.
+- **Placement:** Composite vs singles section.
+- **UX:** Toggle “three single-column indexes” vs “one composite”; qualitative Index Merge vs single range scan — playful, not an optimizer sim.
 
-- **Goal:** Show why three FK indexes ≠ one composite for the inbox query shape.
-- **Placement:** Section 7 (one composite vs many singles).
-- **UX:** Toggle “three single-column indexes” vs “one composite”; cartoon Index Merge vs single range scan — qualitative only.
+### Cut
 
-### 4. Secondary bounce meter (optional — cut if redundant with 02)
+- **Secondary bounce meter** — art. 02 already has `SecondaryBounceDemo` / `PkWidthTaxDemo`. Prose callback + link only.
 
-- **Goal:** Remind that every secondary entry carries the PK; fat PK widens every index.
-- **Placement:** Section 3 (clustered vs secondary refresh).
-- **UX:** Toggle PK width (bigint vs UUID); watch toy secondary entry bytes tick up.
-
-### 5. Equality-before-range (optional)
-
-- **Goal:** Range on a middle column freezes useful suffix columns.
-- **Placement:** End of section 5 or woven into left-prefix matcher as a preset.
-- **UX:** One preset query where `created_at > ?` stops `status` from narrowing the index range.
-
-**Implementation notes:** `"use client"` components; shared ink/mono visual language; motivate in prose before each embed; 2–3 intentional motions per demo max.
+**Implementation notes:** `"use client"`; shared ink/mono visual language; motivate in prose before each embed; 2–3 intentional motions per demo max.
 
 ---
 
@@ -280,20 +290,31 @@ WHERE DATE(updated_at) = '2026-07-24'
 WHERE subject LIKE '%refund%'
 ```
 
+```php
+// Eloquent / Laravel — the day-job default for this article
+// Bad: foreignId() / $table->index() per column because the migration generator said so
+$table->foreignId('org_id')->constrained()->index();
+$table->index('status');
+$table->index('assignee_id');
+// Better: one composite that matches the list query / scope
+$table->index(['org_id', 'status', 'assignee_id', 'updated_at']);
+// Footgun: whereDate('updated_at', $day) → DATE(updated_at) = ? (index-unfriendly)
+```
+
+```prisma
+// Prisma contrast: @@index order must match filter order
+@@index([orgId, status, assigneeId, updatedAt])
+```
+
 ```ruby
-# Rails-ish: add_index per FK without thinking about query shapes
-add_index :tickets, :org_id
-add_index :tickets, :status
-add_index :tickets, :assignee_id
-# better: add_index :tickets, [:org_id, :status, :assignee_id, :updated_at]
+# Rails contrast
+add_index :tickets, [:org_id, :status, :assignee_id, :updated_at]
 ```
 
 ```python
-# Django: index_together / Meta.indexes should match filter() order
-# Bad: separate indexes only because ForeignKey(db_index=True) defaults
+# Django contrast: Meta.indexes / Index() should match filter() order
+# Bad: relying only on ForeignKey(db_index=True) defaults
 ```
-
-Show one Prisma `@@index([orgId, status, assigneeId, updatedAt])` vs multiple `@id`/`@index` on each field.
 
 ### Tiny verification snippet (pointer to article 10)
 
@@ -321,31 +342,32 @@ Close the article by forcing internals → app outcomes:
 
 ---
 
-## Open questions / author notes
+## Author notes (still true; not open)
 
-1. **Title vs stub metadata:** Stub/`content.ts` still says “Indexes” / EXPLAIN-heavy blurb. When publishing, retitle toward **Secondary Indexes** and rewrite description to match (composite, selectivity, left-prefix); move EXPLAIN emphasis to article 10.
-2. **Series order vs current stubs:** Hub currently lists `mysql-select` → `mysql-indexes` → `mysql-joins`. Master plan wants 01→02→**03 indexes**→04 select. Decide whether this post assumes 02 already published or needs a self-contained clustered/secondary primer paragraph (recommend: short primer + link).
-3. **Demo count:** Ship 3–4 scattered demos (prefix matcher + selectivity + composite vs singles minimum). Avoid merging into one top mega-lab; avoid building a fake optimizer.
-4. **ORDER BY depth:** Article 05 owns pagination; here only show that `ORDER BY` matching a usable index prefix avoids filesort — one example, no keyset deep dive.
-5. **Index Merge tone:** Mention as “sometimes MySQL intersects/unions multiple indexes; don’t rely on it as your schema design.” Resist algorithm detail.
-6. **Histogram / `innodb_stats_*`:** Tempting rabbit hole via `index-statistics`. Keep to cardinality intuition; defer histograms to article 10 or a later ops note.
-7. **UNIQUE secondary indexes:** Worth a short callout for `email` / `token_hash` (correctness + lookup), distinct from performance composites.
-8. **Descending indexes / `ASC`/`DESC` mixes:** One sentence + link; real `ORDER BY updated_at DESC` behavior is clearer in article 05.
-9. **Legal/tone:** Paraphrase only; link refman URLs; no Oracle text blocks.
-10. **Demo copy:** Label simplified rules so pedants don’t file bugs when real optimizer picks a scan anyway (stats, row estimates, `LIMIT`, buffering).
-11. **Migration story:** `CREATE INDEX` ≈ `ALTER TABLE`; online DDL cost → article 18. Don’t promise “just add an index in prod” without that caveat.
-12. **Working title alternatives if SEO matters:** “Secondary Indexes in MySQL,” “Composite Indexes & Left Prefix” — slug stays `mysql-indexes`.
+1. **`content.ts`:** Publish with title **Composite Indexes & the Left Prefix**; description already points at composites / left-prefix / selectivity — tweak if needed. EXPLAIN stays article 10.
+2. **Assumes art. 02 published:** Short clustered/secondary primer + link; do not rebuild B-tree school.
+3. **ORDER BY:** One example that matching a usable prefix avoids filesort; keyset → 05.
+4. **Index Merge tone:** Consolation prize, not schema design. No algorithm deep dive.
+5. **Histograms / `innodb_stats_*`:** Cardinality intuition only; defer to 10.
+6. **UNIQUE secondaries:** Short callout for `email` / `token_hash` (correctness + lookup) vs performance composites.
+7. **DESC indexes:** One sentence; real `ORDER BY updated_at DESC` → 05.
+8. **Legal:** Paraphrase only; IEEE cites; no Oracle prose blocks.
+9. **Demo honesty:** Label simplified rules — real optimizer may still scan (stats, `LIMIT`, buffering).
+10. **Migrations:** `CREATE INDEX` ≈ `ALTER TABLE`; online cost → 18; don’t promise free prod adds.
 
 ---
 
 ## Drafting checklist (when writing the post)
 
-- [ ] Replace stub MDX; scatter 3–5 mini-demos mid-article (motivate → explain → embed)
+- [ ] Replace stub MDX; scatter the three demos mid-article (motivate → explain → embed)
+- [ ] Cold open = inbox list API; Eloquent-first ORM gallery
+- [ ] Optional-filters section with nuance (common path vs second index)
+- [ ] Clear short teasers for 05 / 10 / 15 — no deep dives
 - [ ] Humanizer pass on prose before publish
 - [ ] First-person voice check; no formulaic section stamps
-- [ ] `<Cite />` + `<References />` for technical claims (not inline doc hyperlinks on code)
-- [ ] Update `content.ts` title/description/art if needed
-- [ ] Cross-link 02 (PK/clustered), 04 (SELECT), 05 (pagination), 10 (EXPLAIN), 15 (covering)
-- [ ] Unit-test prefix-matching rules
+- [ ] `<Cite />` + `<References />` for technical claims
+- [ ] Update `content.ts` title to **Composite Indexes & the Left Prefix**
+- [ ] Cross-link 02, 04, 05, 10, 15, 18
+- [ ] Unit-test prefix-matching rules (incl. range-freezes-suffix preset)
 - [ ] Manual pass: mobile layout of chip/reorder UI
-- [ ] No covering-index deep dive; no EXPLAIN encyclopedia
+- [ ] README arc row: working title + status when shipped

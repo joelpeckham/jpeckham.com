@@ -3,23 +3,42 @@
 | Field | Value |
 | --- | --- |
 | **Number** | 04 |
-| **Title** | SELECT, Filtering & Projection |
+| **Title** | WHERE, Projection & Sargable Queries *(clarity; slug unchanged)* |
 | **Slug** | `mysql-select` *(existing stub at `/posts/mysql-select/`)* |
 | **Tier** | Foundations (Part A) |
 | **Series position** | After Secondary Indexes (03); before Sorting, LIMIT & Pagination (05) |
-| **Status** | Plan only |
+| **Status** | Shipped draft — MDX + 3 demos 2026-07-25 |
+
+---
+
+## Author decisions (locked)
+
+| Call | Decision |
+| --- | --- |
+| **Open** | Cold open on **tickets** list API (same world as art. 03). No day-job anecdote. |
+| **Schema** | Continue `tickets` (add fat `body TEXT` for projection teaching; keep house defaults). |
+| **Detail vs list** | Mostly list pain; short **detail contrast** (PK lookup vs list) as added content. |
+| **Teaching style** | Prose + **tight** demos (not demo-led mega toys). |
+| **ICP** | Clear prose beat only — **no** ICP badge demo. |
+| **EXPLAIN** | 2–3 annotated previews (`type` / `key` / `key_len` / `Extra`); fluency → art. 10. |
+| **Teasers** | Same thin style as art. 03 for 05 / 06 / 15. |
+| **ORM** | **Eloquent first**; Prisma/Rails/Django one-liners. **Callback hard to arts 01–03** (types, clustered bounce, composites). |
+| **Footguns (dealer)** | `whereDate` / `YEAR(updated_at)`; `SELECT *` pulling `body`; leading `%LIKE%` on subject; Eloquent `Ticket::…->get()` without `select()`. |
+| **Demos (ship)** | (1) Sargability toggles, (2) Projection width meter, (3) Prefix-length highlight (predicate-driven). **Cut** ICP badge. |
+| **Title** | **WHERE, Projection & Sargable Queries** |
+| **Tone / length** | Match arts 02–03; longer OK when examples earn it. |
 
 ---
 
 ## Authoring contract
 
-- **Status:** Plan only — stub wired; article not written yet.
-- **Voice:** First person, casual/jokey, flowing prose. Run humanizer pass (`~/.cursor/skills/humanizer`) before publish.
+- **Status:** Shipped draft — MDX + demos landed; light humanizer pass done.
+- **Voice:** First person, casual/jokey, flowing prose (arts 02–03 level). Humanizer pass before publish.
 - **No formulaic stamps:** No `**Why bother:**`, “App consequence:”, or “Things to Play With” laundry lists — weave motivation into paragraphs.
 - **Citations:** IEEE `<Cite n={…} />` in prose + `<References items={[…]} />` at bottom. Source technical claims; paraphrase refman only.
-- **Interactives:** 3–5 small demos embedded **mid-article** next to the beat they teach (motivate → explain → embed). Cut demos that don’t clarify a tradeoff.
-- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma as primary ORM in snippets.
-- **Length:** ~10 minutes for a casual skim unless the topic truly needs more.
+- **Interactives:** Exactly the three shipped demos above, mid-article (motivate → explain → embed).
+- **House defaults:** Integer cents for money; ULID `CHAR(26)` public ids; `utf8mb4` / `utf8mb4_0900_ai_ci`. **This article:** Eloquent snippets primary.
+- **Length:** Prefer complete teaching over arbitrary skim time.
 
 ---
 
@@ -49,18 +68,18 @@ Stub note: the current `mysql-select` stub mentions `ORDER BY` / `LIMIT`. Rewrit
 
 ## Real-world hook
 
-Place the orders list/detail story in the section where filter × projection land — not forced as a cold open unless it’s the best hook.
+**Cold open** on the tickets inbox (same org as art. 03):
 
-Open with a concrete API shape every reader has shipped or consumed:
-
-**`GET /api/orders?status=open&customer_id=42&created_after=2026-01-01`**  
-and the sibling detail: **`GET /api/orders/:id`**.
+**`GET /api/orgs/:orgId/tickets?status=open&updated_after=2026-01-01`**  
+sibling detail: **`GET /api/tickets/:id`** (or by `public_id`).
 
 Walk through what the handler usually does wrong:
 
-- ActiveRecord / Prisma / Eloquent default: `SELECT *` + `WHERE YEAR(created_at) = 2026` or `WHERE LOWER(email) = ?`.
-- Admin filters that OR many columns (`q` search) and silently disable indexes.
-- “Detail” endpoints that are PK lookups (fast) vs “list” endpoints that are the real cost center.
+- Eloquent default: `SELECT *` + `whereDate` / `WHERE YEAR(updated_at) = 2026`.
+- Admin `q=` that ORs subject/body and silently disables indexes.
+- Detail is a cheap PK (or unique secondary) lookup; the list is the cost center.
+
+Series glue in the open: art. 01 typed the columns, art. 02 clustered the table, art. 03 built the composite — this post is whether the `WHERE` and select list let those indexes work.
 
 **Company / product patterns to name (teaching, not endorsement):**
 
@@ -110,22 +129,23 @@ Local corpus: `sources/mysql-refman-9.7/nodes/<id>.md` (gitignored). Cite with `
 
 ## Article structure
 
-Suggested MDX outline — sentence-case H2s, conversational spine. Scatter **named mini-demos** mid-article; no mega-lab at the top.
+Suggested MDX outline — sentence-case H2s. Scatter the **three** demos mid-article; no mega-lab at the top.
 
-1. **Series beat + what today covers** — every list/detail endpoint is filter × projection; indexes from 03 only pay rent if `WHERE` and select list cooperate.
-2. **Cold open** — broken list endpoint vs fixed one (same API contract, far less work).
-3. **Mental model** — result set = filter × project; InnoDB still finds rows via indexes from 02/03.
-4. **WHERE that the optimizer can use** — sargability checklist + range conditions. *(Embed **Sargability toggles** here.)*
-5. **Functions on columns** — classic footguns and rewrites (`YEAR`, `DATE`, `LOWER`).
-6. **Projection** — `SELECT *` cost for APIs; wide rows; schema churn; teaser for covering indexes. *(Embed **Projection width meter** here.)*
-7. **List vs detail endpoints** — two query shapes, two index stories.
-8. **Prefix length and composite filters** — tie to article 03 left-prefix. *(Embed **Prefix-length highlight** here — predicate-driven, not another “build an index” toy.)*
-9. **ICP light touch** — when MySQL filters on index columns before fetching the full row. *(Optional mini **ICP badge** demo.)*
-10. **ORM / app patterns** — Prisma-first; one-line Rails/Django contrasts.
-11. **Tie-back checklist** — copy-paste for code review.
-12. **References** — IEEE list; bridge to sorting & pagination (05), then joins (06).
+1. **Cold open** — broken tickets list (`SELECT *` + `whereDate`) vs fixed rewrite; same API contract.
+2. **Series beat** — filter × projection; callback to 01–03; indexes only pay rent if `WHERE` cooperates.
+3. **Mental model** — result set = which rows × which columns; clustered vs secondary path (brief).
+4. **WHERE the optimizer can use** — sargability + range conditions. *(Embed **Sargability toggles**.)*
+5. **Functions on columns** — `YEAR` / `DATE` / `LOWER` rewrites (Eloquent `whereDate`).
+6. **Projection** — `SELECT *` cost; fat `body`; schema churn; covering teaser → 15. *(Embed **Projection width meter**.)*
+7. **List vs detail** — PK/detail contrast as a short section; don’t make list pull detail payload.
+8. **Prefix length for this query** — predicate-driven tie to art. 03. *(Embed **Prefix-length highlight**.)*
+9. **ICP light touch** — prose only: filter more on the index tuple before the row; ≠ covering.
+10. **ORM patterns** — Eloquent-first gallery; Prisma/Rails/Django one-liners.
+11. **EXPLAIN previews** — 2–3 annotated snippets; fluency → 10.
+12. **Checklist + bridge** to 05 (sort/limit) and 06 (joins).
+13. **References**.
 
-Approximate length: ~10 minutes skim; 2.5–4k words only if every section earns it.
+Length: as long as the teaching needs; cut padding, not examples.
 
 ---
 
@@ -224,35 +244,33 @@ One short box: even a perfect `WHERE` + projection still hurts if you `ORDER BY`
 
 ## Interactive feature
 
-**Folder:** `src/components/interactive/mysql-select/` (shared chrome from `schema-byte-budget/shared.tsx` as needed).
+**Folder:** `src/components/interactive/mysql-select/` (shared chrome from `schema-byte-budget/shared.tsx`).
 
-**Rule:** If a demo doesn’t clarify a tradeoff, cut it and let prose carry the beat. Client-only; label math as illustrative. Coordinate with article 03: **predicate-driven** demos here, not duplicate “build an index” toys.
+**Ship three demos** — fun, tight, mid-article. Coordinate with art. 03: **predicate-driven**, not another “build an index” toy.
 
-### 1. Sargability toggles
+### 1. Sargability toggles *(must — the “oh” moment)*
 
-- **Goal:** Make “function on column ⇒ no range” visceral in under 30 seconds.
-- **Placement:** Section 4 (WHERE / sargability).
-- **UX:** Fixed `orders` schema + composite index; filter chips rewrite live `WHERE`. Footgun mode: `YEAR(created_at) = 2026` vs sargable range; `LIKE 'alex%'` vs `LIKE '%@gmail.com'`. Highlight collapses to scan with plain-language reason.
+- **Goal:** Function on column ⇒ no range, visceral in under 30s.
+- **Placement:** WHERE / sargability section.
+- **UX:** Fixed `tickets` + `idx (org_id, status, updated_at)`. Presets / toggles rewrite live `WHERE`: `YEAR(updated_at)=2026` vs sargable range; `subject LIKE 'refund%'` vs `LIKE '%refund%'`. Verdict: range / ref / ALL + one-line reason.
 
-### 2. Prefix-length highlight
+### 2. Projection width meter *(byte candy)*
 
-- **Goal:** Show which composite prefix is usable for active predicates (`key_len` metaphor without EXPLAIN literacy).
-- **Placement:** Section 8 (prefix length / composite filters).
-- **UX:** Index strip for `idx_orders_customer_status_created`; prefix segments light up as filters toggle; pseudo access label (`ref` / `range` / `ALL`).
+- **Goal:** Projection rarely changes index match; it changes bytes and bounce cost after the match.
+- **Placement:** Projection section.
+- **UX:** Toggle `SELECT *` vs card columns; bar for toy bytes/row including fat `body TEXT`. Label illustrative.
 
-### 3. Projection width meter
+### 3. Prefix-length highlight *(predicate strip)*
 
-- **Goal:** Feel that projection doesn’t usually change index match but changes work after the match.
-- **Placement:** Section 6 (projection).
-- **UX:** Toggle `SELECT *` vs narrow list; “bytes projected / row” and optional “fetch full row” pulse for non-covered columns.
+- **Goal:** Which left prefix this *query* uses (`key_len` metaphor without EXPLAIN essay).
+- **Placement:** After list/detail; ties to art. 03.
+- **UX:** Fixed index strip; toggle predicates; segments light up; pseudo access label (`ref` / `range` / `ALL`).
 
-### 4. ICP badge (optional — cut if section stays prose-only)
+### Cut
 
-- **Goal:** Distinguish `Using index condition` from covering `Using index`.
-- **Placement:** Section 9 (ICP light touch).
-- **UX:** Single preset query; badge shows which filters run on index tuple vs need row fetch.
+- **ICP badge** — prose beat is enough.
 
-**Implementation notes:** Pure client rule engine; 2–3 intentional motions; no dashboard chrome.
+**Implementation notes:** Pure client rule engine + unit tests; 2–3 motions; no fake ms benchmarks.
 
 ---
 

@@ -232,7 +232,7 @@ export const posts: ContentItem[] = [
   {
     slug: "mysql-indexes",
     href: "/posts/mysql-indexes/",
-    title: "Secondary Indexes",
+    title: "Composite Indexes & the Left Prefix",
     description:
       "B-tree secondary indexes, composite left-prefix rules, and selectivity without the guesswork.",
     date: "2026-07-24",
@@ -249,7 +249,7 @@ export const posts: ContentItem[] = [
   {
     slug: "mysql-select",
     href: "/posts/mysql-select/",
-    title: "SELECT, Filtering & Projection",
+    title: "WHERE, Projection & Sargable Queries",
     description:
       "How WHERE and the SELECT list drive index use on real list and detail endpoints.",
     date: "2026-07-24",

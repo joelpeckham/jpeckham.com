@@ -76,8 +76,8 @@ Each article should: (1) orient the reader, (2) deep-dive the mechanism in casua
 | ---: | --- | --- | --- | --- |
 | 1 | Tables, Types & Schema That Survive Production | `mysql-schema-types` | Shipped draft | Data-type and nullability mistakes are the most expensive early bugs (IDs, money, time, strings). |
 | 2 | Primary Keys & the Clustered Index | `mysql-primary-keys` | Shipped draft | InnoDB *is* the clustered index — PK choice shapes every secondary index and lookup. |
-| 3 | Secondary Indexes | `mysql-indexes` | Plan only | Composite keys, selectivity, and left-prefix — the daily performance lever. |
-| 4 | SELECT, Filtering & Projection | `mysql-select` | Plan only | How `WHERE` / selected columns interact with indexes in real list/detail endpoints. |
+| 3 | Composite Indexes & the Left Prefix | `mysql-indexes` | Shipped draft | Composite keys, selectivity, and left-prefix — the daily performance lever. |
+| 4 | WHERE, Projection & Sargable Queries | `mysql-select` | Shipped draft | How `WHERE` / selected columns interact with indexes in real list/detail endpoints. |
 | 5 | Sorting, LIMIT & Pagination | `mysql-pagination` | Plan only | `ORDER BY` + offset pagination is a classic web-app footgun; keyset pagination needs indexes. |
 | 6 | JOINs That Scale | `mysql-joins` | Plan only | Nested-loop joins, join order, and ORM N+1 vs one fat join. |
 | 7 | Writes: INSERT, UPDATE, DELETE & Upserts | `mysql-writes` | Plan only | Idempotent APIs, bulk inserts, and “affected rows” semantics apps get wrong. |

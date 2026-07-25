@@ -1,7 +1,309 @@
-## Coming soon
+import {
+  CompositeVsSinglesDemo,
+  LeftPrefixDemo,
+  SelectivityDemo,
+} from "@/components/interactive/mysql-indexes";
+import { Cite, References } from "@/components/cite";
 
-**Secondary Indexes** is part of the [Learn MySQL](/projects/mysql/) series.
+## The inbox that was fine until it wasn't
 
-B-tree secondary indexes, composite left-prefix rules, and selectivity.
+`GET /api/orgs/:orgId/tickets?status=open&assigneeId=…`
 
-The full article (and interactive demo, when this topic has one) will land here — same top-of-page pattern as the RAID and neural-net projects. Use the series navigation below to move between topics.
+At fifty rows this is instant. At five million tickets it is the p99 that pages whoever is on call. The ORM is cheerful about it. In Laravel it looks roughly like:
+
+```php
+Ticket::query()
+    ->where('org_id', $orgId)
+    ->where('status', 'open')
+    ->when($assigneeId, fn ($q) => $q->where('assignee_id', $assigneeId))
+    ->orderByDesc('updated_at')
+    ->limit(50)
+    ->get();
+```
+
+Which emits something like:
+
+```sql
+WHERE org_id = ? AND status = ? AND assignee_id = ?
+ORDER BY updated_at DESC
+LIMIT 50
+```
+
+The usual "fix" is three single-column indexes (`org_id`, `status`, `assignee_id`) because `foreignId()->constrained()` indexed the FKs and a well-meaning migration added the rest. Reads stay mediocre. Every ticket update now maintains three extra B-trees. And `status` alone is nearly useless: open / pending / resolved is not a needle in a haystack.
+
+This is post three of [Learn MySQL](/projects/mysql/). Last time, the [primary key](/posts/mysql-primary-keys/) *was* the table's physical layout. Today is secondary indexes, especially the composite ones whose column order matches the filters your API actually sends.
+
+## Same B-tree, different leaf
+
+A secondary index is another B-tree. Same descent you practiced in article two. Different payload in the leaf: the indexed columns plus the primary key, so InnoDB can bounce into the clustered row.<Cite n={1} /> Fat PKs make every secondary heavier; skinny `BIGINT` PKs keep the luggage light. I'm not rebuilding that demo here. Go poke [secondary bounce](/posts/mysql-primary-keys/) if you want the two-hop cartoon again.
+
+By the end you should be able to sketch a composite for a multi-filter list endpoint, smell a useless `status`-only index, and catch Eloquent footguns (`whereDate`, leading `%LIKE%`, auto-indexed FKs) before they ship. Covering indexes, full `EXPLAIN` literacy, and keyset pagination show up as short teasers later. I'm not stealing those chapters.
+
+## Clustered vs secondary, thirty seconds
+
+Clustered index leaf = the row. Secondary leaf = indexed cols + PK columns for that row.<Cite n={1} /> Lookup by email, public id, or org+status usually means: walk the secondary tree, read the PK, walk the clustered tree. Selecting `*` on a wide tickets row makes that bounce more expensive. Sometimes the index can answer without visiting the row at all (covering, article 15). Today, design the path into the row.
+
+InnoDB can also silently append PK columns onto a secondary key (`index extensions`), so an index on `(status)` is a bit like `(status, id)` internally.<Cite n={2} /> Neat for `WHERE status = ? AND id = ?`. Do not design your API indexes around the append. Write the composite you mean.
+
+## What a B-tree secondary is good for
+
+B-tree indexes help when MySQL can walk a sorted range of keys:<Cite n={3} /><Cite n={4} />
+
+- Equality: `org_id = 42`
+- `IN` lists of constants
+- Ranges: `updated_at > ?`, `BETWEEN`, `<`
+- Prefix `LIKE 'refund%'` (constant prefix)
+- Not: `LIKE '%refund%'` (leading wildcard, so no range)
+- Not: wrapping the column in a function (`DATE(updated_at) = ?`, `LOWER(email) = ?`)
+
+If `ORDER BY` matches a usable index prefix (the direction story gets finer in the pagination post), MySQL can often avoid a filesort and just read in order.<Cite n={3} /> One example later. Keyset pagination is article [05](/posts/mysql-pagination/).
+
+## Leftmost prefix
+
+A composite index `(org_id, status, assignee_id, updated_at)` is not four indexes duct-taped together. It is one sorted concatenation.<Cite n={5} /> MySQL can use a leftmost prefix of that key:
+
+- `(org_id)`
+- `(org_id, status)`
+- `(org_id, status, assignee_id)`
+- `(org_id, status, assignee_id, updated_at)`
+
+It cannot jump to `status` or `assignee_id` while skipping `org_id`. "Any subset" is the lie that ships bad migrations.
+
+Equalities (and `IN`, and prefix `LIKE`) can stack from the left. A range on a middle column uses that column, then freezes the suffix for the index *range walk*. Later columns may still get filtered after the fact, but they do not tighten the walk the way people hope.<Cite n={5} /> Heuristic for web list queries: equalities first, range last.
+
+Reorder the index. Cycle the predicates. Try the "Range freezes status" preset.
+
+<LeftPrefixDemo />
+
+These are illustrative rules, not a promise the optimizer will never table-scan anyway (stats, `LIMIT`, buffering). You want the muscle memory.
+
+## Optional filters without lying to yourself
+
+Real inbox APIs have optional query-string junk. `assigneeId` might be absent. `q=` might appear on Tuesdays. One composite will not perfect every combination, and that is fine.
+
+Design for the common path. If ninety percent of requests are "open tickets for this org, newest first," make `(org_id, status, updated_at)` the workhorse, even when that means `assignee_id` is a filter applied after the range, or you add a second index with a clear job:
+
+- Workhorse: `(org_id, status, updated_at)` for the default board
+- Specialist: `(org_id, assignee_id, updated_at)` for "my queue" when that page is hot
+
+Two indexes with roles beat five indexes that are vibes. Optional filters are a product decision about which paths deserve write tax. If a filter is rare, accept a weaker plan and move on.
+
+`OR` across different columns (`status = 'open' OR assignee_id = 7`) often cannot use one composite cleanly.<Cite n={3} /> Split the query in the app, use `UNION`, or redesign the UI. Don't invent a fourth skinny index and hope Index Merge saves you. More on that below.
+
+## Selectivity: why `status` alone is a trap
+
+Selectivity is "how many rows share this value?" relative to the query you run, not a magic percentage you memorize.<Cite n={6} /> On a 5M-row tickets table, `status = 'open'` might be hundreds of thousands of rows. Inside one org, it might be a few thousand. Same predicate, different haystack.
+
+Old folklore about "indexes only help under 30% of the table" is obsolete. The optimizer decides with estimates and cost, not that rule of thumb.<Cite n={7} /> Your job in foundations is a gut check: low-cardinality flags (`status`, `is_active`, booleans) make weak *leading* keys. High-cardinality lookups (`token_hash`, `email`, `public_id`) make fine single-column uniques. Multi-tenant list endpoints want the tenant id first almost always.
+
+Drag the sliders. Watch "status alone" stay huge until you scope the org.
+
+<SelectivityDemo />
+
+Toy math. Production wants realistic volumes in staging. Twenty-row fixtures will lie to you about indexes.
+
+## One composite vs many single-column indexes
+
+Back to the inbox. Three singles give MySQL a chance at Index Merge: intersect row ids from each index, then fetch.<Cite n={8} /> Sometimes that wins. Often it is a consolation prize: extra random lookups, maybe a sort for `ORDER BY updated_at`, and you still paid write amplification on every update.
+
+One composite that matches the left prefix of the query is usually the design you wanted. Column order is which filters are always present vs optional. That call belongs to the product shape of the API, not to DBA folklore.
+
+Toggle the cartoon and notice the write tax.
+
+<CompositeVsSinglesDemo />
+
+## Indexes you do not need still charge rent
+
+Every secondary index is another B-tree to update on `INSERT` and on `UPDATE` of indexed columns.<Cite n={3} /> Sessions, events, and hot ticket tables feel this first. Space grows too. "Index every column the ORM touched" is how you donate write latency to a future outage.
+
+Before you `DROP INDEX` in prod, mark it invisible and watch whether anything regresses. The optimizer ignores invisible indexes, but they still get maintained, so you are testing plan choice safely.<Cite n={9} /> Adding an index is also `ALTER TABLE` territory. Online DDL cost is [its own article](/posts/mysql-online-ddl/). Do not promise "just add it on the primary at noon" without that caveat.
+
+After you add indexes, `ANALYZE TABLE` helps when you rely on persistent stats. One practical ops sentence, then move on.<Cite n={10} />
+
+## How ORMs create bad indexes (Eloquent first)
+
+Laravel will happily help you shoot your foot:
+
+```php
+Schema::create('tickets', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('org_id')->constrained()->index();
+    $table->foreignId('assignee_id')->nullable()->constrained()->index();
+    $table->string('status');
+    $table->timestamp('updated_at');
+
+    $table->index('status'); // vibes
+});
+```
+
+Better: match the list query / scope you actually run.
+
+```php
+$table->index(['org_id', 'status', 'assignee_id', 'updated_at']);
+```
+
+Other classics:
+
+- `whereDate('updated_at', $day)` becomes `DATE(updated_at) = ?`. Function on the column, index-unfriendly. Prefer a range on the raw timestamp.
+- `where('subject', 'like', '%refund%')` is a leading wildcard. Fulltext or a search service, not a B-tree hero moment.
+- `$table->unique('email')` / `token_hash` is good. That is a UNIQUE secondary for correctness and lookup, a different job from the inbox composite.
+
+Prisma contrast: `@@index([orgId, status, assigneeId, updatedAt])`. Order is the left prefix. Rails: `add_index :tickets, [:org_id, :status, :assignee_id, :updated_at]`. Django: put the same order in `Meta.indexes`, and remember `ForeignKey(db_index=True)` defaults are starting points, not a strategy.
+
+## A few names for later
+
+Covering indexes (article [15](/posts/mysql-covering-indexes/)): sometimes every column in the `SELECT` already lives in the secondary leaf, so InnoDB skips the clustered bounce.<Cite n={3} /> If the index is used but p99 is still sad on wide rows, that is the door. It is not a reason to spam more skinny indexes today.
+
+`EXPLAIN` (article [10](/posts/mysql-explain/)): for now, run it on staging data that looks like prod and look at `key` / `key_len`. Full decode later.<Cite n={11} />
+
+```sql
+EXPLAIN
+SELECT id, subject, updated_at
+FROM tickets
+WHERE org_id = 42 AND status = 'open'
+ORDER BY updated_at DESC
+LIMIT 50;
+```
+
+Pagination (article [05](/posts/mysql-pagination/)): `ORDER BY updated_at DESC LIMIT 50` wants that column usable in the index prefix, or you sort after. Descending index details and keyset cursors live there. Matching sort order to the index is why the inbox composite ends with `updated_at`.
+
+## Worked schemas
+
+### Tickets (the inbox)
+
+```sql
+CREATE TABLE tickets (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  org_id        BIGINT UNSIGNED NOT NULL,
+  status        ENUM('open','pending','resolved') NOT NULL,
+  assignee_id   BIGINT UNSIGNED NULL,
+  subject       VARCHAR(200) NOT NULL,
+  updated_at    DATETIME(6) NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_org_status_assignee_updated
+    (org_id, status, assignee_id, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+Uses the index (left prefixes):
+
+```sql
+SELECT id, subject, assignee_id, updated_at
+FROM tickets
+WHERE org_id = 42 AND status = 'open'
+ORDER BY updated_at DESC
+LIMIT 50;
+
+SELECT id, subject, updated_at
+FROM tickets
+WHERE org_id = 42 AND status = 'open' AND assignee_id = 7
+ORDER BY updated_at DESC
+LIMIT 50;
+```
+
+Does not use that index for lookup:
+
+```sql
+-- missing leading org_id
+SELECT id FROM tickets WHERE status = 'open' AND assignee_id = 7;
+
+-- OR across non-prefix shapes
+SELECT id FROM tickets
+WHERE org_id = 42 AND (status = 'open' OR assignee_id = 7);
+```
+
+### Orders ("my orders," same pattern, no tenant)
+
+```sql
+CREATE TABLE orders (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  customer_id  BIGINT UNSIGNED NOT NULL,
+  created_at   DATETIME(6) NOT NULL,
+  total_cents  INT NOT NULL,
+  currency     CHAR(3) NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_customer_created (customer_id, created_at)
+) ENGINE=InnoDB;
+
+SELECT id, created_at, total_cents, currency
+FROM orders
+WHERE customer_id = 1001
+  AND created_at >= '2026-01-01'
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+Equality then range on the trailing column. Indexing only `created_at` helps nobody's "my orders" page.
+
+## Checklist before you merge the migration
+
+- For every hot `WHERE` + `ORDER BY` + `LIMIT` list endpoint, you wrote down the composite that matches it before adding three random indexes
+- Multi-tenant: `org_id` / `tenant_id` leads the index if every query scopes that way
+- Optional filters: common path is honest; second indexes have named roles, not vibes
+- Eloquent FK auto-indexes were audited against real routes
+- Low-cardinality columns are not lone heroes; high-cardinality uniques (`email`, `token_hash`) are fine
+- You know the write tax on hot tables and used invisible indexes before dropping suspects
+- Fat PKs still tax every secondary ([article 02](/posts/mysql-primary-keys/) if you need a refresher)
+- You peeked at `EXPLAIN` key/key_len on prod-shaped data; covering and deep EXPLAIN come later
+
+Secondary indexes are how list endpoints stay honest as tables grow. Next up: [WHERE, projection, and sargable queries](/posts/mysql-select/), and how the columns you ask for interact with the paths you just designed.
+
+<References
+  items={[
+    {
+      n: 1,
+      title: "MySQL 9.7 Reference Manual — Clustered and Secondary Indexes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/innodb-index-types.html",
+    },
+    {
+      n: 2,
+      title: "MySQL 9.7 Reference Manual — Use of Index Extensions",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/index-extensions.html",
+    },
+    {
+      n: 3,
+      title: "MySQL 9.7 Reference Manual — How MySQL Uses Indexes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/mysql-indexes.html",
+    },
+    {
+      n: 4,
+      title: "MySQL 9.7 Reference Manual — Comparison of B-Tree and Hash Indexes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/index-btree-hash.html",
+    },
+    {
+      n: 5,
+      title: "MySQL 9.7 Reference Manual — Multiple-Column Indexes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/multiple-column-indexes.html",
+    },
+    {
+      n: 6,
+      title: "MySQL 9.7 Reference Manual — Index Statistics Collection",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/index-statistics.html",
+    },
+    {
+      n: 7,
+      title: "MySQL 9.7 Reference Manual — WHERE Clause Optimization",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/where-optimization.html",
+    },
+    {
+      n: 8,
+      title: "MySQL 9.7 Reference Manual — Index Merge Optimization",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/index-merge-optimization.html",
+    },
+    {
+      n: 9,
+      title: "MySQL 9.7 Reference Manual — Invisible Indexes",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/invisible-indexes.html",
+    },
+    {
+      n: 10,
+      title: "MySQL 9.7 Reference Manual — CREATE INDEX Statement",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/create-index.html",
+    },
+    {
+      n: 11,
+      title: "MySQL 9.7 Reference Manual — Verifying Index Usage",
+      href: "https://dev.mysql.com/doc/refman/9.7/en/verifying-index-usage.html",
+    },
+  ]}
+/>
