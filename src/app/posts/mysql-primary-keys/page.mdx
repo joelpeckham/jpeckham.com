@@ -9,23 +9,23 @@ import { Cite, References } from "@/components/cite";
 
 ## The table is sorted. That is not a metaphor.
 
-This is post two of [Learn MySQL](/projects/mysql/). Last time I picked column types so nobody accidentally stored money in a float. Today is the primary key: the thing InnoDB uses to *physically arrange* your table on disk.
+This is post two of [Learn MySQL](/projects/mysql/). Last time I picked column types so nobody stored money in a float by accident. Today is the primary key: the thing InnoDB uses to *physically arrange* your table on disk.
 
-That sounds like trivia until you notice what rides on it. Detail endpoints that look up by id get cheap. Every secondary index you add copies the primary key into its own entries.<Cite n={1} /> Foreign keys store matching parent key values in the child table too.<Cite n={2} /> Write-heavy tables care whether new ids land next to each other or spray all over the B-tree. And if the thing your teammates actually search for is buried inside a JSON blob, a perfect PK will sit there unused while support waits on a full table scan. I have a work story about that last one.
+That sounds like trivia until you see what depends on it. Detail endpoints that look up by id stay cheap. Every secondary index you add copies the primary key into its own entries.<Cite n={1} /> Foreign keys store matching parent key values in the child table too.<Cite n={2} /> Write-heavy tables care whether new ids land next to each other or spray across the B-tree. And if the thing your teammates search for sits inside a JSON blob, a perfect primary key sits unused while support waits on a full table scan. I have a work story about that last one.
 
-Quick recap from [tables and types](/posts/mysql-schema-types/), so I don't spend three pages shopping for IDs again. On a normal web table I want a skinny `BIGINT UNSIGNED AUTO_INCREMENT` as the clustered primary key, plus a unique `public_id` (ULID-style string) for URLs and JSON when the API is public. If clients must mint ids themselves, prefer time-ordered UUIDv7 / ULID over random UUIDv4 as the clustered key. The rest of this post assumes that menu and explains *why* the clustered side cares.
+Quick recap from [tables and types](/posts/mysql-schema-types/), so I don't spend three pages shopping for ids again. On a normal web table I want a skinny `BIGINT UNSIGNED AUTO_INCREMENT` as the clustered primary key, plus a unique `public_id` (ULID-style string) for URLs and JSON when the API is public. If clients must mint ids themselves, prefer time-ordered UUIDv7 / ULID over random UUIDv4 as the clustered key. The rest of this post assumes that menu and explains *why* the clustered side cares.
 
 ## A B-tree in one coffee
 
 Before "clustered leaf" means anything, you need a picture of what an index *is*.
 
-InnoDB indexes (aside from spatial ones) are B-tree structures. Index records live in the leaf pages of that tree. The default index page size is 16KB.<Cite n={3} /> Forget the textbook diagrams for a second. Imagine a sorted phone book that refuses to be one giant stack of paper. MySQL chops the data into those fixed-size **pages** (chunks of disk / buffer-pool memory) and arranges them in a short tree:
+InnoDB indexes (aside from spatial ones) are B-tree structures. Index records live in the leaf pages of that tree. The default index page size is 16KB.<Cite n={3} /> Forget the textbook diagrams for a second. Imagine a sorted phone book that refuses to be one giant stack of paper. MySQL chops the data into fixed-size **pages** (chunks of disk / buffer-pool memory). Then it arranges those pages in a short tree:
 
 - **Interior pages** (the root and the branches under it) do *not* hold your row. They hold **separator keys** and child pointers: "keys up through 6 go left; bigger keys go right." Their only job is to steer.
 - **Leaf pages** are the bottom of the tree. They hold the actual index entries, sorted by key.<Cite n={3} />
-- A lookup is a **descent**: start at the root, compare your search key to the separators, follow one child pointer, repeat until you hit a leaf. Without a usable index, MySQL starts at the first row and reads through the table to find matches.<Cite n={4} /> Indexes exist so you don't do that.
+- A lookup is a **descent**: start at the root, compare your search key to the separators, follow one child pointer, then repeat until you hit a leaf. Without a usable index, MySQL starts at the first row and reads through the table to find matches.<Cite n={4} /> Indexes exist so you don't do that.
 
-The reason a descent is so cheap is fan-out. A 16KB interior page holds hundreds of separator keys, and each of *those* children holds hundreds more, so the tree stays absurdly shallow. Three levels already cover millions of rows. Four cover more rows than you have. "Look up one order in a hundred-million-row table" is three or four page reads, most of which are probably cached anyway.
+A descent stays cheap because of fan-out. A 16KB interior page holds hundreds of separator keys. Each of *those* children holds hundreds more. So the tree stays absurdly shallow. Three levels already cover millions of rows. Four cover more rows than you have. "Look up one order in a hundred-million-row table" is three or four page reads. Most of those pages are probably cached anyway.
 
 When people say InnoDB "walks the index," they mean this root-to-leaf trip. "Leaf" is not poetry. It means the bottom level, where the entries live.
 
@@ -37,15 +37,15 @@ Pick a key and watch the path light up. Interior pages only steer. The value sho
 Click a leaf key: interior pages only steer. In a clustered index the leaf holds the whole row. That is the punchline for `WHERE id = ?`.
 </Takeaway>
 
-Secondary indexes (next article) are also B-trees. Same descent. Different stuff sitting in the leaf. We'll get there.
+Secondary indexes (next article) are also B-trees. Same descent. Different stuff sits in the leaf. We'll get there.
 
 ## What "clustered" means for a request
 
-Not every database puts the full row in the primary index. MySQL's InnoDB docs contrast the clustered design with storage organizations that keep row data on a *different* page from the index record.<Cite n={1} /> PostgreSQL's default heap tables are a concrete example of that other shape: table pages hold the row tuples, and indexes are separate structures that point into those pages.<Cite n={5} />
+Not every database puts the full row in the primary index. MySQL's InnoDB docs contrast the clustered design with storage that keeps row data on a *different* page from the index record.<Cite n={1} /> PostgreSQL's default heap tables are a concrete example of that other shape: table pages hold the row tuples, and indexes are separate structures that point into those pages.<Cite n={5} />
 
 InnoDB does not work that way. Each InnoDB table has a special **clustered index** that stores the row data. Typically that clustered index is the primary key.<Cite n={1} /> Looking up `WHERE id = 42` is the same descent you just played, except the search leads directly to the page that already contains the row. The leaf *is* the row.
 
-That is why `GET /api/orders/42` mapped to the primary key is the happy path. One short walk down the tree, and the payload is already sitting in the page you landed on. PK equality lookups are cheap for that boring mechanical reason.<Cite n={1} />
+That is why `GET /api/orders/42` mapped to the primary key is the happy path. You take one short walk down the tree. The payload already sits in the page you landed on. Primary key equality lookups are cheap for that boring mechanical reason.<Cite n={1} />
 
 The rest of this article is about protecting that path, and noticing when your real workload never uses it.
 
@@ -53,7 +53,7 @@ The rest of this article is about protecting that path, and noticing when your r
 
 A clustered key only helps queries that can actually use it. I learned this the unglamorous way at [BetterRX](https://www.betterrx.com/), the hospice pharmacy platform that is my day job.
 
-I deal with a log table for inbound integration messages. Each row carries a big JSON payload with PHI in it. Internal folks often need to find "the message about this patient" or "the message about this file." What they have is a medical record number (MRN) or another id that lives *inside* the JSON. The table has a perfectly fine surrogate primary key. Nobody is querying by that id. Searching means reading millions of rows and poking JSON until something matches, which takes exactly as long as it sounds like it would. "We used BIGINT" does not help, because BIGINT was never invited to the party.
+I deal with a log table for inbound integration messages. Each row carries a big JSON payload with PHI in it. Internal folks often need to find "the message about this patient" or "the message about this file." What they have is a medical record number (MRN) or another id that lives *inside* the JSON. The table has a perfectly fine surrogate primary key. Nobody queries by that id. Searching means reading millions of rows and poking JSON until something matches. That takes exactly as long as it sounds. "We used BIGINT" does not help, because BIGINT was never invited to the party.
 
 JSON is fine for sparse junk you do not filter on. The problem is the **access path**: how MySQL is supposed to find the row. If support will search by MRN, that value needs to be a real column (or a generated column) with an index. Then MySQL can look up the MRN in a secondary index, read the primary key out of that index entry, and bounce into the clustered leaf for the rest of the row.<Cite n={1} /> Same table. Suddenly usable.
 
@@ -61,16 +61,16 @@ That two-step bounce is coming up next. Keep the BetterRX itch in your head: key
 
 ## How InnoDB picks the clustered index
 
-Declare `PRIMARY KEY` explicitly in the migration. MySQL recommends a primary key on every table.<Cite n={1} /> If you don't define one, InnoDB still has to cluster the table somehow, and the somehow is easy to regret later.
+Declare `PRIMARY KEY` explicitly in the migration. MySQL recommends a primary key on every table.<Cite n={1} /> If you don't define one, InnoDB still has to cluster the table somehow. That somehow is easy to regret later.
 
 Rough selection order:<Cite n={1} />
 
 1. An explicit `PRIMARY KEY` becomes the clustered index. (This is what you want.)
-2. Else the first `UNIQUE` index where every column is `NOT NULL` gets promoted to clustered. Surprising if you weren't planning on that.
+2. Else the first `UNIQUE` index where every column is `NOT NULL` gets promoted to clustered. That surprises you if you weren't planning on it.
 3. Else InnoDB invents a hidden clustered index named `GEN_CLUST_INDEX` on a synthetic 6-byte row ID that increases as rows are inserted. The table is still sorted, but you don't have a real primary key you can point foreign keys or APIs at.
 4. Optional server behavior: with `sql_generate_invisible_primary_key=ON`, new InnoDB tables can get an invisible `my_row_id BIGINT UNSIGNED AUTO_INCREMENT` primary key (a GIPK) instead of relying on that fully hidden row-id path.<Cite n={6} /> Better than nothing. Still weirder than writing `PRIMARY KEY` yourself.
 
-Hidden clustering is fine until you need foreign keys, logical replication assumptions, or a stable id in an API. Then you discover the physical order was whatever MySQL invented while you weren't looking. Put the PK in the migration where a human can read it. Future-you is a human.
+Hidden clustering is fine until you need foreign keys, logical replication assumptions, or a stable id in an API. Then you discover the physical order was whatever MySQL invented while you weren't looking. Put the primary key in the migration where a human can read it. Future-you is a human.
 
 ## Secondary indexes are PK-sized
 
@@ -89,9 +89,9 @@ People call step 2 the **bounce** (or PK lookup). Click an email below. Two hops
 A secondary lookup is two hops: the secondary index gives you the PK, and the PK finds the row. Your MRN, email, and `public_id` filters take this path.
 </Takeaway>
 
-Because every secondary entry carries a copy of the PK, a long primary key makes every secondary index use more space.<Cite n={1} /> A `CHAR(36)` UUIDv4 as the clustered key is not just 36 bytes on the table row. It is 36 bytes stuffed into `idx_orders_account`, `idx_orders_status`, and every child-table foreign key column that stores the parent id.<Cite n={2} /> Skinny PKs are a kindness to every index you haven't written yet.
+Because every secondary entry carries a copy of the primary key, a long primary key makes every secondary index use more space.<Cite n={1} /> A `CHAR(36)` UUIDv4 as the clustered key is not just 36 bytes on the table row. It is 36 bytes stuffed into `idx_orders_account`, `idx_orders_status`, and every child-table foreign key column that stores the parent id.<Cite n={2} /> Skinny primary keys are a kindness to every index you haven't written yet.
 
-Luggage math: a `CHAR(36)` PK, times 3 secondaries at ~44 bytes per entry, times 10M rows, is roughly **1.2 GB** of secondary index before you count the clustered table itself. The same shape with a `BIGINT` (8-byte PK plus 8-byte indexed column, about 16 bytes per entry) is roughly **480 MB**. The slider in the demo multiplies it live.
+Luggage math: a `CHAR(36)` primary key, times 3 secondaries at ~44 bytes per entry, times 10M rows, is roughly **1.2 GB** of secondary index before you count the clustered table itself. The same shape with a `BIGINT` (8-byte primary key plus 8-byte indexed column, about 16 bytes per entry) is roughly **480 MB**. The slider in the demo multiplies it live.
 
 ```sql
 -- Anti-pattern: wide clustered key copied into every secondary
@@ -120,7 +120,7 @@ CREATE TABLE orders (
 ) ENGINE=InnoDB;
 ```
 
-Watch one insert stamp a copy of the PK into every secondary index. BIGINT packs a briefcase; CHAR(36) hauls a steamer trunk:
+Watch one insert stamp a copy of the primary key into every secondary index. BIGINT packs a briefcase; CHAR(36) hauls a steamer trunk:
 
 <PkWidthTaxDemo />
 
@@ -128,7 +128,7 @@ Watch one insert stamp a copy of the PK into every secondary index. BIGINT packs
 The tax is PK width times secondary count times row count. Prefer 8-byte bigint clustering unless clients must mint ids (then UUIDv7/ULID, not random `CHAR(36)`).
 </Takeaway>
 
-Sometimes a secondary index already contains every column your query needs, so MySQL can answer from the index tree without consulting the data rows. That is a covering index.<Cite n={4} /> It gets its own article later. Today you just need the setup burned in: secondary index first, then PK, then row.
+Sometimes a secondary index already contains every column your query needs, so MySQL can answer from the index tree without consulting the data rows. That is a covering index.<Cite n={4} /> It gets its own article later. Today you just need the setup burned in: secondary index first, then primary key, then row.
 
 ## Insert locality (why random UUIDs as PK feel haunted)
 
@@ -170,15 +170,15 @@ CREATE TABLE orders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
-Cheap joins. Cheap secondaries. Internal admin URLs like `/orders/42` stay one clustered hop. This is exactly what Laravel's `$table->id()` gives you, and every `$table->foreignId('user_id')` copies the same skinny 8 bytes into the child table, so the whole schema stays cheap to relate. If there is no natural unique key, MySQL's own guidance is to add an auto-increment column and keep the primary key short, because long primary keys bloat every secondary index.<Cite n={1} /><Cite n={8} />
+Cheap joins. Cheap secondary indexes. Internal admin URLs like `/orders/42` stay one clustered hop. This is exactly what Laravel's `$table->id()` gives you, and every `$table->foreignId('user_id')` copies the same skinny 8 bytes into the child table, so the whole schema stays cheap to relate. If there is no natural unique key, MySQL's own guidance is to add an auto-increment column and keep the primary key short, because long primary keys bloat every secondary index.<Cite n={1} /><Cite n={8} />
 
-If the API must not leak sequential ids (Stripe-style `cus_…` / `pi_…` vibes): keep the bigint as the clustered key and put a unique `public_id` beside it. URLs and JSON use `public_id`. Joins and FKs use `id`. You already saw this pattern in the types post. The clustered-index reason is the luggage demo above: don't make the wide public string *also* be the thing every secondary copies.
+If the API must not leak sequential ids (Stripe-style `cus_…` / `pi_…` vibes): keep the bigint as the clustered key and put a unique `public_id` beside it. URLs and JSON use `public_id`. Joins and foreign keys use `id`. You already saw this pattern in the types post. The clustered-index reason is the luggage demo above: don't make the wide public string *also* be the thing every secondary index copies.
 
 If clients must mint ids (offline mobile, multi-writer ingest): UUIDv7 or ULID. Time-ordered beats random for the insert-spray reason. Laravel's `HasUuids` trait already mints time-ordered values, so the trap isn't the trait, it's the column: `$table->uuid()` is a `CHAR(36)` string, so every secondary index carries 36 bytes of dashes and hex. Prefer `HasUlids` with `CHAR(26)`, or `BINARY(16)` if you can stand the ergonomics. Avoid `CHAR(36)` just because the ORM printed a string.
 
-Multi-tenant tables: my default is still a global surrogate `id` as the PK, with secondary indexes that *lead* with `tenant_id` so "all rows for this tenant" can use an index. A composite `PRIMARY KEY (tenant_id, id)` packs one tenant's rows together in the clustered index, which helps some scan shapes, but every secondary and every FK pays for both columns. I only reach for composite clustering when tenant locality is the main access pattern and I've stared at the join tax long enough to feel sad about it.
+Multi-tenant tables: my default is still a global surrogate `id` as the primary key, with secondary indexes that *lead* with `tenant_id` so "all rows for this tenant" can use an index. A composite `PRIMARY KEY (tenant_id, id)` packs one tenant's rows together in the clustered index, which helps some scan shapes, but every secondary index and every foreign key pays for both columns. I only reach for composite clustering when tenant locality is the main access pattern and I've stared at the join tax long enough to feel sad about it.
 
-Natural keys (email, slug) as the primary key: I almost never do this. People change emails. Slugs get renamed. PII ends up copied into every secondary. Width is usually worse than a boring integer. Make them a unique secondary instead.
+Natural keys (email, slug) as the primary key: I almost never do this. People change emails. Slugs get renamed. PII ends up copied into every secondary index. Width is usually worse than a boring integer. Make them a unique secondary index instead.
 
 ## AUTO_INCREMENT for people who ship HTTP handlers
 
@@ -190,7 +190,7 @@ Use an integer type large enough for the sequence you need. When the column hits
 
 ## Forgot a primary key
 
-Import scripts, quick dumps, and "I'll add it later" migrations sometimes create tables with no `PRIMARY KEY`. The Laravel classic is the hand-rolled pivot table: `Schema::create('role_user', ...)` with two `foreignId` columns and no key in sight. (`$table->primary(['role_id', 'user_id'])` fixes it and deduplicates attachments as a bonus.) InnoDB still clusters keyless tables somehow: a hidden `GEN_CLUST_INDEX` row id, or (if enabled) a generated invisible PK.<Cite n={1} /><Cite n={6} /> Replication, foreign keys, and "what is the id of this row?" get awkward fast.
+Import scripts, quick dumps, and "I'll add it later" migrations sometimes create tables with no `PRIMARY KEY`. The Laravel classic is the hand-rolled pivot table: `Schema::create('role_user', ...)` with two `foreignId` columns and no key in sight. (`$table->primary(['role_id', 'user_id'])` fixes it and deduplicates attachments as a bonus.) InnoDB still clusters keyless tables somehow: a hidden `GEN_CLUST_INDEX` row id, or (if enabled) a generated invisible primary key.<Cite n={1} /><Cite n={6} /> Replication, foreign keys, and "what is the id of this row?" get awkward fast.
 
 If `SHOW CREATE TABLE` does not show a primary key you meant to have, fix it before the table is large. Changing the clustered key later rebuilds the table and every secondary index. That pain is its own article. For v1: choose on purpose.
 
@@ -202,16 +202,16 @@ Run `SHOW CREATE TABLE` on your hottest write table. Is the primary key skinny a
 
 - Every InnoDB table has an explicit `PRIMARY KEY` in the migration SQL
 - Hot tables use a short, stable clustered key (prefer 8-byte bigint unless you have a hard reason)
-- Opaque API ids are a unique secondary, not necessarily the clustered key
+- Opaque API ids are a unique secondary index, not necessarily the clustered key
 - Random UUIDv4 is not the clustered key on high-write tables (or you measured the spray and accepted it)
-- You know which secondaries exist and that each one carries a copy of the PK
-- Detail endpoints that filter on PK expect one clustered descent; filters on email/slug/MRN expect a bounce (or a covering index later)
+- You know which secondary indexes exist and that each one carries a copy of the primary key
+- Detail endpoints that filter on the primary key expect one clustered descent; filters on email/slug/MRN expect a bounce (or a covering index later)
 - Keys humans search by are columns (or generated columns), not treasure hunts inside JSON
 - `AUTO_INCREMENT` means unique, not gapless business numbers
 - Multi-tenant: either lead indexes with `tenant_id` or deliberately composite-cluster; don't accidentally scan across tenants
-- You've sketched the cost of changing the PK type later and chosen anyway
+- You've sketched the cost of changing the primary key type later and chosen anyway
 
-Primary keys decide physical layout. Secondary indexes decide which queries get a decent path into that layout. Next up: [secondary indexes](/posts/mysql-indexes/), where we finally talk left-prefix rules, selectivity, and how not to invent six indexes that never get used.
+Primary keys decide physical layout. Secondary indexes decide which queries get a decent path into that layout. Next up: [secondary indexes](/posts/mysql-indexes/), where we finally talk leftmost prefix rules, selectivity, and how not to invent six indexes that never get used.
 
 <References
   items={[

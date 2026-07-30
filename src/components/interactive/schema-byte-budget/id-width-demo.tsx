@@ -63,7 +63,7 @@ export function IdWidthDemo() {
   return (
     <DemoShell
       title="ID width"
-      blurb="Pick a key shape. Watch the clustered column widen and rows-per-page fall."
+      blurb="Pick a key shape. Watch the clustered key widen. Watch rows per page fall."
     >
       <div className="flex flex-wrap gap-2">
         {STRATEGIES.map(({ id, label }) => (
@@ -117,7 +117,7 @@ export function IdWidthDemo() {
           cols={6}
           label="16KB leaf"
           tone={rpp < 40 ? "bad" : rpp < 80 ? "warn" : "ok"}
-          caption={`${filled} of ${PAGE_SLOTS} slots shown · denser = fewer pages`}
+          caption={`${filled} of ${PAGE_SLOTS} slots shown · denser packing means fewer pages`}
         />
       </div>
     </DemoShell>

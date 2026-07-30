@@ -22,7 +22,7 @@ export default function Error({
         This page hit a snag.
       </h1>
       <p className="mt-3 max-w-[420px] text-ink/80">
-        An unexpected error occurred while loading this page.
+        Something broke while this page loaded.
       </p>
       <button
         type="button"

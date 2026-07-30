@@ -11,15 +11,15 @@ import { ArrowLink } from "@/components/ui/arrow-link";
 import { JsonLd, profilePageJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
-  title: { absolute: "About Joel Peckham — Software & AI Developer" },
+  title: { absolute: "About Joel Peckham, Software & AI Developer" },
   description:
-    "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
+    "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
   alternates: { canonical: "/about/" },
   openGraph: {
     url: "/about/",
     title: "About Joel Peckham",
     description:
-      "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
+      "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
     images: [
       {
         url: "/snowboard_joel.webp",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "About Joel Peckham",
     description:
-      "Joel Peckham is a software engineer at BetterRx, building the best hospice pharmacy solution on the market. Based in Laramie, Wyoming.",
+      "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
     images: ["/snowboard_joel.webp"],
   },
 };
@@ -64,11 +64,11 @@ export default function AboutPage() {
                 Nice to meet you.
               </h1>
               <p className="max-w-[560px] text-lg leading-relaxed">
-                I&apos;m a software developer and former graphic designer based
-                in Laramie, Wyoming. I graduated with a B.S. in Computer Science
-                in 2022. I work across the whole stack and I like doing things
-                right – <em>before </em> they come back to bite me. For the last
-                three years I&apos;ve been at{" "}
+                I&apos;m a software developer and former graphic designer in
+                Laramie, Wyoming. I earned a B.S. in Computer Science in 2022. I
+                work across the full stack. I like doing things right{" "}
+                <em>before </em> they come back to bite me. For the last three
+                years I&apos;ve been at{" "}
                 <a
                   href="https://www.betterrx.com/"
                   target="_blank"
@@ -77,9 +77,9 @@ export default function AboutPage() {
                 >
                   BetterRx
                 </a>
-                , building the best hospice pharmacy solution on the market.
-                When I&apos;m not coding, I&apos;m outside hiking, climbing, or
-                skiing.
+                . We build hospice pharmacy software, and I think it&apos;s the
+                best on the market. When I&apos;m not coding, I&apos;m outside
+                hiking, climbing, or skiing.
               </p>
               <div
                 aria-label="Tech stack"
@@ -127,9 +127,7 @@ export default function AboutPage() {
                 Phone
               </span>
               <ArrowLink href="tel:13076311986">+1 (307) 631-1986</ArrowLink>
-              <span className="text-xs text-grey">
-                (Text message preferred.)
-              </span>
+              <span className="text-xs text-grey">(I prefer a text.)</span>
             </li>
             <li className="flex flex-wrap items-baseline gap-x-3">
               <span className="text-meta uppercase tracking-[0.18em] text-grey">

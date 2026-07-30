@@ -32,7 +32,7 @@ export function SeriesNav({ adjacent }: { adjacent: SeriesAdjacent }) {
           )}
         </div>
         <ArrowLink href={hub.href} className="self-start sm:self-auto">
-          Series home
+          Back to series
         </ArrowLink>
         <div className="min-h-[1.5em] sm:text-right">
           {next ? (

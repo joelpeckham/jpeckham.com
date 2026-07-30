@@ -14,29 +14,29 @@ import { buttonVariants } from "@/components/ui/button";
 
 ## Introduction
 
-FORTH is a simple stack-based language. It is a great language to learn about compilers and interpreters. This article will show you how to write a FORTH compiler and interpreter in 130* lines of Python.
+FORTH is a simple stack-based language. It is a good way to learn compilers and interpreters. I will show you how to write a FORTH compiler and interpreter in 130* lines of Python.
 
 ### Some disclaimers
 
-- Firstly, this is not a perfect, standards-compliant FORTH. It's just a fun little project to learn about compilers and interpreters.
-- Secondly, this is more of a rough guide and less of a tutorial. I'm not going to go into a lot of detail about how things work. I'm just going to show you how to get things working. If you want to learn more about compilers and interpreters, I recommend [Crafting Interpreters](https://craftinginterpreters.com/).
-- Finally, it's actually around 480 lines total, but since most of that is defining primitives which could be done in runtime, it's not _really_ relevant. It's just nice to have some starting points to work from :)
+- First, this is not a perfect, standards-compliant FORTH. It is a small project for learning compilers and interpreters.
+- Second, this is a rough guide, not a full tutorial. I will not explain every detail. I will show you how to get it working. If you want more depth on compilers and interpreters, read [Crafting Interpreters](https://craftinginterpreters.com/).
+- Finally, the full project is about 480 lines. Most of that defines primitives you could add at runtime, so the core stays small. The extras are nice starting points :)
 
 ## A language in two parts
 
-Our FORTH implementation will have two main stages, a compile stage and an interpret stage. In the compile stage, we will be collecting words to be executed later. In the interpret stage, we will be executing the words we have collected.
+Our FORTH implementation has two stages: compile and interpret. In the compile stage, we collect words to run later. In the interpret stage, we run those words.
 
-To get started let's make a file called `state.py`. This file will contain two dataclasses to represent the two states of our FORTH implementation.
+Start with a file called `state.py`. This file holds two dataclasses for the two states of our FORTH system.
 
-First, we need to import some things from the `dataclasses` module.
+First, import what you need from the `dataclasses` module.
 
 ```python
 from dataclasses import dataclass, field
 ```
 
-Then we can define our two states.
+Then define the two states.
 
-If you are not familiar with dataclasses, they are a nice way to define classes that are just containers for data. They are a great way to define simple classes that don't need any methods. You can read more about them [in the Python docs](https://docs.python.org/3/library/dataclasses.html).
+If you do not know dataclasses yet, they are a clean way to make classes that only hold data. They work well for simple classes with no methods. You can read more [in the Python docs](https://docs.python.org/3/library/dataclasses.html).
 
 ```python
 @dataclass
@@ -62,7 +62,7 @@ class InterpretState:
 
 ## We all need a little help
 
-Next, we'll define some helper functions to make our lives easier. We'll put these in a file called `helpers.py`.
+Next, define a few helper functions. Put them in `helpers.py`.
 
 ```python
 from typing import List
@@ -80,13 +80,13 @@ def isInt(lexeme:str) -> bool:
         return True
 ```
 
-These two small functions will help us by splitting our code into small pieces called tokens and by checking if a given lexeme is an integer.
+These two functions split code into tokens and check whether a lexeme is an integer.
 
 ## Getting primitives
 
-Next, we'll define some primitives. These are the basic building blocks of our language. We'll put these in a file called `primitives.py`.
+Next, define some primitives. These are the basic building blocks of the language. Put them in `primitives.py`.
 
-Let's start by importing some things we'll need.
+Start by importing what you need.
 
 ```python
 from __future__ import annotations
@@ -95,15 +95,15 @@ from state import InterpretState, CompileState
 from getch import getch
 ```
 
-Getch is a bit special. It's a library that allows us to get a single character from the user without having to press enter. It's not a standard library, so you'll have to install it with `pip install getch`.
+`getch` is a bit special. It lets you read one character without waiting for Enter. It is not in the standard library, so install it with `pip install getch`.
 
-Next, we'll define a dictionary to hold all of our primitives. We'll call it `Primitives`.
+Next, define a dictionary to hold all primitives. Call it `Primitives`.
 
 ```python
 Primitives : Dict[str, Dict[str,function]] = {} #The main export of this file.
 ```
 
-Now, we'll define a couple of decorators. These will allow us to define primitives more concisely. The first decorator is called `primitive()`. It will take a function, strip the intended lexeme from docstring, and add it to the `Primitives` dictionary. The rest of the logic helps us to tag which lexemes are compile only and which are interpret only, and which are both.
+Now define two decorators. They let you write primitives with less boilerplate. The first is `primitive()`. It takes a function, reads the lexeme from the docstring, and adds it to `Primitives`. The rest of the logic tags which lexemes are compile-only, interpret-only, or both.
 
 ```python
 def primitive(func) -> None:
@@ -126,7 +126,7 @@ def primitive(func) -> None:
     return func
 ```
 
-The second decorator is called `compileTime()`. This will simply add a marker to the docstring of the function to indicate that it implements special compile-time behavior. This is useful for primitives that need to do something special when they are compiled, but also need to do something special when they are executed.
+The second decorator is `compileTime()`. It adds a marker to the docstring to show special compile-time behavior. Use it for primitives that need custom work at compile time and at run time.
 
 ```python
 def compileTime(func) -> function:
@@ -137,7 +137,7 @@ def compileTime(func) -> function:
     return func
 ```
 
-Lastly in this `primitives.py` file, we'll define some primitives. We'll start with some simple ones that don't need any special compile-time behavior. You can stop here, but I suggest you use all of them to see how they work.
+Last in `primitives.py`, define some primitives. Start with simple ones that need no special compile-time behavior. You can stop early, but I suggest you use all of them so you can see how they work.
 
 Arithmetic and comparisons:
 
@@ -369,13 +369,13 @@ def loop(state:CompileState) -> None:
     state.codes.extend(("LOOP", doPos))
 ```
 
-(For brevity a few interpret-time twins of the branching words are omitted here; the complete, runnable set lives [on GitHub](https://github.com/joelpeckham/pyforth).)
+(For brevity, a few interpret-time twins of the branching words are omitted here. The full runnable set lives [on GitHub](https://github.com/joelpeckham/pyforth).)
 
 ## Interpreter
 
-The interpreter itself is very small. It's just a loop that runs until the end of the program is reached. Then, token by token, it looks at each token in the dictionary of primitives and calls the function associated with it. If the token is not in the dictionary, it is assumed to be a number and is pushed onto the data stack.
+The interpreter itself is small. It is a loop that runs until the program ends. For each token, it looks up the word in the primitives dictionary and calls that function. If the token is not in the dictionary, treat it as a number and push it onto the data stack.
 
-There's more going on here to deal with variables and calling "functions", but again, this isn't a tutorial.
+There is more here for variables and calling "functions", but again, this is not a tutorial.
 
 ```python
 from state import InterpretState, CompileState
@@ -429,9 +429,9 @@ class Interpreter:
 
 ## Making it interactive
 
-The interpreter is now ready to be used. I've added a simple REPL to make it easier to use. It's not very sophisticated, but it's short and it works.
+The interpreter is ready to use. I added a simple REPL so you can try it. It is not fancy, but it is short and it works.
 
-Let's add this code to a file called `pyforth.py`:
+Add this code to a file called `pyforth.py`:
 
 ```python
 #! /usr/local/bin/python3
@@ -456,4 +456,4 @@ else:
 
 ### Woo! It's done!
 
-Make sure you've added the correct Python install path to the shebang at the top, then run with `./pyforth.py` and you should be good to go!
+Set the shebang at the top to your Python path. Then run `./pyforth.py` and you should be good to go!

@@ -124,7 +124,7 @@ export function insertLocality(shape: InsertShape): InsertLocalityResult {
       tone: "ok",
       title: "Mostly sequential (time-ordered)",
       detail:
-        "UUIDv7 / ULID stay near the hot end. Wider than BIGINT, not random thrash.",
+        "UUIDv7 and ULID stay near the hot end. Wider than BIGINT, but not random thrash.",
       pageFills,
     };
   }
@@ -286,7 +286,7 @@ export function btreeDescentSteps(
     if (node.level === "leaf") {
       steps.push({
         nodeId: node.id,
-        comparison: `leaf holds key ${key} (+ full row)`,
+        comparison: `leaf holds key ${key} and the full row`,
         direction: "leaf",
       });
       continue;

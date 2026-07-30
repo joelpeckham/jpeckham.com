@@ -1,8 +1,8 @@
 import { SeriesTopicList } from "@/components/series-topic-list";
 
-You can ship Laravel apps for years without knowing what MySQL actually does with your migrations. Then one list endpoint slows to a crawl, `EXPLAIN` reads like tea leaves, and everyone's advice is "add an index" with no opinion about which one or why.
+You can ship Laravel apps for years without knowing what MySQL does with your migrations. Then one list endpoint slows to a crawl. `EXPLAIN` reads like tea leaves. Everyone says "add an index," but not which one, or why.
 
-This series fixes that. Each article takes one layer of MySQL and InnoDB (column types, primary keys, indexes, query shapes, and eventually the engine internals) and builds a mental model you can use in a code review the same day. Instead of squinting at static diagrams, you get small interactive demos you can poke until the idea clicks. The app examples are Eloquent, because that's what I write at my day job, but everything is really about the SQL underneath, so none of it expires when you switch ORMs.
+This series fixes that. Each article covers one layer of MySQL and InnoDB: column types, primary keys, indexes, query shapes, and later the engine internals. You leave with a mental model you can use in a code review the same day. Skip the static diagrams. You get small interactive demos you can poke until the idea clicks. The app examples use Eloquent, because that is what I write at my day job. The real subject is the SQL underneath. The ideas still hold when you switch ORMs.
 
 Start at the top. Each article assumes the ones before it.
 
@@ -10,4 +10,4 @@ Start at the top. Each article assumes the ones before it.
 
 <SeriesTopicList seriesId="mysql" />
 
-More is coming: pagination that survives page 4,000, joins, transactions and isolation levels, real `EXPLAIN` fluency, and then the internals (MVCC, row locks, the buffer pool, replication). New articles land here as they're finished.
+More is coming. I will cover pagination that survives page 4,000, joins, transactions and isolation levels, and real `EXPLAIN` fluency. Then come the internals: MVCC, row locks, the buffer pool, and replication. New articles land here when they are finished.

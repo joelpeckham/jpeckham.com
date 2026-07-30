@@ -93,7 +93,7 @@ export function evaluateLeftPrefix(
       title: "Cannot use this index",
       reason: firstOp
         ? `Leading column ${first} has a non-range shape.`
-        : `Missing leading column ${first ?? "?"}. A left prefix needs the front of the key.`,
+        : `Missing leading column ${first ?? "?"}. A leftmost prefix needs the front of the key.`,
     };
   }
 
@@ -105,7 +105,7 @@ export function evaluateLeftPrefix(
       frozenPredCols: [],
       tone: "ok",
       title: "Uses the index",
-      reason: `Left prefix ${usableCols.join(", ")} matches your predicates.`,
+      reason: `Leftmost prefix ${usableCols.join(", ")} matches your predicates.`,
     };
   }
 
@@ -117,7 +117,7 @@ export function evaluateLeftPrefix(
       frozenPredCols,
       tone: "warn",
       title: "Partial prefix: range froze the rest",
-      reason: `Used ${usableCols.join(", ")}. After a range, ${frozenPredCols.join(", ")} cannot narrow the index walk (filter later / ICP territory).`,
+      reason: `Used ${usableCols.join(", ")}. After a range, ${frozenPredCols.join(", ")} cannot narrow the index walk. Filter later, or use ICP.`,
     };
   }
 
@@ -129,7 +129,7 @@ export function evaluateLeftPrefix(
       frozenPredCols,
       tone: "warn",
       title: "Partial prefix: gap in the key",
-      reason: `Used ${usableCols.join(", ")}. Skipping a middle column stops the walk; ${frozenPredCols.join(", ")} sits past the gap.`,
+      reason: `Used ${usableCols.join(", ")}. Skipping a middle column stops the walk. ${frozenPredCols.join(", ")} sits past the gap.`,
     };
   }
 
@@ -139,7 +139,7 @@ export function evaluateLeftPrefix(
     usableIndexes,
     frozenPredCols,
     tone: "ok",
-    title: "Uses a left prefix",
+    title: "Uses a leftmost prefix",
     reason: `Index walk uses ${usableCols.join(", ")}. Trailing index columns without predicates are fine.`,
   };
 }
@@ -422,7 +422,7 @@ export function strategyStory(strategy: IndexStrategy): StrategyStory {
       tone: "warn",
       title: "Three skinny indexes, one messy plan",
       detail:
-        "MySQL may Index Merge (intersect) org_id ∩ status ∩ assignee_id, then sort. Sometimes fine. Often worse than one matching composite.",
+        "MySQL may Index Merge (intersect) org_id ∩ status ∩ assignee_id, then sort. That can work. One matching composite is often cheaper.",
       pathLabel: "Index Merge hope → sort → bounce",
       writeTax: "Every ticket update maintains 3 B-trees",
       insertWriteCount: 4, // clustered + 3 secondaries
@@ -434,7 +434,7 @@ export function strategyStory(strategy: IndexStrategy): StrategyStory {
     tone: "ok",
     title: "One composite, one range walk",
     detail:
-      "Left prefix (org_id, status, assignee_id, updated_at) matches the inbox query. One descent, rows already near the ORDER BY order.",
+      "Leftmost prefix (org_id, status, assignee_id, updated_at) matches the inbox query. One descent. Rows stay near ORDER BY order.",
     pathLabel: "Single range scan → bounce",
     writeTax: "One extra B-tree on write",
     insertWriteCount: 2, // clustered + 1 composite
@@ -675,7 +675,7 @@ export function buildPhoneBookScene(
         walkRowIds: walkRows.map((r) => r.id),
         matchRowIds: matchRows.map((r) => r.id),
       },
-      badge: "Can't narrow further — values interleaved",
+      badge: "Cannot narrow further — values interleaved",
     };
   }
 
@@ -726,6 +726,6 @@ export function buildPhoneBookScene(
     badge:
       walkRows.length === 0
         ? "No usable walk"
-        : "1 jump — contiguous left-prefix walk",
+        : "1 jump — contiguous leftmost-prefix walk",
   };
 }

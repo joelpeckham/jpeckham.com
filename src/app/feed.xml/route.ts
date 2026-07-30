@@ -28,7 +28,7 @@ export function GET() {
   <channel>
     <title>${siteName}</title>
     <link>${siteUrl}</link>
-    <description>Joel Peckham's software portfolio and personal website.</description>
+    <description>Software projects and writing by Joel Peckham.</description>
     <language>en-us</language>
     <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml" />
 ${items}

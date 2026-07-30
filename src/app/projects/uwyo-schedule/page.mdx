@@ -20,29 +20,29 @@ import { buttonVariants } from "@/components/ui/button";
   </a>
 </div>
 
-Plan a conflict-free UW semester around your real schedule — free, independent, and visual.
+Plan a conflict-free UW semester around your real schedule. Free, independent, and visual.
 
 ## It started with a friend
 
-A close friend of mine was going back to school for her doctorate, and she was miserable trying to plan her first semester. The University of Wyoming's course search does what it needs to do, but building an actual weekly schedule out of it means opening a dozen sections in a dozen tabs, writing meeting times on paper, and mentally checking whether the Tuesday lab collides with the class you already picked. She had a job, a life, and blackout hours that were non-negotiable, and the official tools gave her no way to say "just show me the weeks that actually fit."
+A close friend of mine was going back to school for her doctorate. She was miserable trying to plan her first semester. The University of Wyoming's course search does what it needs to do. But building a real weekly schedule from it means opening a dozen sections in a dozen tabs, writing meeting times on paper, and checking whether the Tuesday lab collides with the class you already picked. She had a job, a life, and blackout hours that were non-negotiable. The official tools gave her no way to say "just show me the weeks that actually fit."
 
-So I built her a better version. The first cut was rough — a scraper and a calendar grid — but she started using it to plan for real, and every time she hit a wall I fixed it. She wanted to block off her work hours: I added busy-time blackouts. She wanted a specific advisor for a seminar: I added instructor filters. She'd find a week she liked, tweak one class, and lose the whole layout: I made the planner keep everything else stable. That back-and-forth, her using it and me improving it, is how [uwyoschedule](https://uwyoschedule.org/) got to where it is now.
+So I built her a better version. The first cut was rough — a scraper and a calendar grid — but she started using it to plan for real. Every time she hit a wall, I fixed it. She wanted to block off her work hours: I added busy-time blackouts. She wanted a specific advisor for a seminar: I added instructor filters. She'd find a week she liked, tweak one class, and lose the whole layout: I made the planner keep everything else stable. That back-and-forth — her using it, me improving it — is how [uwyoschedule](https://uwyoschedule.org/) got to where it is now.
 
 ## What it is
 
-You browse the full UW course catalog for a term, add the classes you want to take, and the planner builds a conflict-free week around them. As you make changes the calendar stays in sync — pin a section you like, drag a block to try a same-type alternative, page through other conflict-free weeks, compare two side by side, and copy a share link so someone else can open your exact course list and constraints.
+You browse the full UW course catalog for a term. You add the classes you want to take. The planner builds a conflict-free week around them. As you make changes, the calendar stays in sync. Pin a section you like. Drag a block to try a same-type alternative. Page through other conflict-free weeks. Compare two side by side. Copy a share link so someone else can open your exact course list and constraints.
 
-It's an independent, free tool. It is not affiliated with the University of Wyoming, and it doesn't register you for anything — you still enroll through the official UW systems when your window opens. The goal is just to make the fiddly part, fitting real sections into a week that works, fast and visual.
+It's an independent, free tool. It is not affiliated with the University of Wyoming. It doesn't register you for anything — you still enroll through the official UW systems when your window opens. The goal is just to make the fiddly part fast and visual: fitting real sections into a week that works.
 
 ## The interesting part: scheduling is a constraint problem
 
-Underneath the calendar, "find me a week that works" is a [constraint satisfaction problem](https://en.wikipedia.org/wiki/Constraint_satisfaction_problem). Each course you add is a variable; each of its sections (or, for linked courses, each lecture-plus-lab bundle) is a value in that variable's domain. A solution is one value per course such that no two chosen sections overlap in time and none of them land on a blackout. The number of combinations grows multiplicatively with every course, so brute-forcing every pairing gets slow fast.
+Underneath the calendar, "find me a week that works" is a [constraint satisfaction problem](https://en.wikipedia.org/wiki/Constraint_satisfaction_problem). Each course you add is a variable. Each of its sections (or, for linked courses, each lecture-plus-lab bundle) is a value in that variable's domain. A solution is one value per course such that no two chosen sections overlap in time, and none of them land on a blackout. The number of combinations grows multiplicatively with every course. So brute-forcing every pairing gets slow fast.
 
-The first thing worth doing is making the core question — *do these two sections overlap?* — as cheap as humanly possible, because the search asks it constantly.
+The first thing worth doing is making the core question — *do these two sections overlap?* — as cheap as humanly possible. The search asks it constantly.
 
 ### Time conflicts as bitmask AND
 
-Comparing meeting times as `(dayIndex, startMinute, endMinute)` tuples over and over is wasteful. Instead I collect every distinct minute-boundary that appears across all the sections in play, per day, and use those boundaries to slice the week into a small set of atomic slots. Each section's meetings then become a bitset — a `Uint32Array` — with a 1 bit for every slot it occupies.
+Comparing meeting times as `(dayIndex, startMinute, endMinute)` tuples over and over is wasteful. Instead I collect every distinct minute-boundary that appears across all the sections in play, per day. I use those boundaries to slice the week into a small set of atomic slots. Each section's meetings then become a bitset — a `Uint32Array` — with a 1 bit for every slot it occupies.
 
 Once every candidate is a bitset, checking two sections for a conflict is just a bitwise AND, word by word:
 
@@ -55,30 +55,30 @@ export function masksConflict(a: Uint32Array, b: Uint32Array): boolean {
 }
 ```
 
-No time parsing, no interval math in the hot loop — just integers. Accumulating a partial schedule is an OR into a running mask, and undoing a choice on backtrack is an XOR back out. A whole week usually fits in a handful of 32-bit words.
+No time parsing. No interval math in the hot loop — just integers. Accumulating a partial schedule is an OR into a running mask. Undoing a choice on backtrack is an XOR back out. A whole week usually fits in a handful of 32-bit words.
 
 ### A smarter search than brute force
 
-With cheap conflict checks in hand, the actual solver is a depth-first backtracking search with two classic constraint-solver tricks that keep it from ever exploring most of that giant combination space:
+With cheap conflict checks in hand, the actual solver is a depth-first backtracking search. It uses two classic constraint-solver tricks that keep it from exploring most of that giant combination space:
 
-- **Minimum-remaining-values (MRV).** At each step, instead of picking courses in list order, the search picks the *most constrained* course — the unassigned one with the fewest candidate sections still compatible with what's already chosen. Committing to the tightest course first makes dead ends surface early, near the top of the tree, instead of after a lot of wasted work.
-- **Forward checking.** After every assignment, it verifies that every remaining course still has at least one live candidate. The moment some course is starved down to zero options, it abandons that branch immediately rather than discovering the problem ten courses later.
+- **Minimum-remaining-values (MRV).** At each step, the search does not pick courses in list order. It picks the *most constrained* course — the unassigned one with the fewest candidate sections still compatible with what's already chosen. Committing to the tightest course first makes dead ends surface early, near the top of the tree, instead of after a lot of wasted work.
+- **Forward checking.** After every assignment, it verifies that every remaining course still has at least one live candidate. The moment some course is starved down to zero options, it abandons that branch immediately. It does not wait to discover the problem ten courses later.
 
-There's also a one-pass prefilter before the search even starts: instructor preferences, open-seats-only, delivery-mode filters, and blackout overlaps all knock candidates out of a course's domain up front, so the search only ever traverses sections that are already individually valid. Linked lecture-and-lab pairs are handled as a single candidate carrying multiple CRNs, and a bundle that overlaps *itself* is rejected before it can enter the search at all.
+There's also a one-pass prefilter before the search even starts. Instructor preferences, open-seats-only, delivery-mode filters, and blackout overlaps all knock candidates out of a course's domain up front. So the search only ever traverses sections that are already individually valid. Linked lecture-and-lab pairs are handled as a single candidate carrying multiple CRNs. A bundle that overlaps *itself* is rejected before it can enter the search at all.
 
 ### Keeping the week from jumping around
 
-This is the change that came straight out of watching my friend use it. Early on, changing one class would hand you a brand-new week — technically conflict-free, but with three *other* classes shuffled to times you never asked to move. Infuriating.
+This is the change that came straight out of watching my friend use it. Early on, changing one class would hand you a brand-new week. Technically conflict-free. But with three *other* classes shuffled to times you never asked to move. Infuriating.
 
-So when you pin a section or drag a block, the solver doesn't just look for *any* valid week; it runs a [branch-and-bound](https://en.wikipedia.org/wiki/Branch_and_bound) search for the valid week that differs from your current one by the fewest changes. It counts how many courses would have to move relative to your previous selections, prunes any branch that already exceeds the best solution found so far, and spends a short refinement window hunting for something even closer before it settles. The result is that pinned and untouched classes stay put, and only what has to move, moves. That single behavior is what makes the calendar feel like it's cooperating with you instead of fighting you.
+So when you pin a section or drag a block, the solver doesn't just look for *any* valid week. It runs a [branch-and-bound](https://en.wikipedia.org/wiki/Branch_and_bound) search for the valid week that differs from your current one by the fewest changes. It counts how many courses would have to move relative to your previous selections. It prunes any branch that already exceeds the best solution found so far. Then it spends a short refinement window hunting for something even closer before it settles. The result: pinned and untouched classes stay put, and only what has to move, moves. That single behavior is what makes the calendar feel like it's cooperating with you instead of fighting you.
 
 ### Explaining "there is no answer"
 
-Sometimes there genuinely is no conflict-free week — two required labs only meet at the same hour, or your blackouts have eaten the only section of something. A dead end with no explanation is the most frustrating possible outcome, so when the search comes back empty the planner runs a separate pass to figure out *why* and tells you which courses or constraints are colliding, so you know what to relax instead of just staring at an empty grid.
+Sometimes there genuinely is no conflict-free week. Two required labs only meet at the same hour. Or your blackouts have eaten the only section of something. A dead end with no explanation is the most frustrating possible outcome. So when the search comes back empty, the planner runs a separate pass to figure out *why*. It tells you which courses or constraints are colliding. Then you know what to relax, instead of just staring at an empty grid.
 
 ### Off the main thread
 
-All of this runs in a Web Worker. The page serializes a compact "solve pack" for each course — meeting times, faculty, seats, delivery modes — ships it to the worker, and gets back a solution (or the infeasibility hints above) without ever blocking the UI thread. That's why you can drag a block around and watch the whole week re-solve live, at interactive speed, without the interface stuttering.
+All of this runs in a Web Worker. The page serializes a compact "solve pack" for each course — meeting times, faculty, seats, delivery modes. It ships that pack to the worker. It gets back a solution (or the infeasibility hints above) without ever blocking the UI thread. That's why you can drag a block around and watch the whole week re-solve live, at interactive speed, without the interface stuttering.
 
 <div className="not-prose my-8 border-2 border-ink bg-white p-5 shadow-[var(--shadow-hard)]">
   <p className="mb-4 font-mono text-meta uppercase tracking-[0.18em] text-grey">
@@ -100,12 +100,12 @@ All of this runs in a Web Worker. The page serializes a compact "solve pack" for
 
 ## Getting the catalog
 
-None of this works without accurate section data, so a good chunk of the project is a data pipeline rather than UI. Scheduled ingest jobs pull sections, meeting times, instructors, and seat counts from the University of Wyoming's Banner Self-Service catalog and store a working copy the planner can search and combine quickly. The primary term refreshes on a short cadence; older terms are archived on a slower one. Seat counts and meeting details can still change after a sync, so the app is careful to frame itself as a planner and point people back to the official catalog to confirm CRNs, prerequisites, and linked labs before they register.
+None of this works without accurate section data. So a good chunk of the project is a data pipeline rather than UI. Scheduled ingest jobs pull sections, meeting times, instructors, and seat counts from the University of Wyoming's Banner Self-Service catalog. They store a working copy the planner can search and combine quickly. The primary term refreshes on a short cadence. Older terms are archived on a slower one. Seat counts and meeting details can still change after a sync. So the app frames itself as a planner, and it points people back to the official catalog to confirm CRNs, prerequisites, and linked labs before they register.
 
 ## The stack
 
-The app is a [Next.js](https://nextjs.org/) App Router project deployed on [Vercel](https://vercel.com/), with a Drizzle-managed Postgres database behind the catalog and the schedule solver running client-side in a worker. It's built on a small design system — brand tokens for color and type, shared UI primitives, and copy guidelines — so the marketing page, the catalog browser, and the planner all feel like one product, and the whole flow works on a phone. On the engineering side it's set up to stay honest: the solver has thorough unit tests, end-to-end flows run in Playwright against a real build, and all of it is wired into CI so the core behavior — generating conflict-free weeks — is covered before anything ships.
+The app is a [Next.js](https://nextjs.org/) App Router project deployed on [Vercel](https://vercel.com/). A Drizzle-managed Postgres database sits behind the catalog. The schedule solver runs client-side in a worker. It's built on a small design system — brand tokens for color and type, shared UI primitives, and copy guidelines — so the marketing page, the catalog browser, and the planner all feel like one product. The whole flow works on a phone. On the engineering side it's set up to stay honest. The solver has thorough unit tests. End-to-end flows run in Playwright against a real build. All of it is wired into CI, so the core behavior — generating conflict-free weeks — is covered before anything ships.
 
 ## Where it landed
 
-The version live today is the sum of a lot of small "this is annoying, can you fix it?" moments. Building something for one specific person, watching them actually use it, and fixing the exact thing that tripped them up turned out to be a great way to build software — and it's a much nicer schedule planner than the one that started the whole thing.
+The version live today is the sum of a lot of small "this is annoying, can you fix it?" moments. Building something for one specific person, watching them actually use it, and fixing the exact thing that tripped them up turned out to be a great way to build software. And it's a much nicer schedule planner than the one that started the whole thing.

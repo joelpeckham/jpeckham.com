@@ -9,7 +9,7 @@ import { Cite, References } from "@/components/cite";
 
 `GET /api/orgs/:orgId/tickets?status=open&updated_after=2026-01-01`
 
-Article [03](/posts/mysql-indexes/) left you with a respectable composite. Then the handler does something like this:
+Article [03](/posts/mysql-indexes/) left you with a solid composite. Then the handler does something like this:
 
 ```php
 Ticket::query()
@@ -19,7 +19,7 @@ Ticket::query()
     ->get(); // SELECT *
 ```
 
-Eloquent is being helpful. `whereDate` wraps the column. `get()` asks for every column, including a fat `body` TEXT you never show in the inbox table. Same product filters, worse plan, and a lot more bytes than the UI needs.
+Eloquent means well. `whereDate` wraps the column. `get()` asks for every column, including a fat `body` TEXT you never show in the inbox table. Same product filters. Worse plan. More bytes than the UI needs.
 
 The fixed shape keeps the API contract and stops fighting the index:
 
@@ -44,25 +44,25 @@ LIMIT 50;
 
 (`ORDER BY` belongs in the pagination article, coming later in the series. I'm leaving it off on purpose.)
 
-This is post four of [Learn MySQL](/projects/mysql/). [Types](/posts/mysql-schema-types/) shaped the columns. The [primary key](/posts/mysql-primary-keys/) clustered the table. [Composites](/posts/mysql-indexes/) gave list endpoints a path. Today is whether your `WHERE` and select list let that path get used.
+This is post four of [Learn MySQL](/projects/mysql/). [Types](/posts/mysql-schema-types/) shaped the columns. The [primary key](/posts/mysql-primary-keys/) clustered the table. [Composites](/posts/mysql-indexes/) gave list endpoints a path. Today is about your `WHERE` and select list. Do they let that path get used?
 
 ## Filter × project
 
-Every `SELECT` answers two questions: which rows survive, and which columns leave the server?<Cite n={1} /><Cite n={2} /> Apps feel both. Filter work is pages read while finding matches. Projection work is bytes copied, shipped over the network, and parked in the buffer pool because you hauled a wide row for a skinny card UI.
+Every `SELECT` answers two questions: which rows survive, and which columns leave the server?<Cite n={1} /><Cite n={2} /> Apps feel both. Filter work is pages read while finding matches. Projection work is bytes copied, shipped over the network, and parked in the buffer pool. You hauled a wide row for a skinny card UI.
 
-InnoDB still finds rows the way articles 02 and 03 described: clustered descent for `WHERE id = ?`, secondary descent plus bounce for org/status/date filters.<Cite n={3} /> This article is about not disabling that machinery with a friendly-looking function, and not asking for the novel when you needed the headline.
+InnoDB still finds rows the way articles 02 and 03 described. Clustered descent for `WHERE id = ?`. Secondary descent plus bounce for org/status/date filters.<Cite n={3} /> This article is about two traps. Do not disable that machinery with a friendly-looking function. Do not ask for the novel when you needed the headline.
 
 ## A WHERE the optimizer can actually use
 
-**Sargable** means the engine can compare an indexed column to a known constant or range without transforming every row's column value first. Once you know the term, "index-friendly" says the same thing.
+**Sargable** means the engine can compare an indexed column to a known constant or range. It does not transform every row's column value first. Once you know the term, "index-friendly" says the same thing.
 
 Range-eligible shapes on a B-tree include equality, `IN`, `IS NULL`, inequalities, `BETWEEN`, and `LIKE 'prefix%'` when the pattern is a constant that does not start with `%`.<Cite n={4} /> Leading wildcards (`LIKE '%refund%'`) are not a range driver on that column. Wrapping the column in `YEAR()`, `DATE()`, `LOWER()`, or arithmetic usually isn't either.
 
-The function rule is worth thirty seconds of *why*, because it looks like optimizer pettiness and isn't. The index stores `updated_at` values, sorted. It does not store `YEAR(updated_at)` anywhere. A B-tree can seek to "the first entry ≥ 2026-01-01" because that's a position in the sort order; it cannot seek to "entries whose year is 2026" without computing the function on values it hasn't read yet. So MySQL reads them all. Rewrite the predicate as a range on the stored value and the same sorted tree answers the same product question at index speed.
+The function rule is worth thirty seconds of *why*. It looks like optimizer pettiness. It isn't. The index stores `updated_at` values, sorted. It does not store `YEAR(updated_at)` anywhere. A B-tree can seek to "the first entry ≥ 2026-01-01" because that's a position in the sort order. It cannot seek to "entries whose year is 2026" without computing the function on values it hasn't read yet. So MySQL reads them all. Rewrite the predicate as a range on the stored value. Then the same sorted tree answers the same product question at index speed.
 
 Constants on the *right* are fine. `WHERE id = POW(2, 3)` can still be a point lookup after constant folding. Nondeterministic junk like `WHERE id = FLOOR(1 + RAND() * 49)` cannot.<Cite n={5} />
 
-One nuance before you poke the demo. Wrap the date in `YEAR(updated_at)` on a composite that already has `org_id` and `status` equalities, and those two parts often still show `ref`. Only the date column freezes. Flip the switch and watch the beam grind through every open leaf instead of seeking straight to the 2026 range. That grind is the footgun, not a full table scan. It's the same idea as article 03's left-prefix freeze: the predicates decide how much of a fixed index lights up.
+One nuance before you poke the demo. Wrap the date in `YEAR(updated_at)` on a composite that already has `org_id` and `status` equalities. Those two parts often still show `ref`. Only the date column freezes. Flip the switch and watch the beam grind through every open leaf instead of seeking straight to the 2026 range. That grind is the footgun, not a full table scan. It's the same idea as article 03's leftmost prefix freeze: the predicates decide how much of a fixed index lights up.
 
 <SargabilityDemo />
 
@@ -93,7 +93,7 @@ For email lookups, don't `LOWER(email)` on every request if `utf8mb4_0900_ai_ci`
 
 ## Projection: stop selecting the novel
 
-`SELECT *` is fine in a scratch session. In a list handler it couples your JSON to every future column and hauls `TEXT` / `JSON` / secrets you never render.<Cite n={6} /><Cite n={7} /> Wider rows mean fewer rows per InnoDB page, so the same filter touches more I/O even when the index match is perfect.
+`SELECT *` is fine in a scratch session. In a list handler it couples your JSON to every future column. It also hauls `TEXT` / `JSON` / secrets you never render.<Cite n={6} /><Cite n={7} /> Wider rows mean fewer rows per InnoDB page. So the same filter touches more I/O even when the index match is perfect.
 
 List endpoints want card columns. Detail endpoints can ask for `body`. Same table, two jobs. Watch both lanes haul pages for the same `LIMIT 50`. The fat one keeps fetching:
 
@@ -103,7 +103,7 @@ List endpoints want card columns. Detail endpoints can ask for `body`. Same tabl
 List endpoints want card columns. Fat `SELECT *` means fewer rows per page and more pages for the same `LIMIT`.
 </Takeaway>
 
-If the select list ever fits entirely inside a secondary index, MySQL may answer from the index without bouncing to the clustered row. That is a covering index.<Cite n={3} /><Cite n={8} /> Designing for it gets a whole article later in the series. Today, listing columns is how you keep that door open and stop shipping kilobytes of `body` to an inbox table.
+If the select list ever fits entirely inside a secondary index, MySQL may answer from the index without bouncing to the clustered row. That is a covering index.<Cite n={3} /><Cite n={8} /> Designing for it gets a whole article later in the series. Today, listing columns keeps that door open. It also stops you shipping kilobytes of `body` to an inbox table.
 
 ## List vs detail
 
@@ -117,13 +117,13 @@ Detail can afford a wider row. List should not silently be detail. In Eloquent t
 
 ## Prefix length for *this* query
 
-Article 03 taught the leftmost-prefix rule for the index you build. Here the index is fixed and the predicates move. Equalities on the left parts, then one range. Skip a middle column and the walk stops there.<Cite n={4} /> The sargability switch above is the same story from the query side: wrap the trailing column and that segment goes dark even though `org_id` and `status` still light.
+Article 03 taught the leftmost-prefix rule for the index you build. Here the index is fixed and the predicates move. Equalities on the left parts, then one range. Skip a middle column and the walk stops there.<Cite n={4} /> The sargability switch above is the same story from the query side. Wrap the trailing column and that segment goes dark even though `org_id` and `status` still light.
 
 When you peek at `EXPLAIN` later, `key_len` is the rough "how much of this key did we use?" number. Fluency comes later in the series. For now, if your filters don't light the prefix you expected, fix the `WHERE` before you add another index.
 
 ## Index condition pushdown (quick)
 
-Sometimes MySQL can test extra conditions on columns that appear in the index *before* it reads the full clustered row. The docs' classic shape is an index on `(zipcode, lastname, …)` with `zipcode = ?` driving access and an awkward `lastname LIKE '%…%'` checked on the index tuple when possible; a filter on `address` still needs the row.<Cite n={9} />
+Sometimes MySQL can test extra conditions on columns that appear in the index *before* it reads the full clustered row. The docs' classic shape is an index on `(zipcode, lastname, …)` with `zipcode = ?` driving access and an awkward `lastname LIKE '%…%'` checked on the index tuple when possible. A filter on `address` still needs the row.<Cite n={9} />
 
 In `EXPLAIN`, `Using index condition` means that pushdown happened. It is not the same as `Using index` (covering / index-only). ICP is a consolation prize that reduces row reads. Covering is the design where you needed fewer row reads in the first place. We'll design for covering when that article lands.
 
@@ -171,7 +171,7 @@ On a healthy tickets table with `idx_org_status_updated (org_id, status, updated
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | SIMPLE | tickets | range | idx_org_status_updated | idx_org_status_updated | 10      | const,const | 820  | Using index condition |
 
-Read it left to right: `type = range` (friend), `key` names the composite you meant, `key_len` says how much of that key participated, and `rows` is an estimate. `Extra` here shows index condition pushdown, not covering (covering would say `Using index`).<Cite n={10} /><Cite n={11} /> Contrast that with the bad list below (`YEAR(updated_at)`): you may still see a `ref` on `org_id`/`status` with a shorter `key_len` and no useful range on the date part. We'll read these properly in the EXPLAIN article. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
+Read it left to right. `type = range` is a friend. `key` names the composite you meant. `key_len` says how much of that key participated. `rows` is an estimate. `Extra` here shows index condition pushdown, not covering (covering would say `Using index`).<Cite n={10} /><Cite n={11} /> Contrast that with the bad list below (`YEAR(updated_at)`). You may still see a `ref` on `org_id`/`status` with a shorter `key_len` and no useful range on the date part. We'll read these properly in the EXPLAIN article. If `key` is NULL after you added what you thought was the perfect index, check for functions on columns before you assume MySQL is haunted.
 
 `ANALYZE TABLE` keeps stats from lying after big loads. That's the one ops sentence you get today.<Cite n={12} />
 
@@ -233,7 +233,7 @@ Take one list handler. Rewrite any `whereDate` / `whereYear` / `SELECT *` into a
 - Detail by id uses PK equality (or a unique secondary you meant); list is not secretly detail
 - List filters are sargable: bare column on the left, constants/binds on the right
 - `whereDate` / `whereYear` / `LOWER(column)` got rewritten or justified
-- Composite left-prefix matches the filters you send (article 03)
+- Composite leftmost prefix matches the filters you send (article 03)
 - Projection is intentional: no `SELECT *` on list endpoints; `body` stays out
 - OR / `q=` search has a real strategy, not hope
 - You glanced at `EXPLAIN` key/key_len on prod-shaped data

@@ -6,25 +6,25 @@ import { PuzzleSolver } from "@/components/interactive/puzzle-solver";
 
 - **Slide tiles yourself.** Click any tile next to the blank to move it. The panel tracks your move count and the current Manhattan distance to the goal.
 - **Pick an algorithm.** Switch between A\*, Greedy Best-First, and Breadth-First search, then hit **Solve** to watch it finish the board.
-- **Swap heuristics.** Toggle between Manhattan and Hamming distance to feel how a smarter estimate expands far fewer nodes. (Breadth-First ignores the heuristic entirely.)
+- **Swap heuristics.** Toggle between Manhattan and Hamming distance. A smarter estimate expands far fewer nodes. (Breadth-First ignores the heuristic.)
 - **Scrub the solution.** Step forward and back, drag the slider, or press play to auto-animate the tiles along the found path.
-- **Compare runs.** Every Solve appends a row to the comparison table, so you can pit algorithms and heuristics against each other on the same board before you shuffle.
+- **Compare runs.** Every Solve appends a row to the comparison table. Pit algorithms and heuristics against each other on the same board before you shuffle.
 
 ## About
 
-I first wrote an 8 puzzle solver some years ago in my university Artificial Intelligence class. That version was a terminal program written in Python, built to learn about – and then characterize the performance of – different search algorithms and heuristic functions. Feel free to [get the code on GitHub.](https://github.com/joelpeckham/8puzzle)
+I first wrote an 8-puzzle solver years ago in my university Artificial Intelligence class. That version was a terminal program in Python. I built it to learn search algorithms and heuristic functions, then measure how they perform. Feel free to [get the code on GitHub.](https://github.com/joelpeckham/8puzzle)
 
-The demo above is a from-scratch TypeScript reimplementation of that project. Enjoy solving puzzles and exploring the performance characteristics of different search algorithms! If you're interested in the details of the algorithms, keep reading.
+The demo above is a from-scratch TypeScript rebuild of that project. Solve a few puzzles. Compare how the algorithms behave. If you want the details, keep reading.
 
 ## Search algorithms
 
-The search algorithms used in this project are:
+This project uses three search algorithms:
 
 - Breadth First Search
 - Greedy Best First Search
 - A\* Search
 
-**Breadth First Search** is a simple search algorithm that explores the search space in a breadth-first manner. This means that it will explore all the nodes at a given depth before moving on to the next depth. In this case, each node represents some state of the puzzle. This algorithm is guaranteed to find the shortest path to the goal state, but it is also the slowest of the three algorithms.
+**Breadth First Search** explores the search space one depth at a time. It visits every node at the current depth before it moves deeper. Here, each node is one puzzle state. This algorithm always finds the shortest path to the goal. It is also the slowest of the three.
 
 ```python
 def breadth_first_search(startPuzzle, solutionPuzzle = "12345678-"):
@@ -43,7 +43,7 @@ def breadth_first_search(startPuzzle, solutionPuzzle = "12345678-"):
     return None
 ```
 
-**Greedy Best First Search** is a search algorithm that explores the search space in a manner that prioritizes the nodes that are closest to the goal state using some heuristic function. The heuristic function makes a guess which child node is most likely to lead to the goal state. This algorithm is faster than Breadth First Search, but it is not guaranteed to find the shortest path to the goal state.
+**Greedy Best First Search** ranks nodes with a heuristic. The heuristic guesses which child is most likely to lead to the goal. This algorithm is faster than Breadth First Search. It does not always find the shortest path.
 
 ```python
 def best_first_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678-"):
@@ -62,7 +62,7 @@ def best_first_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678
     return None
 ```
 
-**A\* Search** combines the best of Breadth First Search and Greedy Best First Search. As it explores, it keeps track of the cost of the path to each node. This cost is the sum of the cost of the path to the parent node and the cost of the action that led to the child node. Keeping track of this cost allows A\* Search to find the shortest path to the goal state while still exploring the search space with a heuristic to help. This algorithm is often slower than Greedy Best First Search, but it is guaranteed to find the shortest path to the goal state.
+**A\* Search** combines Breadth First Search and Greedy Best First Search. As it explores, it tracks the path cost to each node. That cost is the parent path cost plus the cost of the move into the child. With that cost and a heuristic, A\* finds the shortest path and still focuses the search. It is often slower than Greedy Best First Search. It always finds the shortest path to the goal.
 
 ```python
 def a_star_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678-"):
@@ -89,12 +89,12 @@ def a_star_search(heuristicFunction, startPuzzle, solutionPuzzle = "12345678-"):
 
 ## Heuristic functions
 
-The heuristic functions used in this project are:
+This project uses two heuristic functions:
 
 - Manhattan Distance
 - Hamming Distance
 
-**Manhattan Distance** estimates the cost of the cheapest path from the current state to the goal state. It does this by summing the distances of each tile from its goal position. The distance of a tile is the sum of the horizontal and vertical distances between the tile and its goal position.
+**Manhattan Distance** estimates the cheapest path from the current state to the goal. It sums how far each tile sits from its goal position. For each tile, that distance is the horizontal gap plus the vertical gap.
 
 ```python
 def manhattanDistance(puzzle):
@@ -108,7 +108,7 @@ def manhattanDistance(puzzle):
     return distance
 ```
 
-**Hamming Distance** is slightly different. It estimates the cost of the cheapest path from the current state to the goal state by counting the number of tiles that are not in their goal position regardless of their distance from their goal position.
+**Hamming Distance** takes a simpler cut. It counts tiles that are not in their goal position. It ignores how far each wrong tile sits from home.
 
 ```python
 def hammingDistance(puzzle):
@@ -118,11 +118,11 @@ def hammingDistance(puzzle):
 
 ### A note on admissibility.
 
-Both of these heuristic functions are admissible. Admissible means that the heuristic function will never overestimate the cost of the cheapest path from the current state to the goal state. This is important because if a heuristic function is not admissible, then the search algorithm may not find the shortest path to the goal state.
+Both heuristics are admissible. Admissible means the heuristic never overestimates the cheapest path to the goal. That matters. If a heuristic overestimates, the search may miss the shortest path.
 
 ## Performance Testing
 
-Using my old Python program [here on GitHub,](https://github.com/joelpeckham/8puzzle) I ran performance tests on over **500** randomly generated puzzles. I ran every solver and heuristic pair three times per puzzle and averaged the results before recording them. The results are shown below.
+I used my old Python program [here on GitHub](https://github.com/joelpeckham/8puzzle) for performance tests. I ran them on over **500** randomly generated puzzles. For every solver and heuristic pair, I ran each puzzle three times, averaged the results, then recorded them. The results are below.
 
 ### Data
 

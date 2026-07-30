@@ -162,8 +162,8 @@ export function arrayStats(level: RaidLevel, driveCount: number): ArrayStats {
       return {
         capacityFraction: 1,
         capacityLabel: "100% usable",
-        faultTolerance: "None — any drive loss is fatal",
-        readWrite: "Fast reads and writes; no redundancy",
+        faultTolerance: "None. Any drive loss is fatal.",
+        readWrite: "Fast reads and writes. No redundancy.",
         minDrives: 2,
         maxCapacity,
       };
@@ -172,7 +172,7 @@ export function arrayStats(level: RaidLevel, driveCount: number): ArrayStats {
         capacityFraction: 1 / driveCount,
         capacityLabel: `${Math.round((100 / driveCount) * 10) / 10}% usable`,
         faultTolerance: `Up to ${driveCount - 1} drive failures`,
-        readWrite: "Fast reads; writes duplicated to every drive",
+        readWrite: "Fast reads. Writes copy to every drive.",
         minDrives: 2,
         maxCapacity,
       };
@@ -181,7 +181,7 @@ export function arrayStats(level: RaidLevel, driveCount: number): ArrayStats {
         capacityFraction: (driveCount - 1) / driveCount,
         capacityLabel: `${Math.round(((driveCount - 1) / driveCount) * 100)}% usable`,
         faultTolerance: "1 drive failure",
-        readWrite: "Dedicated parity drive; parity bottleneck on writes",
+        readWrite: "Dedicated parity drive. Writes hit a parity bottleneck.",
         minDrives: 3,
         maxCapacity,
       };
@@ -190,7 +190,7 @@ export function arrayStats(level: RaidLevel, driveCount: number): ArrayStats {
         capacityFraction: (driveCount - 1) / driveCount,
         capacityLabel: `${Math.round(((driveCount - 1) / driveCount) * 100)}% usable`,
         faultTolerance: "1 drive failure",
-        readWrite: "Distributed parity; better write scaling than RAID 4",
+        readWrite: "Distributed parity. Better write scaling than RAID 4.",
         minDrives: 3,
         maxCapacity,
       };
@@ -199,7 +199,7 @@ export function arrayStats(level: RaidLevel, driveCount: number): ArrayStats {
         capacityFraction: 0.5,
         capacityLabel: "50% usable",
         faultTolerance: "1 failure per mirror pair",
-        readWrite: "Striped mirrors — speed plus redundancy",
+        readWrite: "Striped mirrors. Speed plus redundancy.",
         minDrives: 4,
         maxCapacity,
       };
@@ -508,7 +508,7 @@ function recoverFromXor(state: ArrayState, target: BlockRef): RecoveryStep {
         sources: [],
         recovered: false,
         reason:
-          "Another block in this stripe is also failed — single parity can only recover one loss per stripe.",
+          "Another block in this stripe also failed. Single parity can recover only one loss per stripe.",
       };
     }
     acc ^= blockXorValue(block);
@@ -694,7 +694,7 @@ export function rebuild(state: ArrayState): RebuildResult {
       state: next,
       steps,
       success: false,
-      message: "Rebuild failed — RAID 0 cannot recover lost data.",
+      message: "Rebuild failed. RAID 0 cannot recover lost data.",
     };
   }
 
@@ -704,7 +704,7 @@ export function rebuild(state: ArrayState): RebuildResult {
       state: next,
       steps,
       success: false,
-      message: `Rebuild incomplete — ${failedSteps.length} block(s) could not be recovered.`,
+      message: `Rebuild incomplete. Could not recover ${failedSteps.length} block(s).`,
     };
   }
 
@@ -712,7 +712,7 @@ export function rebuild(state: ArrayState): RebuildResult {
     state: next,
     steps,
     success: true,
-    message: `Rebuild complete — recovered ${recoveredCount} block(s).`,
+    message: `Rebuild complete. Recovered ${recoveredCount} block(s).`,
   };
 }
 

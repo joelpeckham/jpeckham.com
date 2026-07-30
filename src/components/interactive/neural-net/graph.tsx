@@ -124,7 +124,7 @@ export function NetworkGraph({
       className="h-auto w-full select-none"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="Neural network graph. Left: 25 input pixels. Middle: hidden neurons. Right: 10 output neurons."
+      aria-label="Neural network graph. Left: 25 input pixels. Middle: hidden neurons. Right: 10 output digits."
     >
       {/* input -> hidden edges */}
       <g fill="none">

@@ -294,7 +294,7 @@ export function NeuralNet() {
               </ControlField>
 
               <ControlField
-                label="Iterations / train"
+                label="Iters per train"
                 className="sm:col-span-2 lg:col-span-1"
               >
                 <input
@@ -307,7 +307,7 @@ export function NeuralNet() {
                     setBatch(Math.max(1, Number(e.target.value) || 1))
                   }
                   className={controlInput}
-                  aria-label="Iterations per train click"
+                  aria-label="Iterations per train"
                 />
               </ControlField>
             </div>
@@ -398,7 +398,7 @@ export function NeuralNet() {
                   type="button"
                   onClick={() => selectImage(sample.label)}
                   aria-pressed={isActive}
-                  aria-label={`Feed the network the training image for ${sample.label}`}
+                  aria-label={`Show digit ${sample.label} to the network`}
                   className={cn(
                     "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink bg-white p-0.5 transition-transform",
                     isActive
@@ -419,7 +419,7 @@ export function NeuralNet() {
               type="button"
               onClick={selectDraw}
               aria-pressed={selected === "draw"}
-              aria-label="Draw your own digit for the network to classify"
+              aria-label="Draw a digit for the network to classify"
               className={cn(
                 "flex aspect-square w-full min-w-0 items-center justify-center border-2 border-ink p-1 font-mono text-[10px] uppercase leading-none tracking-[0.08em] transition-transform sm:text-[11px]",
                 selected === "draw"
@@ -440,8 +440,8 @@ export function NeuralNet() {
             <DrawPad bits={drawn} onToggle={toggleDrawnPixel} />
             <div className="flex flex-col gap-2 text-sm">
               <p className="max-w-sm text-grey">
-                Click cells to toggle pixels, then watch how the network — which
-                only ever saw the ten images above — classifies your drawing.
+                Click cells to flip pixels. The network only trained on the ten
+                images above. Watch what it guesses.
               </p>
               <Button
                 type="button"
@@ -465,7 +465,7 @@ export function NeuralNet() {
           onPointerDown={hideTip}
         >
           <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-grey sm:hidden">
-            Tap neurons or connections to inspect values
+            Tap a neuron or link to see its value
           </p>
           <NetworkGraph
             wih={view.wih}

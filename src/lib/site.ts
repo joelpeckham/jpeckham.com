@@ -8,5 +8,5 @@ export const defaultOgImage = {
   url: "/og/home/",
   width: 1200,
   height: 630,
-  alt: "Joel Peckham — Full-stack & AI Developer",
+  alt: "Joel Peckham, full-stack and AI developer",
 };

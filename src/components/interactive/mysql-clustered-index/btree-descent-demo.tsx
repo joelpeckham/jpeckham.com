@@ -69,7 +69,7 @@ export function BtreeDescentDemo() {
   return (
     <DemoShell
       title="B-tree descent"
-      blurb="Click a leaf key. Interior pages only steer — the leaf is the row."
+      blurb="Click a leaf key. Interior pages only steer. The leaf holds the row."
       accent="ink"
     >
       <div className="border-2 border-ink bg-white p-2">
@@ -97,7 +97,7 @@ export function BtreeDescentDemo() {
         </div>
       ) : (
         <p className="font-mono text-[11px] text-grey">
-          Keys {ALL_KEYS[0]}–{ALL_KEYS[ALL_KEYS.length - 1]} · click any leaf
+          Keys {ALL_KEYS[0]}–{ALL_KEYS[ALL_KEYS.length - 1]}. Click any leaf.
         </p>
       )}
     </DemoShell>

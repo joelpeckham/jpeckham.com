@@ -20,21 +20,21 @@ import { buttonVariants } from "@/components/ui/button";
   </a>
 </div>
 
-Free QR codes that encode your real URL — no account, no trial, no hostage links.
+Free QR codes that encode your real URL. No account, no trial, no hostage links.
 
 ## A friend's posters stopped working
 
-A friend of mine works for a small not-for-profit co-op here in town. She'd designed a run of posters, sent them to the printer, and put them up around the community — the usual, with a QR code in the corner so people could scan their way to the co-op's page.
+A friend of mine works for a small not-for-profit co-op here in town. She designed a run of posters and sent them to the printer. She put them up around the community. Each poster had a QR code in the corner so people could reach the co-op's page.
 
-A week later the codes were dead. Every scan landed on a "this link has expired" page demanding payment. She hadn't changed anything. The QR generator she'd used had a week-long free trial, and once it lapsed, the site simply stopped redirecting the shortened URLs it had baked into her codes. The posters were already printed and hung. The only way to make them work again was to pay up.
+A week later the codes were dead. Every scan hit a "this link has expired" page that demanded payment. She hadn't changed anything. The QR generator she used offered a week-long free trial. When the trial ended, the site stopped redirecting the short URLs baked into her codes. The posters were already printed and hung. The only way to fix them was to pay up.
 
 > That's not a bug. That's the business model.
 
 ## Why this is a scam
 
-Here's the thing that made me angry once I understood it. A QR code is just an image that encodes some text — usually a URL. Generating one costs essentially nothing; it's a bit of math that turns a string into a grid of black and white squares. There is no ongoing service to pay for.
+This is what made me angry once I understood it. A QR code is just an image that encodes some text, usually a URL. Generating one costs almost nothing. It's a bit of math that turns a string into a grid of black and white squares. There's no ongoing service to pay for.
 
-So how do you charge rent for something free? You make it *not* encode the destination directly. Instead of putting the co-op's real URL into the code, these services quietly route it through a short link that *they* own — something like `theirdomain.com/x7Fq2`. Now the printed code points at their server forever, and they control whether that redirect keeps working. Miss a payment and they flip a switch, and every poster, sticker, and business card you printed goes dark.
+So how do you charge rent for something free? You stop encoding the destination directly. These services don't put the co-op's real URL into the code. They route it through a short link they own, something like `theirdomain.com/x7Fq2`. Now the printed code points at their server forever. They control whether that redirect keeps working. Miss a payment and they flip a switch. Every poster, sticker, and business card you printed goes dark.
 
 <div className="not-prose my-8 grid gap-4 sm:grid-cols-2">
   <figure className="border-2 border-ink bg-white p-5 shadow-[var(--shadow-hard)]">
@@ -69,29 +69,29 @@ So how do you charge rent for something free? You make it *not* encode the desti
   </figure>
 </div>
 
-URL redirection is one of the cheapest services on the internet to run. Dressing it up, hiding it inside a QR code, and then holding printed material hostage over it feels genuinely scammy — especially when the only thing they built on top is an image generator.
+URL redirection is one of the cheapest services on the internet to run. Hide it inside a QR code. Hold printed material hostage over it. That feels like a scam, especially when the only thing they built on top is an image generator.
 
 ## The other annoyances
 
-While I was at it, two smaller frustrations were worth fixing:
+While I was at it, I fixed two smaller frustrations:
 
-- **Sign-up walls.** So many generators make you create an account before you can download the thing you already made. For a five-second task, that's absurd.
-- **Bad exports.** Plenty of sites only hand you a small, fixed-size PNG. If you're sending a poster to a printer you want a crisp **SVG**, and if you want a raster you want to pick the **size** — not fight a 200×200 JPEG.
+- **Sign-up walls.** Many generators make you create an account before you can download the thing you already made. For a five-second task, that's absurd.
+- **Bad exports.** Plenty of sites only give you a small, fixed-size PNG. For a printer you want a crisp **SVG**. For a raster you want to pick the **size**, not fight a 200×200 JPEG.
 
 ## What I built
 
 So I built [qr.jpeckham.com](https://qr.jpeckham.com/): a no-bullshit QR code generator.
 
 - **Paste a URL, get a QR code instantly.** No account, no trial, no email.
-- **Shortening is optional — and it never breaks your code.** If you turn it on, it shortens via the [Spoo.me](https://spoo.me/) API. If shortening is unavailable for any reason, the QR just encodes your full, normalized URL instead. There's no scenario where the code points at a link I can turn off. Worst case, it points straight at your destination, the way a QR code should.
-- **Real exports.** Download as **SVG** for print, or as **PNG** at whatever size you want, with an optional transparent background.
+- **Shortening is optional, and it never breaks your code.** If you turn it on, it shortens via the [Spoo.me](https://spoo.me/) API. If shortening fails for any reason, the QR encodes your full, normalized URL instead. The code never points at a link I can turn off. Worst case, it points straight at your destination, the way a QR code should.
+- **Real exports.** Download as **SVG** for print, or as **PNG** at the size you want, with an optional transparent background.
 
-The whole point is that a printed QR code should keep working forever, because it encodes *your* destination — not a lease on someone else's redirect.
+The point is simple. A printed QR code should keep working forever because it encodes *your* destination, not a lease on someone else's redirect.
 
 ## How it works
 
-It's a small [Next.js](https://nextjs.org/) app deployed on [Vercel](https://vercel.com/). QR generation happens client-side with `qrcode.react`, so the code is drawn right in your browser the moment you type a URL. The only backend is a single `/api/shorten` route that normalizes the URL, optionally calls Spoo.me, and falls back to the long URL if anything goes wrong. It's rate-limited and size-capped, and it works fine with no API key at all — it just skips shortening. The whole thing is open source on [GitHub](https://github.com/joelpeckham/qr).
+It's a small [Next.js](https://nextjs.org/) app deployed on [Vercel](https://vercel.com/). QR generation runs client-side with `qrcode.react`, so the code is drawn in your browser as soon as you type a URL. The only backend is a single `/api/shorten` route. That route normalizes the URL, optionally calls Spoo.me, and falls back to the long URL if anything goes wrong. It's rate-limited and size-capped. It works fine with no API key at all; it just skips shortening. The whole thing is open source on [GitHub](https://github.com/joelpeckham/qr).
 
 ## The takeaway
 
-Your printed QR codes should never depend on someone else's subscription. If a generator routes your code through a link it controls, the code is only as permanent as your relationship with that company. Encode the real destination, keep an SVG, and never let a lapsed trial take down a wall full of posters again.
+Your printed QR codes should never depend on someone else's subscription. If a generator routes your code through a link it controls, the code lasts only as long as your relationship with that company. Encode the real destination. Keep an SVG. Never let a lapsed trial take down a wall full of posters again.

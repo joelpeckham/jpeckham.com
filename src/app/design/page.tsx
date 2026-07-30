@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
 
 const description =
-  "An older graphic design portfolio from Joel Peckham, a software engineer and former designer. Joel no longer takes on design work, but still likes to show this off.";
+  "An older graphic design portfolio from Joel Peckham. He no longer takes design work, but he still likes to show this off.";
 
 export const metadata: Metadata = {
   title: "Design",
@@ -52,11 +52,10 @@ export default function DesignPage() {
             I&apos;m still proud of.
           </h1>
           <p className="max-w-[620px] text-lg leading-relaxed">
-            Before I was a software engineer, I worked as a graphic designer. I
-            don&apos;t take on design work anymore, but I kept this portfolio
-            around because I still love how it turned out. Consider it a snapshot
-            of an earlier chapter — logos, packaging, and layout work I&apos;m
-            proud of.
+            Before I wrote software, I worked as a graphic designer. I
+            don&apos;t take design jobs anymore. I kept this portfolio because I
+            still love how it turned out. It&apos;s a snapshot of an earlier
+            chapter: logos, packaging, and layout work I&apos;m proud of.
           </p>
           <div className="mt-8">
             <a

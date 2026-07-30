@@ -4,25 +4,25 @@ import { NeuralNet, ActivationLegend } from "@/components/interactive/neural-net
 
 ## Things to Play With
 
-When the page first loads, the network's weights are random and it has done no training, so its guesses are noise. Here is how to explore it:
+On first load, the network's weights are random. It has done no training, so its guesses are noise. Here is how to explore it:
 
-- **Press Play** to train continuously and watch the weights, activations, loss, and accuracy update live. Press **Pause** to stop, or use **Train** to run a fixed batch of iterations all at once.
-- Keep an eye on the **loss** (lower is better) and **accuracy** (percent of the ten images it labels correctly). Notice how loss drops quickly at first and then levels off.
-- Drag the **Hidden neurons** slider and train again. With too few neurons the network may struggle to separate all ten digits; with more it usually learns faster.
-- Drag the **Learning rate** slider. Small values learn slowly but steadily; large values learn fast but can overshoot and make the loss bounce around.
-- Click any of the ten **input images** to feed it through the network and see which output neuron lights up.
+- **Press Play** to train continuously. Watch the weights, activations, loss, and accuracy update live. Press **Pause** to stop, or use **Train** to run a fixed batch of iterations all at once.
+- Watch the **loss** (lower is better) and **accuracy** (percent of the ten images it labels correctly). Loss drops quickly at first, then levels off.
+- Drag the **Hidden neurons** slider and train again. With too few neurons, the network may struggle to separate all ten digits. With more, it usually learns faster.
+- Drag the **Learning rate** slider. Small values learn slowly but steadily. Large values learn fast, but they can overshoot and make the loss bounce around.
+- Click any of the ten **input images** to feed it through the network. See which output neuron lights up.
 - Hover (or tap on mobile) over a **connection** to read its exact weight, or over a **neuron** to read its exact activation.
-- Switch to the **Draw** tab to make your own 5x5 image and see how the network handles input it never trained on.
+- Switch to the **Draw** tab to make your own 5x5 image. See how the network handles input it never trained on.
 
 ## The Neural Network Explained
 
 ### The Task
 
-Our network is tasked with recognizing the digit in a 5x5 pixel image. When we feed it an image of a 0, we want it to classify the image as a 0.
+This network recognizes the digit in a 5x5 pixel image. When you feed it an image of a 0, you want it to classify that image as a 0.
 
 #### Input Format
 
-The input is a 25-dimensional vector (just a list of 25 numbers), one per pixel. Each value is either 0 (a white pixel) or 1 (a black pixel). For example, the image of a 0 is:
+The input is a 25-dimensional vector: a list of 25 numbers, one per pixel. Each value is either 0 (a white pixel) or 1 (a black pixel). For example, the image of a 0 is:
 
 `[ 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0 ]`
 
@@ -30,43 +30,43 @@ Can you see how the first five numbers describe the top row of the image?
 
 #### Output Format
 
-The output is a 10-dimensional vector, one value per digit (0 through 9). Each value is the activation of that output neuron — a number between 0 and 1 produced by the sigmoid function. A higher activation means the network associates the input more strongly with that digit. The network's prediction is simply the digit whose neuron has the **highest** activation.
+The output is a 10-dimensional vector, one value per digit (0 through 9). Each value is the activation of that output neuron: a number between 0 and 1 from the sigmoid function. A higher activation means the network ties the input more strongly to that digit. The network's prediction is the digit whose neuron has the **highest** activation.
 
-These ten values are **not** probabilities: each neuron is squashed to 0–1 independently, so they do not sum to 1. (Turning them into a true probability distribution would take an extra step called a softmax, which this network does not use.) Consider this output:
+These ten values are **not** probabilities. Each neuron is squashed to 0–1 on its own, so they do not sum to 1. (Turning them into a true probability distribution would take an extra step called a softmax. This network does not use softmax.) Consider this output:
 
 `[ 0.10, 0.05, 0.20, 0.15, 0.08, 0.12, 0.30, 0.05, 0.90, 0.60 ]`
 
-The neuron for 8 has the highest activation (0.90), so the network predicts **8**, even though the neuron for 9 (0.60) is also fairly active.
+The neuron for 8 has the highest activation (0.90), so the network predicts **8**. The neuron for 9 (0.60) is also fairly active, but 8 still wins.
 
 ### Network Architecture
 
 #### Layers
 
-The network has three layers: the input layer, the hidden layer, and the output layer. Many networks stack several hidden layers, but one is enough here.
+The network has three layers: the input layer, the hidden layer, and the output layer. Many networks stack several hidden layers. One is enough here.
 
 - The **input layer** holds the 25 pixel values.
-- The **hidden layer** does the intermediate work of combining pixels into useful features.
+- The **hidden layer** combines pixels into useful features.
 - The **output layer** produces the ten activations that form the prediction.
 
 #### Neurons
 
-Each layer is made of neurons. On every forward pass, each neuron computes an **activation**: it takes a weighted sum of the activations from the previous layer and squashes the result with an activation function. We use the sigmoid function, which maps any number to a value between 0 and 1:
+Each layer is made of neurons. On every forward pass, each neuron computes an **activation**. It takes a weighted sum of the activations from the previous layer, then squashes the result with an activation function. The network uses the sigmoid function, which maps any number to a value between 0 and 1:
 
 `sigmoid(x) = 1 / (1 + e^(-x))`
 
-In the visualizer, a neuron's activation is shown by its color — lighter means weaker, darker means stronger.
+In the visualizer, a neuron's activation is shown by its color. Lighter means weaker. Darker means stronger.
 
 <ActivationLegend />
 
 #### Weights
 
-Every neuron is connected to the neurons in the previous layer by **weights**. A weight is a number describing how strongly one neuron influences the next. Weights start out random (and reset to random when you press Reset), and training is the process of nudging them into useful values.
+Every neuron connects to the neurons in the previous layer by **weights**. A weight is a number that says how strongly one neuron influences the next. Weights start out random (and reset to random when you press Reset). Training nudges them into useful values.
 
-In the visualizer, each connecting line is a weight. Thicker, more opaque lines are stronger weights; red lines are positive and blue lines are negative. Hover a line to see its exact value.
+In the visualizer, each connecting line is a weight. Thicker, more opaque lines are stronger weights. Red lines are positive and blue lines are negative. Hover a line to see its exact value.
 
 ### Training the Network
 
-Training happens in **iterations**. Each iteration has two parts: a forward pass and a backward pass. The forward pass makes a prediction; the backward pass adjusts the weights to make that prediction a little better. The visualizer cycles through the ten training images, one per iteration.
+Training happens in **iterations**. Each iteration has two parts: a forward pass and a backward pass. The forward pass makes a prediction. The backward pass adjusts the weights to make that prediction a little better. The visualizer cycles through the ten training images, one per iteration.
 
 #### The Forward Pass
 
@@ -79,16 +79,16 @@ In the forward pass, the network turns an input into a prediction:
 
 #### The Backward Pass
 
-In the backward pass — called **backpropagation** — the network measures how wrong it was and adjusts its weights to reduce that error. It computes, for each weight, the direction that would most reduce the error (the gradient), then takes a small step in that direction. The size of that step is set by the **learning rate**: too small and training crawls, too large and it can overshoot and become unstable. Repeated over many iterations, these small steps drive the error down. This optimization method is called stochastic gradient descent (SGD).
+In the backward pass (called **backpropagation**), the network measures how wrong it was. Then it adjusts its weights to reduce that error. For each weight, it computes the direction that would most reduce the error (the gradient). Then it takes a small step in that direction. The size of that step is the **learning rate**. Too small, and training crawls. Too large, and it can overshoot and become unstable. Over many iterations, these small steps drive the error down. This method is called stochastic gradient descent (SGD).
 
 #### A Note on Loss
 
-To do backpropagation, we give the network a **target** output: the correct answer for the current input. The target uses 0.99 for the right digit and 0.0 for the rest. (We aim for 0.99 rather than 1.0 because a sigmoid neuron can only approach 1 — it can never quite reach it — so a perfect 1.0 target would push the weights toward infinity.)
+To do backpropagation, training gives the network a **target** output: the correct answer for the current input. The target uses 0.99 for the right digit and 0.0 for the rest. I aim for 0.99 rather than 1.0 because a sigmoid neuron can only approach 1. It never quite reaches it. A perfect 1.0 target would push the weights toward infinity.
 
-The **loss** measures how far the output was from the target. This network uses the sum of the squared errors across the ten output neurons: the bigger the gap between prediction and target, the bigger the loss. Since loss measures how bad a prediction is, smaller is better, and the loss chart above should trend downward as you train.
+The **loss** measures how far the output was from the target. This network uses the sum of the squared errors across the ten output neurons. The bigger the gap between prediction and target, the bigger the loss. Smaller loss is better. The loss chart above should trend downward as you train.
 
 ### A Note on Overfitting
 
-Overfitting is when a network learns its training data too well and fails to generalize to new data. Our network is a perfect example: it trains and is scored on the exact same ten images, over and over. That is why accuracy can shoot to 100% — the network has effectively memorized the answer key rather than learning a general idea of what each digit looks like.
+Overfitting is when a network learns its training data too well and fails on new data. This network is a perfect example. It trains and scores on the exact same ten images, over and over. That is why accuracy can shoot to 100%. The network has memorized the answer key. It has not learned a general idea of what each digit looks like.
 
-You can see this for yourself: switch to the **Draw** tab and draw a digit, even one that closely resembles a training image. Because the network only ever saw those ten specific bitmaps, small changes can throw its prediction off completely.
+You can see this yourself. Switch to the **Draw** tab and draw a digit, even one that closely resembles a training image. The network only ever saw those ten specific bitmaps. Small changes can throw its prediction off completely.

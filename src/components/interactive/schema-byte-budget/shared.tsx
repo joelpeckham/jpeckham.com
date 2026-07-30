@@ -188,7 +188,7 @@ export function ByteStrip({
           {softLimit != null ? (
             <span className="text-grey">
               {" "}
-              / {softLimit.toLocaleString()} shared limit
+              / {softLimit.toLocaleString()} B shared limit
             </span>
           ) : null}
         </p>

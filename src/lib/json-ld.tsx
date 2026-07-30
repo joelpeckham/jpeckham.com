@@ -40,9 +40,9 @@ export function personJsonLd() {
     email: "mail@jpeckham.com",
     jobTitle: "Software Developer",
     description:
-      "Full-stack and AI software developer based in Laramie, Wyoming.",
+      "Full-stack and AI software developer in Laramie, Wyoming.",
     disambiguatingDescription:
-      "Software engineer and full-stack developer in Laramie, Wyoming (not the poet Joel B. Peckham).",
+      "Software engineer and full-stack developer in Laramie, Wyoming. Not the poet Joel B. Peckham.",
     worksFor: {
       "@type": "Organization",
       name: "BetterRx",

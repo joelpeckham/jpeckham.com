@@ -62,7 +62,7 @@ export const projects: ContentItem[] = [
     href: "/projects/uwyo-schedule/",
     title: "uwyoschedule",
     description:
-      "A conflict-free class schedule planner for University of Wyoming students, built on a live copy of the UW course catalog.",
+      "Plan conflict-free class schedules for University of Wyoming students. Uses a live copy of the UW course catalog.",
     date: "2026-06-01",
     kind: "project",
     tags: ["Next.js", "Full Stack", "Product"],
@@ -78,7 +78,7 @@ export const projects: ContentItem[] = [
     href: "/projects/neural-net-visualizer/",
     title: "Neural Network Visualizer",
     description:
-      "An interactive tool to visualize the training of a neural network in real time.",
+      "Visualize neural network training in real time.",
     date: "2023-03-05",
     kind: "project",
     interactive: true,
@@ -95,7 +95,7 @@ export const projects: ContentItem[] = [
     href: "/projects/8-puzzle-solver/",
     title: "8 Puzzle Solver",
     description:
-      "A sliding-puzzle solver with your choice of heuristic and search algorithm, ported from Python to the browser.",
+      "Solve the sliding puzzle with the heuristic and search algorithm you choose. Ported from Python to the browser.",
     date: "2023-02-20",
     kind: "project",
     interactive: true,
@@ -112,7 +112,7 @@ export const projects: ContentItem[] = [
     href: "/projects/forth-compiler-in-python/",
     title: "FORTH interpreter in 130* lines of Python",
     description:
-      "Building a compiler and interpreter for the stack-based FORTH language in a surprisingly small amount of Python.",
+      "Build a compiler and interpreter for stack-based FORTH in a surprisingly small amount of Python.",
     date: "2023-02-01",
     kind: "project",
     tags: ["Compilers", "Python"],
@@ -132,7 +132,7 @@ export const projects: ContentItem[] = [
     href: "/projects/raid-visualizer/",
     title: "RAID Visualizer",
     description:
-      "An interactive teaching tool for visualizing how RAID arrays stripe, mirror, and rebuild data across drives.",
+      "See how RAID arrays stripe, mirror, and rebuild data across drives.",
     date: "2022-10-12",
     kind: "project",
     interactive: true,
@@ -149,7 +149,7 @@ export const projects: ContentItem[] = [
     href: "/projects/gpt-powered-stock-trading-research/",
     title: "GPT-Powered Stock Trading Research",
     description:
-      "Can a large transformer model act as an all-in-one, news-based trading bot? A senior research project.",
+      "Can a large transformer model act as a news-based trading bot? A senior research project.",
     date: "2023-01-05",
     kind: "project",
     tags: ["Machine Learning", "Research", "NLP"],
@@ -165,7 +165,7 @@ export const projects: ContentItem[] = [
     href: "/projects/no-bullshit-qr/",
     title: "No Bullshit QR Codes",
     description:
-      "Paywalled QR generators broke a friend's printed posters, so I built a free one that never holds your links hostage — with real SVG and PNG export.",
+      "Paywalled QR generators broke a friend's printed posters. I built a free one that never holds your links hostage. Export real SVG and PNG.",
     date: "2025-12-02",
     kind: "project",
     tags: ["Next.js", "Product", "Rant"],
@@ -181,7 +181,7 @@ export const projects: ContentItem[] = [
     href: "/projects/mysql/",
     title: "Learn MySQL",
     description:
-      "An interactive series on MySQL and InnoDB for web app developers. Build mental models that hold up under real traffic, one demo at a time.",
+      "Interactive MySQL and InnoDB series for web app developers. Build mental models that hold under real traffic, one demo at a time.",
     date: "2026-07-24",
     kind: "project",
     tags: ["MySQL", "Databases", "Series"],
@@ -198,9 +198,9 @@ export const posts: ContentItem[] = [
   {
     slug: "mysql-schema-types",
     href: "/posts/mysql-schema-types/",
-    title: "Tables, Types & Schema That Survive Production",
+    title: "Tables, Types & Schema for Production",
     description:
-      "Data types, nullability, and schema choices that keep web apps correct under real traffic.",
+      "Pick data types, nullability, and schema choices that keep web apps correct under real traffic.",
     date: "2026-07-24",
     kind: "post",
     seriesId: "mysql",
@@ -218,7 +218,7 @@ export const posts: ContentItem[] = [
     href: "/posts/mysql-primary-keys/",
     title: "Primary Keys & the Clustered Index",
     description:
-      "In InnoDB the primary key is the table: clustered lookups, secondary bounce, and why random UUID PKs hurt.",
+      "In InnoDB the primary key is the clustered index. Learn clustered lookups, secondary index bounce, and why random UUID primary keys hurt.",
     date: "2026-07-24",
     kind: "post",
     seriesId: "mysql",
@@ -234,9 +234,9 @@ export const posts: ContentItem[] = [
   {
     slug: "mysql-indexes",
     href: "/posts/mysql-indexes/",
-    title: "Composite Indexes & the Left Prefix",
+    title: "Composite Indexes & the Leftmost Prefix",
     description:
-      "B-tree secondary indexes, composite left-prefix rules, and selectivity without the guesswork.",
+      "Build B-tree secondary indexes. Use composite leftmost prefix rules and measure selectivity without guesswork.",
     date: "2026-07-24",
     kind: "post",
     seriesId: "mysql",
@@ -254,7 +254,7 @@ export const posts: ContentItem[] = [
     href: "/posts/mysql-select/",
     title: "WHERE, Projection & Sargable Queries",
     description:
-      "How WHERE and the SELECT list drive index use on real list and detail endpoints.",
+      "Write sargable WHERE clauses and tight projections so list and detail endpoints use indexes.",
     date: "2026-07-24",
     kind: "post",
     seriesId: "mysql",
@@ -274,7 +274,7 @@ export const seriesList: Series[] = [
     id: "mysql",
     title: "Learn MySQL",
     description:
-      "Interactive articles on MySQL and InnoDB. Start at the top and move through in order.",
+      "Interactive articles on MySQL and InnoDB. Start at the top and read in order.",
     hubSlug: "mysql",
     postSlugs: [
       "mysql-schema-types",
@@ -337,7 +337,7 @@ export function getAdjacentInSeries(slug: string): SeriesAdjacent | null {
 }
 
 export function contentSectionLabel(kind: ContentItem["kind"]): string {
-  return kind === "post" ? "Writing" : "Project";
+  return kind === "post" ? "Post" : "Project";
 }
 
 /**
@@ -358,7 +358,7 @@ export function contentSectionHref(kind: ContentItem["kind"]): string {
 }
 
 export function contentCtaLabel(kind: ContentItem["kind"]): string {
-  return kind === "post" ? "Read post" : "Case study";
+  return kind === "post" ? "Read post" : "View project";
 }
 
 export function formatDate(date: string): string {

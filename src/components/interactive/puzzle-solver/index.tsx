@@ -107,7 +107,7 @@ export function PuzzleSolver() {
   const setCustomPuzzle = useCallback(() => {
     const parsed = parsePuzzle(puzzleInput);
     if (!parsed) {
-      setPuzzleInputError("Invalid puzzle");
+      setPuzzleInputError("Could not parse that puzzle.");
       return;
     }
     applyPuzzle(parsed);
@@ -259,7 +259,7 @@ export function PuzzleSolver() {
             </div>
             {!solved ? (
               <p className="text-xs text-grey lg:leading-snug">
-                Click a tile next to the blank, or hit Solve.
+                Click a tile beside the blank. Or hit Solve.
               </p>
             ) : null}
             </div>
@@ -321,7 +321,7 @@ export function PuzzleSolver() {
                   }}
                   disabled={solving || playing}
                   placeholder="e.g. 1 2 3 4 5 6 7 8 _"
-                  aria-label="Custom puzzle state"
+                  aria-label="Custom puzzle"
                   aria-invalid={puzzleInputError ? true : undefined}
                   className="min-w-0 flex-1 border-2 border-ink bg-white px-3 py-2 font-mono text-sm tracking-normal focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 lg:px-2 lg:py-1.5 lg:text-xs"
                 />
@@ -473,9 +473,8 @@ export function PuzzleSolver() {
             </div>
           </Card>
           <p className="font-mono text-xs text-grey">
-            * Greedy best-first is not guaranteed to find the shortest solution.
-            Run different algorithms on the same board (before shuffling) to
-            compare their speed and solution length.
+            * Greedy best-first may miss the shortest path. Keep the same board.
+            Run each algorithm. Compare time and move count.
           </p>
         </div>
       ) : null}
@@ -673,7 +672,7 @@ function SolutionPlayback({
   return (
     <Card className="h-full">
       <div className="flex h-full flex-col gap-2.5 p-4 sm:p-5 lg:gap-2 lg:p-3">
-        <span className="label">Solution playback</span>
+        <span className="label">Playback</span>
         <div className="flex min-w-0 items-center gap-2 lg:gap-1.5">
           <Button
             type="button"
@@ -729,7 +728,7 @@ function SolutionPlayback({
             setPlaying(false);
             goToStep(value);
           }}
-          aria-label="Scrub through the solution"
+          aria-label="Step through the solution"
           aria-valuetext={`Move ${step} of ${lastStep}`}
         />
       </div>

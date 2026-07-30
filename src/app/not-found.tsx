@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Page not found",
-  description: "The page you requested does not exist on jpeckham.com.",
+  description: "That page is not on jpeckham.com.",
   robots: { index: false, follow: true },
 };
 
@@ -39,7 +39,7 @@ export default function NotFound() {
         This page wandered off.
       </h1>
       <p className="mt-3 max-w-[420px] text-ink/80">
-        The page you&apos;re looking for doesn&apos;t exist or has moved.
+        It doesn&apos;t exist, or it moved.
       </p>
       <Link
         href="/"

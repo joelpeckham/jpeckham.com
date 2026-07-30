@@ -53,7 +53,7 @@ export function Board({
     <div
       role="application"
       tabIndex={interactive ? 0 : -1}
-      aria-label={`8-puzzle board. Blank is at position ${blankIndex + 1} of 9. Use arrow keys or click adjacent tiles to slide them into the blank.`}
+      aria-label={`8-puzzle board. Blank at position ${blankIndex + 1} of 9. Click a neighbor tile, or use arrow keys.`}
       onKeyDown={handleKeyDown}
       className={cn(
         "@container relative mx-auto aspect-square w-full max-w-[min(100%,20rem)] touch-manipulation border-2 border-ink bg-paper-2 select-none lg:mx-0 lg:max-w-none",
@@ -90,7 +90,7 @@ export function Board({
               key={ch}
               type="button"
               onClick={() => onTileClick?.(index)}
-              aria-label={`Tile ${ch} — click or use arrow keys to slide into the blank`}
+              aria-label={`Tile ${ch}. Click or press an arrow key to slide it into the blank.`}
               className={cn(tileClassName, "touch-manipulation")}
               style={tileStyle}
             >

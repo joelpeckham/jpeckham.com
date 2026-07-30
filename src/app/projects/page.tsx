@@ -9,20 +9,20 @@ import { defaultOgImage } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Projects",
   description:
-    "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+    "Projects, machine learning experiments, and browser demos by Joel Peckham.",
   alternates: { canonical: "/projects/" },
   openGraph: {
     url: "/projects/",
     title: "Projects",
     description:
-      "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+      "Projects, machine learning experiments, and browser demos by Joel Peckham.",
     images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     title: "Projects",
     description:
-      "Software projects, machine learning experiments, and interactive demos by Joel Peckham.",
+      "Projects, machine learning experiments, and browser demos by Joel Peckham.",
     images: [defaultOgImage.url],
   },
 };
@@ -48,8 +48,7 @@ export default function ProjectsPage() {
           accent="red"
         />
         <p className="mt-6 max-w-[560px] text-lg leading-normal">
-          A mix of algorithms, machine learning, and interactive demos you can
-          play with right in the browser.
+          Algorithms, machine learning, and demos you can try in the browser.
         </p>
       </Reveal>
 
@@ -72,8 +71,8 @@ export default function ProjectsPage() {
             Nothing here yet
           </p>
           <p className="mx-auto mt-3 max-w-[420px] leading-normal text-ink/70">
-            Projects are on the way. Check back soon, or say hello if you want to
-            build something together.
+            Projects are on the way. Check back soon. Or say hello if you want
+            to build something together.
           </p>
         </Reveal>
       )}

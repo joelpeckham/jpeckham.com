@@ -51,14 +51,23 @@ Standalone posts (no series) work the same way without `seriesId` — they only 
 
 ## Writing voice (Learn MySQL)
 
-House style for this series — tune it as we go, but treat these as defaults when drafting:
+House style for this series — **STE-adapted**, not strict ASD-STE100. Keep personality; enforce clarity and tight vocabulary.
 
 ### Voice
 
 - Write almost entirely in **first person** (“I”, not “we”). Reader “you” is fine for teaching.
-- Casual, story-driven, a little jokey. It should be **fun to read** — flowing prose, not a textbook outline.
+- Casual, story-driven, a little jokey. Fun to read — not a sterile flight manual.
 - Hand-hold on *why this matters*, but weave that into the paragraph. Do **not** use formulaic section endings like `**Why bother:** …` or repeated “App consequence” stamps.
 - Don’t narrate obvious site chrome (e.g. “prev/next links at the bottom”). Readers will find them.
+
+### Clarity (STE-inspired)
+
+- Prefer **short sentences** (one main idea; aim ≤ ~25 words).
+- Prefer **active voice** and direct verbs.
+- Prefer simple connectors: `and`, `but`, `so`, `then`, `if`, `when`, `because`.
+- Prefer concrete nouns/verbs. Avoid filler (`leverage`, `robust`, `seamless`, `empower`, `utilize`, etc.).
+- Prefer **one term per concept** across the series (`clustered index`, `secondary index`, `leftmost prefix` / `left prefix`, `sargable`, `projection`). No synonym churn.
+- Avoid stacked clauses, noun piles, and multi-hedge phrases (“it might be somewhat helpful to…”).
 
 ### Structure
 

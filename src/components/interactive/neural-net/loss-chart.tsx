@@ -151,7 +151,7 @@ export function LossChart({ history }: { history: number[] }) {
             fontFamily="var(--font-mono)"
             fill={GRID}
           >
-            Train to see the loss curve
+            Train to plot the loss
           </text>
         )}
       </svg>

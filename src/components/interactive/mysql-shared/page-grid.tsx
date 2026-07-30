@@ -113,7 +113,7 @@ export function PageGrid({
           )}
         >
           {splitFlash
-            ? "page split!"
+            ? "Page split!"
             : `${filledCount}/${slots.length} slots`}
         </p>
       )}

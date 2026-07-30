@@ -90,7 +90,7 @@ export function VarcharCharsetDemo() {
                   transform: u.ok ? undefined : "rotate(-8deg) scale(0.9)",
                   opacity: u.ok ? 1 : 0.55,
                 }}
-                title={u.ok ? `${u.bytes} byte(s)` : "utf8mb3 can’t store this"}
+                title={u.ok ? `${u.bytes} byte(s)` : "utf8mb3 cannot store this"}
               >
                 <span
                   className={cn(
@@ -111,8 +111,8 @@ export function VarcharCharsetDemo() {
 
       <p className="font-mono text-[11px] text-grey">
         {shattered
-          ? "Supplementary-plane chars shatter under utf8mb3."
-          : `${total} bytes · wider tiles = more storage per character.`}
+          ? "utf8mb3 cannot store supplementary-plane chars."
+          : `${total} bytes · wider tiles mean more storage per character.`}
       </p>
     </DemoShell>
   );

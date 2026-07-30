@@ -186,7 +186,7 @@ export function LeftPrefixDemo() {
   return (
     <DemoShell
       title="Nested phone book"
-      blurb="A composite is groups inside groups. Drag the key order. Tap know it / range / off."
+      blurb="A composite key is groups inside groups. Drag the key order. Tap know it, range, or off."
       accent="blue"
     >
       <div className="flex flex-wrap gap-2">
@@ -290,7 +290,7 @@ export function LeftPrefixDemo() {
                   {col}
                 </span>
                 <span className="font-bold">
-                  {op ? OP_LABEL[op] : "don't know"}
+                  {op ? OP_LABEL[op] : "off"}
                 </span>
               </button>
             );
@@ -298,7 +298,7 @@ export function LeftPrefixDemo() {
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <Chip tone="ok">blue = used in walk</Chip>
-          <Chip tone="warn">yellow = frozen / match</Chip>
+          <Chip tone="warn">yellow = frozen or match</Chip>
         </div>
       </div>
 

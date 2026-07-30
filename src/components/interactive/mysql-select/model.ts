@@ -37,7 +37,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "warn",
     title: "Function freezes the date column",
     reason:
-      "org_id + status can still use a left prefix, but YEAR(updated_at) is not a range on updated_at. MySQL can't walk that column as a B-tree interval.",
+      "org_id and status can still use a leftmost prefix. YEAR(updated_at) is not a range on updated_at. MySQL cannot walk that column as a B-tree interval.",
     litSegments: 2,
   },
   {
@@ -49,7 +49,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "ok",
     title: "Sargable range on the bare column",
     reason:
-      "Equalities on org_id and status, then a range on updated_at. Same product filter as YEAR(...), index-friendly shape.",
+      "Equalities on org_id and status, then a range on updated_at. Same product filter as YEAR(...). Index-friendly shape.",
     litSegments: 3,
   },
   {
@@ -60,7 +60,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "ok",
     title: "Prefix LIKE can be a range",
     reason:
-      "Constant prefix LIKE is range-eligible on that column. Here org_id drives the index; subject isn't in this composite (different index story).",
+      "Constant prefix LIKE is range-eligible on that column. Here org_id drives the index. subject is not in this composite.",
     litSegments: 1,
   },
   {
@@ -71,7 +71,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "warn",
     title: "Leading wildcard is not a B-tree range",
     reason:
-      "LIKE '%refund%' cannot drive a range on subject. org_id may still narrow; the search part is filter-after or a different tool.",
+      "LIKE '%refund%' cannot drive a range on subject. org_id may still narrow. The search part is filter-after, or a different tool.",
     litSegments: 1,
   },
   {
@@ -83,7 +83,7 @@ export const SARG_PRESETS: SargPreset[] = [
     tone: "ok",
     title: "Classic list WHERE",
     reason:
-      "Left prefix equalities then one range. This is the shape article 03's composite was built for.",
+      "Leftmost prefix equalities, then one range. This is the shape the article 03 composite was built for.",
     litSegments: 3,
   },
 ];
@@ -232,7 +232,7 @@ export function estimateProjection(mode: "star" | "list"): ProjectionEstimate {
       includesFat: true,
       tone: "bad",
       title: "SELECT * hauls the body",
-      detail: `~${bytesPerRow.toLocaleString()} B/row including TEXT body. List cards rarely need it; you still bounce to the clustered leaf for every hit.`,
+      detail: `~${bytesPerRow.toLocaleString()} B/row including TEXT body. List cards rarely need it. You still bounce to the clustered leaf for every hit.`,
     };
   }
 
@@ -243,6 +243,6 @@ export function estimateProjection(mode: "star" | "list"): ProjectionEstimate {
     includesFat: false,
     tone: includesFat ? "warn" : "ok",
     title: "Card-shaped projection",
-    detail: `~${bytesPerRow.toLocaleString()} B/row for the inbox table UI. Same WHERE; less junk over the wire and out of the buffer pool.`,
+    detail: `~${bytesPerRow.toLocaleString()} B/row for the inbox table UI. Same WHERE. Less junk over the wire and out of the buffer pool.`,
   };
 }

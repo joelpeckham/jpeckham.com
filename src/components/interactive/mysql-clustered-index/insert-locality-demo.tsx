@@ -113,7 +113,7 @@ export function InsertLocalityDemo() {
   const insertsDone = step < 0 ? 0 : step + 1;
   const caption =
     step < 0
-      ? "Watch inserts land — or take the controls"
+      ? "Watch inserts land, or take the controls."
       : sequence[step]?.causesSplit
         ? `Insert #${insertsDone} → page ${landing} — split!`
         : `Insert #${insertsDone} → page ${landing}`;
@@ -122,7 +122,7 @@ export function InsertLocalityDemo() {
     <div ref={rootRef}>
       <DemoShell
         title="Insert locality"
-        blurb="Sequential keys hug the hot end; random UUIDs spray and split."
+        blurb="Sequential keys hug the hot end. Random UUIDs spray and split."
         accent="ink"
       >
         <div className="flex flex-wrap gap-2">

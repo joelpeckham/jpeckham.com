@@ -14,12 +14,12 @@ export default function AboutError({
     <div className="mx-auto max-w-[1240px] px-5 py-24 text-center sm:px-8">
       <p className="label text-grey">Resume preview unavailable</p>
       <h1 className="mt-2 font-display text-h2 font-black uppercase tracking-[-0.02em]">
-        Could not load resume preview.
+        I could not load the resume preview.
       </h1>
       <p className="mx-auto mt-3 max-w-[480px] text-ink/80">
-        The resume source may be missing. Initialize the git submodule with{" "}
+        The resume source may be missing. Run{" "}
         <code className="font-mono text-sm">git submodule update --init</code>,
-        or download the PDF directly.
+        or download the PDF.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
         <button

@@ -61,19 +61,19 @@ const WORKFLOW: {
     phase: "write",
     step: 1,
     label: "Write data",
-    hint: "Type text (spaces become underscores), then write it to the array.",
+    hint: "Type text. Spaces become underscores. Then write it to the array.",
   },
   {
     phase: "corrupt",
     step: 2,
     label: "Corrupt storage",
-    hint: "Click a character block to fail it, or hit Fail on a drive. Yellow blocks are XOR parity.",
+    hint: "Click a block to fail it. Or hit Fail on a drive. Yellow blocks hold XOR parity.",
   },
   {
     phase: "rebuild",
     step: 3,
     label: "Rebuild array",
-    hint: "Rebuild XORs or copies surviving blocks to recover data. Blue = source, red = target.",
+    hint: "Rebuild recovers data from XOR or copies. Blue is source. Red is target.",
   },
 ];
 
@@ -164,7 +164,7 @@ function RaidBlock({
       )}
       aria-label={
         occupied
-          ? `Drive ${driveIndex + 1} block ${blockIndex + 1}${contentLabel}${block.failed ? ", failed" : ", click to corrupt"}`
+          ? `Drive ${driveIndex + 1} block ${blockIndex + 1}${contentLabel}${block.failed ? ", failed" : ". Click to corrupt"}`
           : `Drive ${driveIndex + 1} empty block ${blockIndex + 1}`
       }
     >
@@ -262,7 +262,7 @@ function WorkflowStep({
 export function RaidVisualizer() {
   const [state, setState] = useState<ArrayState>(() => createInitialState("0"));
   const [text, setText] = useState(DEFAULT_TEXT);
-  const [status, setStatus] = useState("Ready — write data to fill the array.");
+  const [status, setStatus] = useState("Ready. Write data to fill the array.");
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [, setStaticTick] = useState(0);
   const [rebuilding, setRebuilding] = useState(false);
@@ -342,7 +342,7 @@ export function RaidVisualizer() {
     setState(next);
     setStatus(
       text.length > next.writtenLength
-        ? `Wrote ${next.writtenLength} of ${text.length} characters — array is full.`
+        ? `Wrote ${next.writtenLength} of ${text.length} characters. Array is full.`
         : `Wrote ${next.writtenLength} character(s) across the array.`,
     );
   }, [cancelRebuildAnimation, state, text]);
@@ -371,8 +371,8 @@ export function RaidVisualizer() {
     setState(next);
     setStatus(
       next === state
-        ? "Nothing left to fail — write some data first."
-        : "Random failure injected.",
+        ? "Nothing left to fail. Write some data first."
+        : "Injected a random failure.",
     );
   }, [cancelRebuildAnimation, state]);
 
@@ -431,7 +431,7 @@ export function RaidVisualizer() {
     setText((current) =>
       clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
     );
-    setStatus("Drives added — data cleared, write again to see the new layout.");
+    setStatus("Drives added. Data cleared. Write again to see the new layout.");
   }, [cancelRebuildAnimation, state]);
 
   const handleRemoveDrives = useCallback(() => {
@@ -442,7 +442,7 @@ export function RaidVisualizer() {
       clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
     );
     setStatus(
-      "Drives removed — data cleared, write again to see the new layout.",
+      "Drives removed. Data cleared. Write again to see the new layout.",
     );
   }, [cancelRebuildAnimation, state, stepCount]);
 
@@ -557,7 +557,7 @@ export function RaidVisualizer() {
                 }
                 maxLength={capacity || undefined}
                 aria-label="Data to write"
-                placeholder="Type characters to stripe across drives"
+                placeholder="Type characters to write across the drives"
               />
               <Button
                 type="button"
@@ -606,7 +606,7 @@ export function RaidVisualizer() {
               Random failure
             </Button>
             <span className="font-mono text-xs text-grey">
-              or click blocks / Fail above
+              Or click blocks. Or hit Fail on a drive.
             </span>
           </div>
 

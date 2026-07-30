@@ -93,8 +93,8 @@ export default function Home() {
             className="max-w-[520px] enter text-lg leading-normal"
             style={cssVars({ "--enter-delay": "200ms" })}
           >
-            Joel Peckham — Full-stack and AI developer. I build tools, train
-            models, and put most of it right here so you can try it yourself.
+            I&apos;m Joel Peckham, a full-stack and AI developer. I build tools,
+            train models, and put most of it here so you can try it yourself.
           </p>
           <div
             className="pointer-events-auto mt-8 flex flex-wrap gap-4 enter"

@@ -13,11 +13,11 @@ import { buttonVariants } from "@/components/ui/button";
   </a>
 </div>
 
-For my senior research project I asked a simple question: can a large language model read a news article about a company and predict whether its stock price will go up or down?
+For my senior research project I asked a simple question. Can a large language model read a news article about a company and predict whether its stock price will go up or down?
 
 ## Background
 
-Back in the dark ages (yes, I mean before ChatGPT took the internet by storm), transformer-based text generation models were known only to AI researchers and the nerdiest of programmers. It took until the release of OpenAI's GPT-2 in early 2019 before I joined the hype train. Like everyone else at the time, I wanted to co-opt the power of transformers for fun and profit, but alas OpenAI was only allowing other big-time researchers, or deep-pocketed corporations access to their groundbreaking technology. Thankfully in the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) were assembling a crack team of open-source gods to compete with OpenAI. Working at breakneck pace, they released [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/), a free and open competitor to GPT-2 and GPT-3 by early 2021, just in time for me to make use of their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
+This was before ChatGPT took over the internet. Back then, transformer-based text models lived mostly with AI researchers and the nerdiest programmers. OpenAI released GPT-2 in early 2019, and that is when I jumped on the hype train. Like everyone else, I wanted to use transformers for fun and profit. OpenAI limited access to big research labs and deep-pocketed companies, so that plan stalled. In the meantime, [Ben Wang](https://github.com/kingoflolz) and [Aran Komatsuzaki](https://twitter.com/arankomatsuzaki) built an open-source team to compete. They shipped [GPT-J](https://arankomatsuzaki.wordpress.com/2021/06/04/gpt-j/) by early 2021. It was free, open, and close enough to GPT-2 and GPT-3 for my needs. That timing mattered. I used their work in my [senior research project](/joel_peckham_evaluating_transformer_networks_2022.pdf) for my college degree.
 
 ### Timeline
 
@@ -40,13 +40,13 @@ Back in the dark ages (yes, I mean before ChatGPT took the internet by storm), t
 
 ### Concept
 
-In mid-2021, there was lots of excitement around the flexibility of large transformer models. I wanted to see if I could use GPT-J as an all-in-one news-based trading bot. The idea being, if a model has read enough of the internet as background, it should understand the context of a news article, and output a trading signal for a given company.
+In mid-2021, people were excited about how flexible large transformer models looked. I wanted to test GPT-J as an all-in-one news-based trading bot. The bet was simple. If a model has read enough of the internet, it should grasp a news article and return a trading signal for a company.
 
 **Input:** news article about a company → **Output:** buy, sell, or neutral signal
 
 ### Data gathering
 
-For the best chance of success, I decided to fine-tune the GPT-J-6B model with data formatted like the prompts I intended to test with. I scraped and labeled 140,000 news articles from the below web sources:
+I fine-tuned GPT-J-6B on data that matched the prompts I planned to test. I scraped and labeled 140,000 news articles from the sources below:
 
 <Image
   src="/projects/images/domainCounts.png"
@@ -57,7 +57,7 @@ For the best chance of success, I decided to fine-tune the GPT-J-6B model with d
   loading="lazy"
 />
 
-To avoid rate limiting, I created a custom web scraper to use and manage a pool of rotating proxies. I also used a custom rate limiter to ensure that I was not making too many requests to any given domain. Running the scraper from an OracleVM, I was able to scrape around 40 articles per minute and complete all 140,000 articles in around 2.5 days.
+Rate limits were a problem, so I built a custom scraper. It managed a pool of rotating proxies. I also added a custom rate limiter so I did not hammer any one domain. I ran the scraper on an OracleVM. It pulled about 40 articles per minute and finished all 140,000 articles in about 2.5 days.
 
 ```python
 class Scraper:
@@ -128,11 +128,11 @@ class Scraper:
         print(f"Finished scraping. {len(self._finishedUrls)} urls scraped. {successfulScrapes} successful scrapes.")
 ```
 
-I then split my dataset into a training set with 90,000 articles and into validation/testing sets with 10,000/40,000 articles respectively.
+I then split the dataset. Training got 90,000 articles. Validation got 10,000. Testing got 40,000.
 
 ## Training
 
-Because the model weights are over 60GB, specialized computing was required for this training task. The training was done with a Google TPU-v3 generously donated by Google's [TPU Research Cloud](https://sites.research.google/trc/about/). I trained my model using the following hyperparameters:
+The model weights are over 60GB, so I needed specialized compute. I trained on a Google TPU-v3 from Google's [TPU Research Cloud](https://sites.research.google/trc/about/). These were the hyperparameters:
 
 ```json
 {
@@ -167,7 +167,7 @@ Because the model weights are over 60GB, specialized computing was required for 
 
 ### Training Loss
 
-At first, I was encouraged by seeing a meaningful decrease in training loss, however, now I believe this was due to overfitting to the training set.
+At first, a clear drop in training loss looked promising. I now think that drop was mostly overfitting.
 
 <Image
   src="/projects/images/trainLoss.png"
@@ -190,11 +190,11 @@ Directional accuracy on held-out articles (did the model guess up/down correctly
 
 ## Conclusion
 
-In my testing, GPT-J performs no better than random when predicting the direction of price movement based on a news story. Furthermore, fine-tuning the model does not improve prediction accuracy.
+In my tests, GPT-J does no better than chance at predicting price direction from a news story. Fine-tuning does not improve accuracy either.
 
-I believe these results are due to the following factors:
+I think a few factors explain that:
 
-- The model (except for a small amount of fine-tuning) is not trained on financial data.
-- The data was not cleaned well enough to remove noise.
-- Text data is not a good representation of financial data. In other words, the model doesn't care about the actual numbers, only how well they "sound" in the context of the article.
-- The articles may also not have enough information to predict price movement anyway. News is often considered a lagging indicator of price movement, and the articles I scraped were often published after the relevant price movement had already occurred.
+- Outside a small fine-tune, the model was not trained on financial data.
+- The data still had too much noise.
+- Text is a weak stand-in for financial signal. The model cares more about how numbers sound in the article than about the numbers themselves.
+- Many articles may not contain enough information to predict price moves. News often lags price. A lot of the articles I scraped came out after the move had already happened.

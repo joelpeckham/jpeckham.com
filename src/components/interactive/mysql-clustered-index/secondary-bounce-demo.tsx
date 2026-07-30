@@ -161,7 +161,7 @@ export function SecondaryBounceDemo() {
   return (
     <DemoShell
       title="Secondary bounce"
-      blurb="Click an email. Hop 1 finds the PK; hop 2 loads the clustered row."
+      blurb="Click an email. Hop 1 finds the primary key. Hop 2 loads the clustered row."
       accent="yellow"
     >
       <div className="flex flex-wrap gap-2">
@@ -224,7 +224,7 @@ export function SecondaryBounceDemo() {
             height={140}
           />
           <p className="mt-1 font-mono text-[10px] text-grey">
-            {done ? `row · ${target.status}` : "pk → row"}
+            {done ? `row · ${target.status}` : "primary key → row"}
           </p>
         </div>
 

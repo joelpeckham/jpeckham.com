@@ -16,7 +16,7 @@ export function PkWidthTaxDemo() {
   return (
     <DemoShell
       title="Secondary luggage"
-      blurb="Every secondary entry carries a copy of the primary key."
+      blurb="Every secondary index entry carries a copy of the primary key."
       accent="blue"
     >
       <AutoLoop durationMs={2800} endHoldMs={900} startHoldMs={300}>
@@ -90,8 +90,8 @@ export function PkWidthTaxDemo() {
 
               <p className="mt-3 font-mono text-[11px] text-grey">
                 {bag === "slim"
-                  ? "Skinny PK → skinny copies in every secondary."
-                  : "Fat PK → every index pays the same tax."}
+                  ? "A skinny primary key means skinny copies in every secondary index."
+                  : "A fat primary key taxes every secondary index."}
               </p>
             </div>
           );

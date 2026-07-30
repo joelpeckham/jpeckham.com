@@ -96,7 +96,7 @@ export function TimeTypeDemo() {
   return (
     <DemoShell
       title="TIMESTAMP vs DATETIME"
-      blurb="One instant. TIMESTAMP shapeshifts with the session; DATETIME is a photo of a clock."
+      blurb="One instant. TIMESTAMP changes with the session. DATETIME is a photo of a clock."
     >
       <AutoLoop durationMs={3600} frameCount={ZONES.length} endHoldMs={700}>
         {({ frame }) => {
@@ -155,7 +155,7 @@ export function TimeTypeDemo() {
                   />
                 </div>
                 <p className="mt-3 text-center font-mono text-[11px] text-grey">
-                  Always {dt.date} 00:00 — session TZ never rewrites it
+                  Always {dt.date} 00:00. Session TZ never rewrites it.
                 </p>
               </div>
             </div>

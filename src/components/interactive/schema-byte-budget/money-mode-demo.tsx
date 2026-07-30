@@ -101,7 +101,7 @@ export function MoneyModeDemo() {
   return (
     <DemoShell
       title="Money mode"
-      blurb="Crank the cart. DOUBLE drifts off the ledger rail; INT and DECIMAL stay locked."
+      blurb="Crank the cart. DOUBLE drifts off the ledger rail. INT and DECIMAL stay locked."
     >
       <div className="flex flex-wrap gap-2">
         {MODES.map((m) => (
@@ -201,7 +201,7 @@ export function MoneyModeDemo() {
         <p className="mt-2 font-mono text-[11px] text-grey">
           {exact
             ? `${lineCount} × $0.10 = ${formatMoney(sum.expectedCents)}. Locked.`
-            : `Expected ${formatMoney(sum.expectedCents)}; DOUBLE raw ${sum.floatRaw}. Gap grows with cart size.`}
+            : `Expected ${formatMoney(sum.expectedCents)}. DOUBLE raw is ${sum.floatRaw}. The gap grows with cart size.`}
         </p>
       </div>
     </DemoShell>

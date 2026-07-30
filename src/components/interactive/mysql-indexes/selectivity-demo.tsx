@@ -236,12 +236,12 @@ export function SelectivityDemo() {
       ? {
           tone: "bad" as const,
           title: "Same answer. Different bill.",
-          detail: `${lastRun.survivors} tiles left — but you spent ${lastRun.totalPeeks} peeks. Leading with a weak question means every later check walks a huge crowd.`,
+          detail: `${lastRun.survivors} tiles left, but you spent ${lastRun.totalPeeks} peeks. A weak first question makes every later check walk a huge crowd.`,
         }
       : {
           tone: "ok" as const,
           title: "Same answer. Different bill.",
-          detail: `${lastRun.survivors} tiles left after only ${lastRun.totalPeeks} peeks. The first question got a free index jump; later filters walked a small crowd.`,
+          detail: `${lastRun.survivors} tiles left after only ${lastRun.totalPeeks} peeks. The first question got a free index jump. Later filters walked a small crowd.`,
         }
     : null;
 
@@ -255,7 +255,7 @@ export function SelectivityDemo() {
   return (
     <DemoShell
       title="Guess Who: question order"
-      blurb="Same three questions, same survivors. Drag the order, hit Play — peeks are the score."
+      blurb="Same three questions. Same survivors. Drag the order, hit Play. Peeks are the score."
       accent="yellow"
     >
       <div className="flex flex-wrap gap-2">
@@ -468,8 +468,8 @@ export function SelectivityDemo() {
 
       <p className="font-mono text-[10px] text-grey">
         Each tile ≈ {formatRows(TILE_ROW_SCALE)} rows on a{" "}
-        {formatRows(BOARD.length * TILE_ROW_SCALE)}-row table. Toy board —
-        not histograms.
+        {formatRows(BOARD.length * TILE_ROW_SCALE)}-row table. This is a toy
+        board, not histograms.
       </p>
     </DemoShell>
   );

@@ -23,7 +23,7 @@ export function NullSemanticsDemo() {
   return (
     <DemoShell
       title="NULL ≠ anything"
-      blurb={`WHERE payment_type != 'card' — NULL is UNKNOWN, so it falls through.`}
+      blurb={`WHERE payment_type != 'card'. NULL is UNKNOWN, so it falls through.`}
     >
       <AutoLoop durationMs={4800} endHoldMs={500} startHoldMs={200}>
         {({ t }) => {
@@ -123,7 +123,7 @@ export function NullSemanticsDemo() {
               </div>
 
               <p className="mt-2 text-center font-mono text-[11px] text-grey">
-                NULL never takes TRUE or FALSE — it drops out of both branches.
+                NULL is neither TRUE nor FALSE. It drops out of both branches.
               </p>
             </div>
           );

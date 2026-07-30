@@ -4,29 +4,29 @@ import { RaidVisualizer } from "@/components/interactive/raid-visualizer";
 
 ## Things to Play With
 
-- **Pick a RAID level.** Switch between RAID 0, 1, 4, 5, and 10 to see how each layout stripes, mirrors, or computes parity across the drive bay.
-- **Write data.** Type a string (spaces become underscores) or hit **Random**, then **Write Data** to lay characters across the array. Parity blocks appear in yellow as two-digit hex bytes.
-- **Corrupt storage.** Click any occupied block to fail it, or hit **Fail** on a drive to wipe the whole disk. **Random Failure** is a quick way to demo recovery.
-- **Rebuild the array.** Press **Rebuild Array** and watch source blocks light up blue before the recovered block turns red — parity levels XOR surviving blocks; mirrored levels copy from the paired drive.
-- **Scale the array.** Add or remove drives within the limits of each RAID level and watch usable capacity and fault tolerance update live. Changing the geometry clears the array — write again to see the new layout.
+- **Pick a RAID level.** Switch between RAID 0, 1, 4, 5, and 10. Watch how each layout stripes, mirrors, or computes parity across the drive bay.
+- **Write data.** Type a string (spaces become underscores), or hit **Random**. Then press **Write Data** to lay characters across the array. Parity blocks appear in yellow as two-digit hex bytes.
+- **Corrupt storage.** Click any occupied block to fail it. Or hit **Fail** on a drive to wipe the whole disk. **Random Failure** is a quick way to demo recovery.
+- **Rebuild the array.** Press **Rebuild Array**. Source blocks light up blue, then the recovered block turns red. Parity levels XOR surviving blocks. Mirrored levels copy from the paired drive.
+- **Scale the array.** Add or remove drives within the limits of each RAID level. Usable capacity and fault tolerance update live. Changing the geometry clears the array — write again to see the new layout.
 
 ## About
 
-In October 2022 I built RAIDviz as an educational tool for professors teaching storage in my university operating systems course. The idea was simple: let students *see* striping, mirroring, and parity instead of only reading about them on a slide. The original version was a standalone vanilla JavaScript page with Bootstrap styling.
+In October 2022 I built RAIDviz for professors who teach storage in my university operating systems course. The idea was simple. Let students *see* striping, mirroring, and parity — not only read about them on a slide. The original was a standalone vanilla JavaScript page with Bootstrap styling.
 
-The demo above is a from-scratch React and TypeScript rewrite for this portfolio. It fixes bugs from the original (broken rebuild after adding drives, incorrect sum-based "parity"), adds RAID 5, uses real XOR parity, and matches the interactive demos elsewhere on this site.
+The demo above is a from-scratch React and TypeScript rewrite for this portfolio. It fixes bugs from the original: broken rebuild after you add drives, and incorrect sum-based "parity." It also adds RAID 5, uses real XOR parity, and matches the interactive demos elsewhere on this site.
 
 ## How RAID maps data to drives
 
-Each drive in the visualizer is a 4×4 grid — sixteen blocks. When you write a string, the simulator distributes characters according to the RAID level you selected.
+Each drive in the visualizer is a 4×4 grid — sixteen blocks. When you write a string, the simulator spreads characters by the RAID level you selected.
 
-**RAID 0** stripes characters round-robin across every drive. Capacity is 100%, but there is no redundancy: lose any block and it is gone forever.
+**RAID 0** stripes characters round-robin across every drive. Capacity is 100%, but there is no redundancy. Lose any block and it is gone forever.
 
-**RAID 1** mirrors every character onto every drive. Capacity drops to 1/*n*, but you can lose *n*−1 drives and still read the data.
+**RAID 1** mirrors every character onto every drive. Capacity drops to 1/*n*. You can lose *n*−1 drives and still read the data.
 
-**RAID 4** stripes across all but one drive and stores XOR parity on a dedicated parity disk. **RAID 5** does the same math but rotates which drive holds parity on each stripe row, which is why the yellow parity blocks move around as you add data.
+**RAID 4** stripes across all but one drive. It stores XOR parity on a dedicated parity disk. **RAID 5** uses the same math, but it rotates which drive holds parity on each stripe row. That is why the yellow parity blocks move around as you add data.
 
-**RAID 10** stripes across the first half of the drives and mirrors each stripe onto a partner in the second half — striped mirrors.
+**RAID 10** stripes across the first half of the drives. It mirrors each stripe onto a partner in the second half — striped mirrors.
 
 ## The XOR trick
 
@@ -42,7 +42,7 @@ If *A* is lost, you recover it from the survivors:
 P ⊕ B = A
 ```
 
-The visualizer computes parity over character byte values and displays the result as a two-digit hex value on parity blocks. During rebuild, it XORs every non-failed block in the same stripe row to reconstruct the missing one.
+The visualizer computes parity over character byte values. It shows the result as a two-digit hex value on parity blocks. During rebuild, it XORs every non-failed block in the same stripe row to rebuild the missing one.
 
 ### Worked example
 
@@ -52,7 +52,7 @@ Suppose stripe row 0 holds `"A"` on drive 1 and `"B"` on drive 2. Their ASCII co
 65 ⊕ 66 = 3   → parity block shows "03"
 ```
 
-If drive 1 fails, rebuild XORs `66 ⊕ 3 = 65`, recovering `"A"`.
+If drive 1 fails, rebuild XORs `66 ⊕ 3 = 65` and recovers `"A"`.
 
 ## RAID comparison
 
@@ -66,4 +66,4 @@ If drive 1 fails, rebuild XORs `66 ⊕ 3 = 65`, recovering `"A"`.
 
 ## Why RAID 0 cannot rebuild
 
-RAID 0 spreads each character across exactly one drive with no copies and no parity. When a block fails, there is literally no other place the byte was stored. The rebuild step reports that immediately — that is the point of the demo. Redundancy is not free: RAID 1 gives you copies, RAID 4/5 give you parity math, and RAID 10 gives you both striping and mirroring, but each trades capacity or complexity for survivability.
+RAID 0 puts each character on exactly one drive. There are no copies and no parity. When a block fails, that byte has nowhere else to live. The rebuild step reports that right away — that is the point of the demo. Redundancy is not free. RAID 1 gives you copies. RAID 4 and RAID 5 give you parity math. RAID 10 gives you both striping and mirroring. Each one trades capacity or complexity for survivability.

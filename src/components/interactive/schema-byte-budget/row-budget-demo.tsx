@@ -24,9 +24,9 @@ import {
 const LIST_LIMIT = 50;
 
 const PRESET_BLURBS: Record<PresetId, string> = {
-  "orm-bad": "Generate-and-walk-away vibes: float money, utf8mb3, fat VARCHARs.",
-  "marketplace-good": "Exact money, DATETIME events, utf8mb4, product-sized text.",
-  "wide-soup": "Five VARCHAR(2000)s “just in case.” List endpoints cry.",
+  "orm-bad": "ORM defaults: float money, utf8mb3, and fat VARCHARs.",
+  "marketplace-good": "Exact money, DATETIME events, utf8mb4, and product-sized text.",
+  "wide-soup": "Five VARCHAR(2000)s “just in case.” List endpoints suffer.",
 };
 
 export function RowBudgetDemo() {
@@ -45,21 +45,21 @@ export function RowBudgetDemo() {
     if (preset === "wide-soup" || estimate.nearRowLimit) {
       return {
         tone: "bad" as const,
-        title: `~${rpp} rows/page (list endpoint tax)`,
-        detail: `Fetching ${LIST_LIMIT} rows touches ~${pages} pages. Wide declarations starve the buffer pool for the same answer.`,
+        title: `~${rpp} rows/page — list tax`,
+        detail: `A LIMIT ${LIST_LIMIT} fetch touches ~${pages} pages. Wide rows starve the buffer pool for the same answer.`,
       };
     }
     if (preset === "orm-bad") {
       return {
         tone: "warn" as const,
         title: "Correctness chips are already red",
-        detail: `~${rpp} rows/page looks survivable until float money, TIMESTAMP, and utf8mb3 show up in production.`,
+        detail: `~${rpp} rows/page looks fine until float money, TIMESTAMP, and utf8mb3 hit production.`,
       };
     }
     return {
       tone: "ok" as const,
       title: `~${rpp} rows/page, chips green`,
-      detail: `${LIST_LIMIT} listings ≈ ${pages} page${pages === 1 ? "" : "s"}. Dense rows and honest types. This is the strip you want in review.`,
+      detail: `${LIST_LIMIT} listings ≈ ${pages} page${pages === 1 ? "" : "s"}. Dense rows and honest types. Aim for this strip in review.`,
     };
   })();
 
@@ -68,7 +68,7 @@ export function RowBudgetDemo() {
   return (
     <DemoShell
       title="Schema byte budget"
-      blurb="Stack every choice onto one row. Watch how many fit on a page, and how many pages a list endpoint must touch."
+      blurb="Stack every choice onto one row. See how many rows fit on a page. See how many pages a list endpoint must touch."
     >
       <div className="flex flex-wrap gap-2">
         {(Object.keys(PRESET_LABELS) as PresetId[]).map((id) => (
@@ -150,7 +150,7 @@ export function RowBudgetDemo() {
             ) : null}
           </div>
           <p className="mt-2 text-xs text-grey">
-            Fewer denser pages → happier buffer pool for the same API response.
+            Fewer, denser pages keep the buffer pool happier for the same API response.
           </p>
         </Panel>
       </div>

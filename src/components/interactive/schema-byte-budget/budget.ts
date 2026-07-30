@@ -180,7 +180,7 @@ export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
         clusteredKeyBytes: 8,
         totalBytes: 8,
         jsPrecisionRisk: true,
-        note: "Plenty of range, but a bare JSON number can round in JavaScript.",
+        note: "Plenty of range. A bare JSON number can round in JavaScript.",
       };
     }
     case "ulid-pk": {
@@ -202,7 +202,7 @@ export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
         clusteredKeyBytes,
         totalBytes: clusteredKeyBytes,
         jsPrecisionRisk: false,
-        note: "Opaque and client-mintable, but every secondary index copies ~104B.",
+        note: "Opaque and client-mintable. Every secondary index copies ~104B.",
       };
     }
     case "bigint-plus-public": {
@@ -231,7 +231,7 @@ export function idStrategyEstimate(strategy: IdStrategy): IdStrategyEstimate {
         clusteredKeyBytes: 8,
         totalBytes: 8 + 26 * 4,
         jsPrecisionRisk: false,
-        note: "Cheap joins inside; stringy ULID at the API boundary.",
+        note: "Cheap joins inside. Use a stringy ULID at the API boundary.",
       };
     }
   }
@@ -373,18 +373,18 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
     }
     case "double":
       bytes = 8;
-      notes.push("8 bytes, approximate. Not for money.");
+      notes.push("8 bytes, approximate. Do not use for money.");
       break;
     case "decimal": {
       const p = col.precision ?? 12;
       const s = col.scale ?? 2;
       bytes = decimalStorageBytes(p, s);
-      notes.push(`Exact fixed-point; ~${bytes} bytes for DECIMAL(${p},${s}).`);
+      notes.push(`Exact fixed-point. About ${bytes} bytes for DECIMAL(${p},${s}).`);
       break;
     }
     case "bigint_cents":
       bytes = 8;
-      notes.push("Integer minor units (cents). Exact, JSON-safe if you stringify bigints.");
+      notes.push("Integer minor units (cents). Exact. JSON-safe if you stringify bigints.");
       break;
     case "varchar": {
       const n = Math.max(0, col.length ?? 255);
@@ -403,11 +403,11 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
       );
       if (offPage) {
         notes.push(
-          "Long VARCHAR values often spill off-page in real InnoDB; this bar still shows the declared budget.",
+          "Long VARCHAR values often spill off-page in real InnoDB. This bar still shows the declared budget.",
         );
       }
       if (cs === "utf8mb3") {
-        notes.push("utf8mb3 cannot store emoji / supplementary-plane chars.");
+        notes.push("utf8mb3 cannot store emoji or supplementary-plane chars.");
       }
       break;
     }
@@ -424,27 +424,27 @@ export function estimateColumn(col: SchemaColumn): ColumnEstimate {
       bytes = 20;
       notes.push(
         col.kind === "json"
-          ? "JSON is validated binary storage; large docs usually live off-page."
-          : "TEXT is typically off-page; list endpoints pay for every wide row.",
+          ? "JSON is validated binary storage. Large docs usually live off-page."
+          : "TEXT is typically off-page. List endpoints pay for every wide row.",
       );
       break;
     case "datetime": {
       const extra = fspExtraBytes(col.fsp);
       bytes = 5 + extra;
-      notes.push("Stores the wall-clock digits you give it, with no session TZ conversion.");
+      notes.push("Stores the wall-clock digits you give it. No session TZ conversion.");
       break;
     }
     case "timestamp": {
       const extra = fspExtraBytes(col.fsp);
       bytes = 4 + extra;
-      notes.push("Converted to/from the session time_zone on write and read.");
-      notes.push("Range tops out in 2038 for TIMESTAMP.");
+      notes.push("Converted to and from the session time_zone on write and read.");
+      notes.push("TIMESTAMP range tops out in 2038.");
       break;
     }
   }
 
   if (col.nullable) {
-    notes.push("Nullable; contributes to the null bitmap.");
+    notes.push("Nullable. Contributes to the null bitmap.");
   }
 
   return {

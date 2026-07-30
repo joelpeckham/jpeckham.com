@@ -23,7 +23,7 @@ export function SargabilityDemo() {
   return (
     <DemoShell
       title="Sargability"
-      blurb="Flip the switch. YEAR() forces a scan; a bare range seeks."
+      blurb="Flip the switch. YEAR() forces a scan. A bare range seeks."
       accent="blue"
     >
       <div className="flex flex-wrap items-center gap-3">
@@ -104,7 +104,7 @@ export function SargabilityDemo() {
                 pointerMode={scene.pointerMode}
                 label={
                   scene.pointerMode === "scan"
-                    ? "Scanning every open leaf — YEAR() can't seek"
+                    ? "Scanning every open leaf. YEAR() cannot seek."
                     : "Seek to range, then stop"
                 }
               />
@@ -117,8 +117,8 @@ export function SargabilityDemo() {
 
       <p className="font-mono text-[11px] text-grey">
         {wrapped
-          ? "Function on the column freezes the date segment — same idea as a broken left prefix."
-          : "Equalities then a bare range: the B-tree walks one interval."}
+          ? "A function on the column freezes the date segment. Same idea as a broken leftmost prefix."
+          : "Equalities, then a bare range. The B-tree walks one interval."}
       </p>
     </DemoShell>
   );

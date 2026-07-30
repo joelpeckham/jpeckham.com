@@ -44,7 +44,7 @@ export function CompositeVsSinglesDemo() {
   return (
     <DemoShell
       title="Composite vs three singles"
-      blurb="Same WHERE. Watch the race — and the write tax."
+      blurb="Same WHERE. Watch the race. Watch the write tax."
       accent="red"
     >
       <div className="border-2 border-ink bg-ink px-3 py-2 font-mono text-[11px] text-paper">

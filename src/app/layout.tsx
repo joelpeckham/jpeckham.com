@@ -22,11 +22,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Joel Peckham — Software & AI Developer",
-    template: "%s — Joel Peckham",
+    default: "Joel Peckham, Software & AI Developer",
+    template: "%s · Joel Peckham",
   },
   description:
-    "Joel Peckham's software portfolio and personal website. Full-stack and AI developer based in Laramie, Wyoming.",
+    "Joel Peckham's software portfolio. Full-stack and AI developer in Laramie, Wyoming.",
   keywords: [
     "Joel Peckham",
     "Software Developer",
@@ -40,18 +40,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: siteUrl,
-    title: "Joel Peckham — Software & AI Developer",
+    title: "Joel Peckham, Software & AI Developer",
     description:
-      "Full-stack and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
+      "Full-stack and AI developer in Laramie, Wyoming. Projects, experiments, and writing.",
     siteName,
     images: [defaultOgImage],
   },
   twitter: {
     card: "summary_large_image",
     creator: "@peckham_joel",
-    title: "Joel Peckham — Software & AI Developer",
+    title: "Joel Peckham, Software & AI Developer",
     description:
-      "Full-stack and AI developer based in Laramie, Wyoming. Projects, experiments, and writing.",
+      "Full-stack and AI developer in Laramie, Wyoming. Projects, experiments, and writing.",
     images: [defaultOgImage],
   },
   icons: {
