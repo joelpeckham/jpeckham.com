@@ -2,6 +2,7 @@ import {
   contentSectionHref,
   contentSectionName,
   getAdjacentInSeries,
+  projects,
   type ContentItem,
 } from "@/lib/content";
 import { siteName, siteUrl } from "@/lib/site";
@@ -13,6 +14,20 @@ type JsonLdProps = {
 /** Stable identifiers so every schema block references one shared entity. */
 export const personId = `${siteUrl}/#person`;
 export const websiteId = `${siteUrl}/#website`;
+
+const socialSameAs = [
+  "https://github.com/joelpeckham",
+  "https://www.linkedin.com/in/joelpeckham/",
+  "https://x.com/peckham_joel",
+] as const;
+
+/** Product sites from the catalog, plus social profiles. */
+export function personSameAs(): string[] {
+  const productUrls = projects
+    .map((p) => p.productUrl)
+    .filter((url): url is string => Boolean(url));
+  return [...socialSameAs, ...productUrls];
+}
 
 function serializeJsonLd(data: Record<string, unknown>): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
@@ -74,11 +89,7 @@ export function personJsonLd() {
       "Laravel",
       "Python",
     ],
-    sameAs: [
-      "https://github.com/joelpeckham",
-      "https://www.linkedin.com/in/joelpeckham/",
-      "https://x.com/peckham_joel",
-    ],
+    sameAs: personSameAs(),
   };
 }
 
@@ -98,6 +109,42 @@ export function articleJsonLd(item: ContentItem) {
     },
     url: `${siteUrl}${item.href}`,
     keywords: item.tags?.join(", "),
+    ...(item.productUrl
+      ? {
+          about: {
+            "@type": "SoftwareApplication",
+            name: item.title,
+            url: item.productUrl,
+          },
+        }
+      : {}),
+  };
+}
+
+/** Product schema for write-ups that ship a live site. */
+export function softwareApplicationJsonLd(item: ContentItem) {
+  if (!item.productUrl) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: item.title,
+    description: item.description,
+    url: item.productUrl,
+    image: `${siteUrl}/og/${item.slug}/`,
+    applicationCategory: "BrowserApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    author: {
+      "@type": "Person",
+      "@id": personId,
+      name: siteName,
+      url: siteUrl,
+    },
+    sameAs: [`${siteUrl}${item.href}`],
   };
 }
 

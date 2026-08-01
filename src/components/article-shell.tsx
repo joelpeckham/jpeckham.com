@@ -20,7 +20,12 @@ import {
   type ContentSlug,
 } from "@/lib/content";
 import { siteName } from "@/lib/site";
-import { JsonLd, articleJsonLd, breadcrumbJsonLd } from "@/lib/json-ld";
+import {
+  JsonLd,
+  articleJsonLd,
+  breadcrumbJsonLd,
+  softwareApplicationJsonLd,
+} from "@/lib/json-ld";
 import { BackToListLink, ScrollToTopOnMount } from "@/components/scroll-to-top";
 import "highlight.js/styles/an-old-hope.css";
 
@@ -88,10 +93,13 @@ export function ArticleShell({
     ? adjacent.series.title
     : `All ${contentSectionName(item.kind)}`;
 
+  const productSchema = softwareApplicationJsonLd(item);
+
   return (
     <>
       <JsonLd data={articleJsonLd(item)} />
       <JsonLd data={breadcrumbJsonLd(item)} />
+      {productSchema ? <JsonLd data={productSchema} /> : null}
       <ScrollToTopOnMount />
       <ViewTransition name={coverTransitionKey(item.slug)} share="cover-piece">
         <div

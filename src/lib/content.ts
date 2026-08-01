@@ -6,7 +6,8 @@ export type CoverIcon =
   | "puzzle"
   | "stack"
   | "newspaper"
-  | "drive";
+  | "drive"
+  | "lyrics";
 export type CoverVariant = "split" | "stamp" | "band";
 
 export type CornerMarkColor = "a1" | "a2" | "fg";
@@ -44,6 +45,8 @@ export type ContentItem = {
   tags?: string[];
   /** When set, this item belongs to a series (usually a topic post). */
   seriesId?: string;
+  /** Shipped product URL — feeds Person sameAs + SoftwareApplication JSON-LD. */
+  productUrl?: string;
 };
 
 export type Series = {
@@ -58,6 +61,24 @@ export type Series = {
 
 export const projects: ContentItem[] = [
   {
+    slug: "lyriic",
+    href: "/projects/lyriic/",
+    title: "lyriic",
+    description:
+      "I meant to write a song but built a local-first lyric editor instead. It's got client-side rhymes, synonyms, and bit-packed dictionaries so syllable counting stays out of the way.",
+    date: "2026-08-01",
+    kind: "project",
+    interactive: true,
+    productUrl: "https://lyriic.com/",
+    tags: ["Product", "TypeScript", "Compression"],
+    art: {
+      bg: "ink",
+      headline: ["LYRIIC"],
+      icon: "lyrics",
+      variant: "split",
+    },
+  },
+  {
     slug: "uwyo-schedule",
     href: "/projects/uwyo-schedule/",
     title: "uwyoschedule",
@@ -65,6 +86,7 @@ export const projects: ContentItem[] = [
       "Plan conflict-free class schedules for University of Wyoming students. Uses a live copy of the UW course catalog.",
     date: "2026-06-01",
     kind: "project",
+    productUrl: "https://uwyoschedule.org/",
     tags: ["Next.js", "Full Stack", "Product"],
     art: {
       bg: "yellow",
@@ -168,6 +190,7 @@ export const projects: ContentItem[] = [
       "Paywalled QR generators broke a friend's printed posters. I built a free one that never holds your links hostage. Export real SVG and PNG.",
     date: "2025-12-02",
     kind: "project",
+    productUrl: "https://qr.jpeckham.com/",
     tags: ["Next.js", "Product", "Rant"],
     art: {
       bg: "red",

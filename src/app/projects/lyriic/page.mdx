@@ -1,0 +1,191 @@
+import {
+  FrontCodingDemo,
+  RhymeKeyDemo,
+  RhymeLookupDemo,
+  StressPackDemo,
+  SyllableLineDemo,
+  WireBudgetDemo,
+} from "@/components/interactive/lyriic";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+
+<div className="not-prose -mt-2 mb-8 flex flex-wrap gap-3">
+  <a
+    href="https://lyriic.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "red", size: "md" }))}
+  >
+    Open lyriic.com
+  </a>
+  <a
+    href="https://github.com/joelpeckham/lyriic"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+  >
+    GitHub
+  </a>
+</div>
+
+## I was supposed to write a song
+
+I was watching a video about songwriting. Halfway through I got that familiar itch: *I could do that.* Not chart-topper confidence. More like "I have a notebook and a free evening" confidence.
+
+So I sat down to write.
+
+The first verse went fine until I started checking meter. How many syllables in this line? Where's the stress on *desire*? Does *anyone* actually rhyme with *fun*, or am I cheating? I kept tapping fingers on the desk, muttering counts under my breath, losing the line I was trying to catch.
+
+That counting loop is death for the zen of writing. The draft wants flow. Your brain wants a spreadsheet.
+
+I never finished the song. I spent the weekend building [lyriic](https://lyriic.com/) instead.
+
+lyriic is a free, local-first editor for poetry and lyrics in meter. Big quiet canvas. Per-line syllable counts. Optional meter rulers. Hover a word for rhymes and synonyms. No account. No AI that writes the verse for you. Your draft stays in the browser.
+
+This is the weekend's technical hangover: how to ship a usable dictionary brain to the client without murdering the first paint, and how to make rhyme and synonym lookups feel instant once the packs land.
+
+Try the itch that started it. Type a line. Watch the counts show up. That quiet number on the right is what I wanted in the corner of my eye, not a ritual that steals the stanza.
+
+<SyllableLineDemo />
+
+<Takeaway>
+The product goal was simple: keep the musical part of writing, automate the finger-counting part.
+</Takeaway>
+
+## What "fast enough" means when the dictionary *is* the app
+
+Most rhyme sites are a text box glued to a server. That works until you're offline on a plane, or the API hiccups mid-couplet, or you notice your unfinished chorus just left your laptop.
+
+I wanted the opposite. Treat the lexicon like a game asset. Download it once. Decode it. Look things up in memory. The poem never needs a round trip.
+
+The awkward part is size. A useful English brain is not small:
+
+- ~276k lemmas with syllable counts
+- stress patterns for the same set
+- sparse poetic variants (`fire` as 2 syllables or a compressed 1)
+- perfect-rhyme and end-rhyme indexes
+- a thesaurus with POS-aware synonym groups
+
+Dump that as JSON and you're looking at tens of megabytes before the editor feels smart. Fine for a native app install. Rude for a website you opened because you had an idea in the shower.
+
+So the weekend became a compression problem with a UX constraint: the writing surface has to feel alive *before* the heavy packs finish, and lookups have to stay O(bucket), not "tokenize IPA on every keystroke."
+
+## Front-coding the word list
+
+Lemma lists are almost sorted already if you sort them. Adjacent words share prefixes: `sing`, `singer`, `singers`, `singing`. Storing each string whole is paying rent on the same letters over and over.
+
+Front-coding stores three things per word: how many characters you reuse from the previous word (`u8`), how long the new tail is (`u16`), and the tail bytes. Decode walks the list once and rebuilds full strings into a `string[]` plus a `Map` for O(1) word→id.
+
+Play the `sing*` cluster. Blue is the shared prefix you *don't* resend. Yellow is the tail that actually ships.
+
+<FrontCodingDemo />
+
+<Takeaway>
+On the real lexicon, front-coding alone cuts stored character payload to about 31% of the raw letters, and that's before brotli.
+</Takeaway>
+
+Every other pack (rhymes, thesaurus, stress, variants) talks in **word ids**, not strings. One Zipf-sorted lexicon. Everything else is integers pointing at it. The thesaurus gets a small overflow string table for synonyms that aren't headwords in the main list. That's it.
+
+## Two bits per syllable
+
+Stress is even more wasteful if you store it as text. I don't need the string `"primary, unstressed, secondary"`. I need three values that fit in two bits:
+
+| code | meaning |
+| --- | --- |
+| `0` | unstressed |
+| `1` | primary |
+| `2` | secondary |
+
+Pack those into a `u32`, low syllable in the low bits. Sixteen syllables max, which is plenty for English dictionary forms. The entire stress table becomes one `Uint32Array` aligned with word ids: about 1.05 MiB raw, ~90 KB after brotli.
+
+Tap the syllables below. Watch the bit lanes and the hex value update. Same packing lyriic uses in `stress.bin`.
+
+<StressPackDemo />
+
+<Takeaway>
+Prosody for a quarter-million words fits in a dense integer array. No JSON keys. No per-word string patterns.
+</Takeaway>
+
+Poetic alternatives (the times you want `fire` as one syllable) live in a sparse variants pack: only the ~10k words that need alts, each with a syllable count and another packed stress `u32`. The common case stays skinny.
+
+## Rhymes without doing phonology at query time
+
+The clever bit isn't a clever search. It's refusing to search.
+
+At build time I fuse pronunciations (Misaki → CMUdict → WikiPron, with a preference order) and extract **rhyme keys** from IPA:
+
+- **Perfect rhyme key:** phones from the last primary stress through the coda (`desire` → `/aɪɚ/`, same as `fire`)
+- **End rhyme key:** last vowel nucleus through the coda, stress ignored (`anyone` and `fun` both end in `/ʌn/`)
+
+Those keys get front-coded too. Then two inverted indexes:
+
+1. `wordId → keyIds` (a word can have more than one pronunciation)
+2. `keyId → wordIds` in Zipf order (common rhymes first)
+
+Query path:
+
+```
+normalize(word) → wordId → keyIds → walk buckets → dedupe → rank for UI
+```
+
+No IPA tokenization while you type. Integer map lookups and array walks. The popover asks for ids first, windows the head of the bucket, then materializes strings, so a fat end-rhyme bucket doesn't explode the DOM.
+
+Watch a key get cut out of a phone strip. Flip between perfect and end to see why `butter`/`meter` collapse together on end rhyme but not on perfect.
+
+<RhymeKeyDemo />
+
+<Takeaway>
+Phonology is a build step. Runtime rhyme is an index walk.
+</Takeaway>
+
+Then watch the lookup itself step through on a toy lexicon:
+
+<RhymeLookupDemo />
+
+Production scale, for the curious: ~95k perfect keys (small buckets, picky matches) vs ~2.3k end keys (huge buckets, songwriter-friendly). End rhyme is the mode that makes `anyone`/`fun` feel legal. Perfect is what you want when you're being a snob in a good way.
+
+## Synonyms with just enough grammar
+
+The thesaurus pack (`LYXT`) is OEWN synset neighbors plus Wiktionary synonym links, ranked OEWN-first, then Wiktionary fill. Heads point at usage blocks: noun / verb / adjective / adverb, each a list of synonym ids.
+
+Runtime adds two soft skills on top of the dump:
+
+1. **Inflection bridging:** typed `remains`, look up `remain`
+2. **POS guess from the line:** determiner before the word? Prefer nouns. `to` / aux / pronoun before it? Prefer verbs.
+
+Candidates then get the same meter-aware ranking as rhymes: POS match, syllable fit, Zipf. The helper is trying to hand you a word that still scans, not a thesaurus firework.
+
+I won't pretend the POS detector is a full parser. It's a cheap prior that is right often enough to put the useful synonyms first. When it's wrong, the other usages are still one tap away.
+
+## The wire budget
+
+Put the packs side by side. Naive JSON for words-plus-perfect-rhymes alone is already ~12 MiB in the measurements I kept. The custom binaries for *everything* (lexicon, stress, variants, both rhyme modes, thesaurus) land around **8.6 MiB** raw and **~3.7 MiB** with brotli.
+
+<WireBudgetDemo />
+
+<Takeaway>
+~3.7 MiB brotli is the whole linguistic brain. The editor idle-schedules loads and decodes in a worker so the canvas doesn't hitch.
+</Takeaway>
+
+Load order matters as much as bytes. Lexicon first (counts in the gutter). Stress and variants next (rulers get honest). Thesaurus and rhymes prefetch on idle, delayed further on Save-Data / slow networks. After the assets are cached you're effectively offline for writing.
+
+## The zen constraint
+
+I kept catching myself adding "helpful" chrome. Candidate drawers that never shut up. Colored stress marks on every syllable. A panel that scores your stanza like a gym coach.
+
+Every one of those features fights the original complaint. I didn't abandon the song because I lacked dashboards. I abandoned it because checking the line *felt like work*.
+
+So lyriic stays a big text surface. Counts whisper. Tools appear when you ask a word a question. Meter rulers are optional. Overrides exist for the words dictionaries argue about. The poem is still yours.
+
+If you want the product without the pack-format tour, it's at [lyriic.com](https://lyriic.com/). If you want to see whether `anyone`/`fun` feels like cheating in end-rhyme mode, open a draft and tap the word.
+
+<TryIt>
+Open [lyriic.com](https://lyriic.com/), paste a half-finished chorus, turn on a meter ruler you actually care about (common meter and iambic pentameter are right there), and replace one stubborn line-ending using the rhyme popover. Notice whether the count update is quiet enough that you keep the melody in your head.
+</TryIt>
+
+## Loose ends
+
+Rhyme keys are only as good as the fused pronunciation sources. Proper nouns and slang still fall through to heuristics. End-rhyme buckets can be enormous (`-ɚ` is a planet); ranking and windowing hide that, but a multi-key "slant" index might beat one fat coda bucket someday. Collaborative drafts would break the "never leaves the device" story, and I'm fine with that trade for v1.
+
+I still haven't written the song. I did write a syllable counter that doesn't harsh my vibe. For a weekend where the muse got replaced by a binary packer, I'll take it.

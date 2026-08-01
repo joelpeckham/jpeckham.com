@@ -179,6 +179,35 @@ function Newspaper({ color, accent }: { color: string; accent: string }) {
   );
 }
 
+/**
+ * Prosody / scansion: syllable bars with stress marks above (iambic ˘ / ˘ /).
+ * Flat primitives only — satori rejects <g> and React fragments.
+ */
+function Lyrics({ color, accent }: { color: string; accent: string }) {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+      {/* ˘ unstressed — fat filled U */}
+      <path
+        d="M4 6 L4 30 L22 30 L22 6 L15 6 L15 22 L11 22 L11 6 Z"
+        fill={accent}
+      />
+      <path
+        d="M54 6 L54 30 L72 30 L72 6 L65 6 L65 22 L61 22 L61 6 Z"
+        fill={accent}
+      />
+      {/* / stressed — thick acute parallelograms */}
+      <path d="M30 30 L42 6 L50 6 L38 30 Z" fill={accent} />
+      <path d="M80 30 L92 6 L100 6 L88 30 Z" fill={accent} />
+
+      {/* Syllable glyphs — solid bars */}
+      <rect x="5" y="44" width="16" height="48" fill={color} />
+      <rect x="30" y="44" width="16" height="48" fill={color} />
+      <rect x="55" y="44" width="16" height="48" fill={color} />
+      <rect x="80" y="44" width="16" height="48" fill={color} />
+    </svg>
+  );
+}
+
 function Icon({
   name,
   color,
@@ -203,6 +232,8 @@ function Icon({
       return <Newspaper color={color} accent={accent} />;
     case "drive":
       return <Drive color={color} accent={accent} />;
+    case "lyrics":
+      return <Lyrics color={color} accent={accent} />;
   }
 }
 
