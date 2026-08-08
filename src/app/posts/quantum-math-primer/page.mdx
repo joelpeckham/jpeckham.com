@@ -1,0 +1,178 @@
+import {
+  ComplexPlaneDemo,
+  BasisPickerDemo,
+  InnerProductDemo,
+} from "@/components/interactive/quantum-math-primer";
+import { MathAside, Takeaway, TryIt } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Welcome to Learn Quantum
+
+This is post zero of [Learn Quantum](/projects/quantum/). I am walking through David Mermin's *Quantum Computer Science* for programmers who bounced off Dirac notation.<Cite n={1} /> No physics. No "imagine a particle." Lists of numbers, a few symbols, and why those symbols keep showing up.
+
+Today is the math appendix in miniature: vectors as lists, a basis, complex amplitudes, bras and kets, and the inner product that later becomes a probability. If a symbol looks scary, open the Math side quest under it.
+
+By the end you should read $|\psi\rangle$ without flinching, compute a tiny inner product by hand, and know that probabilities come from squared lengths of complex numbers.
+
+## Vectors are just lists
+
+Forget arrows for a minute. In this series a vector is an ordered list of numbers. Two numbers: a 2D vector. Eight numbers: an 8D vector. Quantum computer science lives in spaces whose size is a power of two, but that is a later convenience, not a law of math.<Cite n={1} />
+
+Write a list as a column so the order stays obvious:
+
+$$
+|\psi\rangle \longrightarrow
+\begin{pmatrix}
+\alpha_0 \\
+\alpha_1
+\end{pmatrix}.
+$$
+
+Those $\alpha$ entries are the **amplitudes**: the numbers that sit in each slot of the list. For now treat them as ordinary numbers. In a few sections they become complex. Same idea, richer arithmetic.
+
+The tall bars and angle bracket make a **ket**. The decoration $|\,\rangle$ means "this is a vector." The label inside names which one. So $|0\rangle$ is "the vector we call zero," not the number zero. $|\psi\rangle$ is a generic state.
+
+<MathAside title="What |ψ⟩ means">
+<p>Dirac wrote vectors as kets so the label could sit in a normal font. $|7798\rangle$ is easier to read than $\phi_{7798}$. Vectorial character lives in the $|\,\rangle$ wrapper, not in Greek letters.</p>
+</MathAside>
+
+Two special lists matter a lot:
+
+$$
+|0\rangle =
+\begin{pmatrix}
+1 \\
+0
+\end{pmatrix},
+\quad
+|1\rangle =
+\begin{pmatrix}
+0 \\
+1
+\end{pmatrix}.
+$$
+
+They are the **computational basis** for one bit-sized system: the two unit axes I expand every 2-entry list against. "Basis" here means a set of reference vectors you write everything else as a mix of. "Computational" is the jargon for this particular pair, the one tied to classical 0 and 1 later.
+
+Each has length 1 (square the entries and add: $1+0=1$). Their overlap is 0 (multiply matching slots and add: $1\cdot0 + 0\cdot1 = 0$). That pair of facts is **orthonormal**: unit length, and different ones do not overlap. Formal notation lands in a later section; the demo only needs that picture.
+
+Click a basis vector. Watch the column light up. The punchline is the zero overlap between $|0\rangle$ and $|1\rangle$.
+
+<BasisPickerDemo />
+
+<Takeaway>
+A ket is a labeled column of amplitudes. $|0\rangle$ and $|1\rangle$ are the unit axes we expand everything in.
+</Takeaway>
+
+## Complex numbers without the trauma
+
+An amplitude is usually complex: $\alpha = u + iv$. Here $u$ is the real part, $v$ is the imaginary part, and $i$ is the bookkeeping unit with $i^2 = -1$. You do not need a story about "imaginary time." You need two real dials and one rule for length.
+
+The **squared magnitude** of $\alpha$ is
+
+$$
+|\alpha|^2 = u^2 + v^2.
+$$
+
+That number is always real and never negative. Later it becomes a probability contribution. Complex conjugation flips the sign of $v$: $(u+iv)^* = u - iv$. Bras will need that.
+
+Drag the real and imaginary sliders. Watch the point on the plane and the bar for $|\alpha|^2$. If that bar goes past 1, a lone amplitude is already too big to sit in a legal state by itself.
+
+<ComplexPlaneDemo />
+
+<Takeaway>
+Complex amplitude = two real numbers. Probability weight = $u^2 + v^2$. Conjugation flips the imaginary sign.
+</Takeaway>
+
+## Bras, kets, and the dual row
+
+If a ket is a column, the matching **bra** is a row of conjugated amplitudes:
+
+$$
+\langle\psi| \longrightarrow
+\begin{pmatrix}
+\alpha_0^* & \alpha_1^* & \cdots
+\end{pmatrix}.
+$$
+
+Dirac's joke: bra + ket = bracket. Put them together and you get a number, the **inner product** $\langle\phi|\psi\rangle$. In plain English: conjugate the left vector's amplitudes, multiply matching slots, and sum. That number is the overlap between the two lists.
+
+For two vectors with amplitudes $\beta_x$ and $\alpha_x$,
+
+$$
+\langle\phi|\psi\rangle = \sum_x \beta_x^* \alpha_x.
+$$
+
+When the amplitudes are real, the stars do nothing and you just multiply and add. When they are complex, conjugate the bra side first.<Cite n={1} />
+
+<MathAside title="Inner product checklist">
+<p>1. Write both vectors in the same basis.</p>
+<p>2. Conjugate the left vector's amplitudes.</p>
+<p>3. Multiply matching slots and sum.</p>
+<p>4. Same vector with itself: $\langle\psi|\psi\rangle = \sum_x |\alpha_x|^2$, which is real and positive if the vector is nonzero.</p>
+</MathAside>
+
+## Normalization: the "unit length" rule
+
+To **normalize** a vector is to rescale it so its squared length is 1. A state we actually use must be a **unit vector**:
+
+$$
+\langle\psi|\psi\rangle = \sum_x |\alpha_x|^2 = 1.
+$$
+
+That is not etiquette. It is the requirement that probabilities will later add to one. If your amplitudes' squares sum to $0.7$, you have not written a legal state yet. Rescale, or admit you are mid-calculation.
+
+## Inner product as "overlap"
+
+How much does $|\psi\rangle$ look like $|\phi\rangle$? The inner product answers. If both are unit vectors, $|\langle\phi|\psi\rangle|^2$ is the number you care about for "probability of finding $\phi$ when the state is $\psi$." The measurement post will put a name on that rule. The algebra starts here.
+
+I keep the demo on real amplitudes so the UI stays honest. The complex rule is the same with conjugations on the bra.
+
+<InnerProductDemo />
+
+<Takeaway>
+$\langle\phi|\psi\rangle$ is overlap. For unit vectors, $|\langle\phi|\psi\rangle|^2$ is the probability weight you will meet again under measurement.
+</Takeaway>
+
+## Orthonormal bases, said plainly
+
+A set $\{|x\rangle\}$ is **orthonormal** when every member has length 1 and different members have inner product 0:
+
+$$
+\langle x | y \rangle =
+\begin{cases}
+1 & x = y, \\
+0 & x \neq y.
+\end{cases}
+$$
+
+Then any vector expands uniquely as
+
+$$
+|\psi\rangle = \sum_x \alpha_x |x\rangle,
+\quad
+\alpha_x = \langle x | \psi \rangle.
+$$
+
+That last line is why Dirac notation wins for this subject. The amplitude in front of $|x\rangle$ is exactly the inner product with that basis ket.<Cite n={1} />
+
+<TryIt>
+Pick $|\psi\rangle = \tfrac{3}{5}|0\rangle + \tfrac{4}{5}|1\rangle$. Check $\langle\psi|\psi\rangle = 1$. Compute $\langle 0|\psi\rangle$ and $\langle 1|\psi\rangle$. They should be $3/5$ and $4/5$.
+</TryIt>
+
+## What we skipped (on purpose)
+
+Adjoints, unitaries, outer products, and tensor products live in Mermin's Appendix A.<Cite n={1} /> You will meet them when a later post needs them. Today you only need: list of amplitudes, complex length, ket/bra, inner product, normalize.
+
+Next: [Cbits](/posts/quantum-cbits/), classical bits in this notation, before any superposition.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), Appendix A",
+      href: "https://www.cambridge.org/9780521876582",
+    },
+  ]}
+/>

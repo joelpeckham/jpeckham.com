@@ -1,0 +1,124 @@
+import {
+  BvGuesserDemo,
+  SimonPeriodDemo,
+  ToffoliTruthDemo,
+} from "@/components/interactive/quantum-oracles";
+import { MathAside, Takeaway } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Harder oracles, same $U_f$
+
+This is post five of [Learn Quantum](/projects/quantum/). Deutsch gave us one relational bit from one query. Today: three named tools that reuse the same black-box unitary $U_f$ — the **oracle** that XOR-writes $f(x)$ into an output register.
+
+- **Bernstein–Vazirani (BV):** guess a secret bit string from the parity function $f(x)=a\cdot x$.
+- **Simon:** find a secret period under XOR (mod-2 add), not ordinary integer add.
+- **Toffoli:** the reversible AND gate — classically a 3-bit primitive, quantumly buildable from smaller unitaries.
+
+Classical reversible computing cannot build a Toffoli from 1- and 2-bit gates alone.<Cite n={1} />
+
+## Bernstein–Vazirani: guess $a$ in one query
+
+Fix a secret $n$-bit string $a$. The oracle computes the **mod-2 dot product** — add up the bit-wise products $a_j x_j$, then keep only even/odd:
+
+$$f(x) = a \cdot x = a_0 x_0 \oplus a_1 x_1 \oplus \cdots \oplus a_{n-1} x_{n-1}.$$
+
+Classically you need $n$ queries (feed the standard basis vectors $x=2^m$, one bit of $a$ per call). Quantumly, one query to $U_f$ is enough for every bit of $a$.<Cite n={1} /><Cite n={2} />
+
+The setup reuses the Deutsch phase trick. Park the output register in $H|1\rangle = (|0\rangle-|1\rangle)/\sqrt{2}$. Then
+
+$$U_f |x\rangle_n \frac{|0\rangle-|1\rangle}{\sqrt{2}} = (-1)^{f(x)} |x\rangle_n \frac{|0\rangle-|1\rangle}{\sqrt{2}}.$$
+
+Bit flips on the output become phases on the input. Start the input in $|0\rangle_n$, hit every wire with $H$, apply $U_f$, Hadamard the input again, and measure. The input register is left in $|a\rangle_n$.<Cite n={1} />
+
+Circuit picture: $U_f$ for this $f$ is a pile of cNOTs from input bits where $a_j=1$ onto the output. Sandwiching those cNOTs in Hadamards swaps control and target. The output, sitting in $|1\rangle$, fires every relevant NOT onto the input and stamps $a$ in place.
+
+<MathAside title="Mod-2 dot product">
+<p>
+Treat bit strings as lists of 0s and 1s. Multiply matching positions, then XOR the results together (ordinary + would carry; XOR does not). Example: $a=1101$, $x=1011$ gives $1\cdot1 + 1\cdot0 + 0\cdot1 + 1\cdot1 = 2$, which is $0$ mod 2 — so $a\cdot x = 0$.
+</p>
+</MathAside>
+
+Hide a secret. Run the quantum protocol once. Compare to $n$ classical probes.
+
+<BvGuesserDemo />
+
+<Takeaway>
+Bernstein–Vazirani turns $n$ classical queries into one quantum query by encoding $a$ as phases, then reading $a$ off the input register.
+</Takeaway>
+
+## Simon's problem: find the hidden period
+
+Simon's oracle is **two-to-one**: every output value has exactly two inputs. There is a secret nonzero $a$ such that
+
+$$f(x) = f(y) \quad\Leftrightarrow\quad y = x \oplus a.$$
+
+Equivalently, $f$ is periodic under XOR: $f(x\oplus a)=f(x)$ for every $x$. That is a **period mod 2** — the step is bitwise XOR, not integer addition. (Shor's later period lives under ordinary $+$.)<Cite n={1} /><Cite n={3} />
+
+Classically, finding $a$ takes exponentially many queries in $n$ (you wait for a collision $f(x_i)=f(x_j)$). Quantumly the query count grows only linearly, with high probability.<Cite n={1} />
+
+Sketch:
+
+1. Superpose the input, apply $U_f$, measure the **output**. Generalized Born leaves the input in $(|x_0\rangle + |x_0\oplus a\rangle)/\sqrt{2}$ for a random $x_0$.
+2. You cannot clone that state to learn both terms. Instead apply $H^{\otimes n}$ and measure. You get a random $y$ obeying $y \cdot a = 0$.
+3. That is one **linear constraint** on the unknown bits of $a$: whichever positions of $y$ are 1, those bits of $a$ XOR to 0. Repeat until you have $n-1$ independent constraints. Solve the linear system; the only nonzero solution is $a$.
+
+This is the toy model for Shor's later period-finding.<Cite n={1} />
+
+Sample equations until the period falls out. Keep $n$ small; the linear algebra is the point.
+
+<SimonPeriodDemo />
+
+<Takeaway>
+Simon trades each oracle call for a random parity constraint on $a$. Enough independent constraints → classical linear algebra finishes the job.
+</Takeaway>
+
+## Toffoli: the 3-bit workhorse
+
+Classical reversible computing needs at least one irreducible 3-bit gate. The **Toffoli** gate (controlled-controlled-NOT, or ccNOT) flips the target iff both controls are $1$:
+
+$$T |x\rangle|y\rangle|z\rangle = |x\rangle|y\rangle|z \oplus xy\rangle.$$
+
+In particular $T|x\rangle|y\rangle|0\rangle = |x\rangle|y\rangle|xy\rangle$ — reversible AND.<Cite n={1} /><Cite n={4} /> With AND and NOT you can build all Boolean logic, hence arithmetic, on a reversible machine.
+
+You cannot assemble classical Toffoli from 1- and 2-Cbit gates alone. The quantum linear extension *can* be built from 1-Qbit unitaries plus cNOTs (Mermin walks through controlled-$U$ gadgets and a square-root-of-$X$). That matters for hardware: stay in the 1- and 2-Qbit gate set and still get universal classical reversible logic inside the quantum circuit.<Cite n={1} />
+
+Flip the controls. Confirm the target only moves when both are high.
+
+<ToffoliTruthDemo />
+
+<Takeaway>
+Toffoli is reversible AND. Classically it is a primitive 3-bit gate. Quantumly you can synthesize it from smaller unitary pieces.
+</Takeaway>
+
+## Where this leaves the series
+
+At this point the oracle pattern should feel familiar: $U_f$ on input/output registers, phase kickback from a $|-\rangle$ output, Hadamards that turn structure in $f$ into spikes you can measure. RSA and Shor reuse the same instincts with a much richer period.<Cite n={1} />
+
+Next: why periods threaten RSA in [RSA, Periods & Why Factoring Matters](/posts/quantum-rsa/).
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), §§2.4–2.6",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A69885F1B0DFCA1F66ADEA42D38EFCE",
+    },
+    {
+      n: 2,
+      title:
+        "E. Bernstein and U. Vazirani, Quantum complexity theory, SIAM J. Comput. 26, 1411 (1997); early version arXiv:quant-ph/9701001",
+      href: "https://arxiv.org/abs/quant-ph/9701001",
+    },
+    {
+      n: 3,
+      title: "D. R. Simon, On the power of quantum computation, SIAM J. Comput. 26, 1474 (1997); see also arXiv:quant-ph/9503017",
+      href: "https://arxiv.org/abs/quant-ph/9503017",
+    },
+    {
+      n: 4,
+      title: "T. Toffoli, Reversible computing, in Automata, Languages and Programming (Springer, 1980)",
+      href: "https://link.springer.com/chapter/10.1007/3-540-09745-0_14",
+    },
+  ]}
+/>

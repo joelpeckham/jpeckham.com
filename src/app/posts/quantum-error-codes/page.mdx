@@ -1,0 +1,108 @@
+import {
+  StabilizerChecklistDemo,
+  SteaneEncodeDemo,
+  CodeFamilyDemo,
+} from "@/components/interactive/quantum-error-codes";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Bit flips were the tutorial mode
+
+The [3-Qbit code](/posts/quantum-error-bits/) only fights X errors. A real single-Qbit glitch can look like X, Z, or Y — bit flip, phase flip, or both — entangled with an ugly environment state.<Cite n={1} /> To correct that, you need enough room for the clean codeword *plus* $3n$ corrupted copies, each living in its own 2D subspace:
+
+$$2^{n-1} \ge 3n + 1.$$
+
+The smallest $n$ that works is 5, and equality holds — the 5-Qbit code is “perfect” in the same packing sense the 3-Qbit code was perfect for bit flips alone.<Cite n={1} />
+
+This is post eleven of [Learn Quantum](/projects/quantum/). We’ll meet the 5-Qbit stabilizers, then Steane’s 7-Qbit code, which spends two extra Qbits to buy gates you can actually implement fault-tolerantly.
+
+## Quick glossary (same words, plain English)
+
+- **Pauli X / Z / Y.** $X$ flips the bit ($|0\rangle\leftrightarrow|1\rangle$). $Z$ flips the phase of $|1\rangle$. $Y$ does both (Mermin writes the “both” case as $Y$; up to a global phase it is the product of $X$ and $Z$).
+- **Stabilizer.** A Pauli product that squares to $1$, leaves every good codeword alone (eigenvalue $+1$), and is something you can measure *without* learning the logical amplitudes. The 3-Qbit bit-flip code used $Z_{2}Z_{1}$ and $Z_{1}Z_{0}$; here the products are longer.
+- **Syndrome.** The list of $\pm 1$ eigenvalues from those stabilizer measurements. It is an address for the error, not a readout of $\alpha$ and $\beta$.
+- **Code distance (intuition).** Distance $d$ is the smallest number of single-Qbit Paulis that can turn one logical codeword into another. These codes have $d = 3$: they correct $t = \lfloor(d-1)/2\rfloor = 1$ arbitrary single-Qbit error, and two-Qbit errors can look like logical operators.
+
+## Stabilizers name the error
+
+Same playbook as the bit-flip code: find commuting Pauli products that square to $1$, whose joint $\pm 1$ eigenvalues label every single-Qbit corruption (and the clean state). For five Qbits, four operators do it:<Cite n={1} />
+
+| | Stabilizer |
+| --- | --- |
+| $M_{0}$ | $Z_{1}X_{2}X_{3}Z_{4}$ |
+| $M_{1}$ | $Z_{2}X_{3}X_{4}Z_{0}$ |
+| $M_{2}$ | $Z_{3}X_{4}X_{0}Z_{1}$ |
+| $M_{3}$ | $Z_{4}X_{0}X_{1}Z_{2}$ |
+
+Codewords are the simultaneous $+1$ eigenspace of all four — Mermin builds them by applying products of $(1 + M_{i})$ to $|00000\rangle$ and $|11111\rangle$. You don’t need the 32-term expansions to use the code; the syndrome table is the working surface.<Cite n={1} />
+
+Steane’s seven-Qbit code uses six stabilizers — three weight-4 $X$ products and three matching $Z$ products:<Cite n={1} />
+
+| | $X$-type ($M$) | $Z$-type ($N$) |
+| --- | --- | --- |
+| 0 | $M_{0}=X_{0}X_{4}X_{5}X_{6}$ | $N_{0}=Z_{0}Z_{4}Z_{5}Z_{6}$ |
+| 1 | $M_{1}=X_{1}X_{3}X_{5}X_{6}$ | $N_{1}=Z_{1}Z_{3}Z_{5}Z_{6}$ |
+| 2 | $M_{2}=X_{2}X_{3}X_{4}X_{6}$ | $N_{2}=Z_{2}Z_{3}Z_{4}Z_{6}$ |
+
+On Steane: all three $M_{i}$ stay $+1$ for a pure $X$ error (the $N_{i}$ pattern names which qubit); all three $N_{i}$ stay $+1$ for a pure $Z$ error (the $M_{i}$ pattern names it); a $Y$ error lights both families.<Cite n={1} />
+
+Pick an injected Pauli, read the $\pm 1$ checklist, and the pattern should point at exactly one single-Qbit error (or none).
+
+<StabilizerChecklistDemo />
+
+<Takeaway>
+Each single-Qbit $X$, $Y$, or $Z$ anticommutes with a unique subset of stabilizers. The light pattern is the address of the error.
+</Takeaway>
+
+<MathAside title="Commute vs anticommute, quickly">
+<p>
+Two Pauli strings on the same qubits commute if they anticommute on an even number of positions, and anticommute if that count is odd. On one qubit, X and Z anticommute; X and X commute. When a stabilizer anticommutes with the error, the corrupted state picks up a −1 eigenvalue for that stabilizer. That’s the whole syndrome mechanism.
+</p>
+</MathAside>
+
+## Why seven often beats five
+
+The 5-Qbit code is elegant and Qbit-thrifty. Extending ordinary gates to act on its codewords is painful.<Cite n={1} /> Steane’s code uses seven Qbits, but many logical gates are *transversal*: do the same 1-Qbit gate on every wire, or CNOT between matching pairs of two blocks.<Cite n={1} />
+
+Logical $\overline{X}$ is $X^{\otimes 7}$. Logical $\overline{Z}$ is $Z^{\otimes 7}$. Logical $\overline{H}$ is $H^{\otimes 7}$ — that last one fails for the 5-Qbit code. Logical CNOT is seven bitwise CNOTs. If at most one elementary gate misfires, at most one Qbit per block is wrong, and ordinary error correction cleans it up. That’s the slogan *fault tolerance*.<Cite n={1} />
+
+## Encoding without measuring (sketch)
+
+You can prepare Steane codewords by measuring stabilizers and fixing signs, but there’s also a unitary encoder in the spirit of the two-CNOT bit-flip circuit. High level: park the data on $q_{3}$, apply a controlled $X_{4}X_{5}$, hit $q_{0},q_{1},q_{2}$ with $H$, then three controlled multi-NOTs that enact $(1 + M_{2})$, $(1 + M_{1})$, and $(1 + M_{0})$.<Cite n={1} /> The demo follows that stage list from Mermin’s Figure 5.10 — schematic wires, not a pixel-perfect redraw.
+
+<SteaneEncodeDemo />
+
+<Takeaway>
+Encoding is a unitary that spreads $\alpha|0\rangle + \beta|1\rangle$ into $\alpha|\overline{0}\rangle + \beta|\overline{1}\rangle$. Measurement-based prep is the other route; both aim at the same $+1$ stabilizer space.
+</Takeaway>
+
+## Family portrait
+
+Different codes buy different insurance. The 3-Qbit repetition code is a bit-flip specialist ($d = 3$ for $X$ only). Five Qbits cover general single-Qbit errors at minimum size. Seven adds friendlier gates. Shor’s original 9-Qbit code concatenated bit-flip and phase-flip ideas and is mostly historical now.<Cite n={1} />
+
+<CodeFamilyDemo />
+
+<Takeaway>
+More Qbits aren’t automatically better — trade distance, gate set, and fault tolerance. Steane is the practical favorite in this chapter.
+</Takeaway>
+
+<TryIt>
+In the checklist demo, choose the 7-Qbit code and inject $X_{0}$. Confirm all $M$ stabilizers stay $+1$ while the $N$ pattern identifies qubit 0. Then try $Y_{3}$ and watch both $X$-type and $Z$-type lights complain.
+</TryIt>
+
+Next in the series: [Bell inequalities and crypto](/posts/quantum-bell-crypto/) — leaving the engine room of codes for the weird correlations those protected Qbits can still show.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction, Cambridge University Press, 2007, ch. 5 §§5.5–5.9",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A694C7535A758457D15B492798A37F3",
+    },
+  ]}
+/>

@@ -1,0 +1,120 @@
+import {
+  TeleportStepper,
+  CorrectionLookup,
+  GhzExplorer,
+} from "@/components/interactive/quantum-teleportation";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Move the state, trash the original
+
+This is post thirteen of [Learn Quantum](/projects/quantum/) — the last of the protocol pair that started with [Bell states and dense coding](/posts/quantum-bell-crypto/). Today Alice has a Qbit in an unknown state |\psi⟩ = α|0⟩ + β|1⟩. She wants Bob’s Qbit to carry that same state. She cannot clone it. She cannot read α and β. She *can* spend a shared Bell pair and phone Bob two classical bits.<Cite n={1} />
+
+That is teleportation. The word is dramatic. The accounting is strict: entanglement is consumed, Alice’s copy of |\psi⟩ is destroyed, and nothing arrives faster than the phone call.
+
+Then we end the series’ protocol arc with the GHZ puzzle — three Qbits whose parity rules refuse to be explained by predetermined local answers.
+
+## The setup
+
+Alice holds |\psi⟩. She and Bob also share
+
+$$|\Phi\rangle = \frac{1}{\sqrt{2}}\big(|00\rangle + |11\rangle\big),$$
+
+Alice keeping one half, Bob the other. The joint state is |\psi⟩ₐ|Φ⟩ₐᵦ. Nobody needs to know α and β. Carol might have prepared |\psi⟩ and refused to say which unitary she used.<Cite n={1} />
+
+No-cloning still applies. Teleportation does not make a second copy. It *transfers* the state assignment. After the protocol, Bob’s Qbit is described by |\psi⟩ and Alice’s originals are not.
+
+## Protocol: Bell measure, then Pauli fix
+
+Plain English for the three moving parts:
+
+- **Bell measurement.** Alice runs cNOT (|\psi⟩ control, her Bell half as target), then Hadamard on the |\psi⟩ wire, then measures both of her Qbits. That combo is equivalent to asking “which of the four Bell states do my two Qbits look like?” Each answer 00, 01, 10, 11 shows up with probability 1/4. She never learns α or β — only which of four random labels came out.
+- **Classical call.** She phones Bob those two bits. Until they arrive, Bob cannot treat his Qbit as |\psi⟩.
+- **Pauli correction.** Depending on the label, Bob’s Qbit is already |\psi⟩ or a Pauli-twisted copy. He applies the matching Pauli and the twist unwraps.
+
+Alice’s bit string is ordered |ψ⟩ then A_ent. Matching Mermin:<Cite n={1} />
+
+- **00** → Bob already has |ψ⟩ → apply I
+- **01** → Bob has X|ψ⟩ → apply X
+- **10** → Bob has Z|ψ⟩ → apply Z
+- **11** → Bob has α|1⟩ − β|0⟩ → apply ZX
+
+Walk it. Pick a preset state. Step through the circuit. Force Alice’s outcome to 10 if you want a prediction check, or roll randomly.
+
+<TeleportStepper />
+
+<Takeaway>
+Teleportation = shared Bell pair + Alice’s Bell measurement + two classical bits + Bob’s Pauli. The unknown amplitudes never travel as classical data.
+</Takeaway>
+
+If the correction table feels like a lookup you will forget, poke the four cases on their own. Same α,β; different Alice bits; different Pauli.
+
+<CorrectionLookup />
+
+<MathAside title="Where the four Bob states come from">
+After Alice’s cNOT and H, the three-Qbit state expands into four equal-weight terms. Each term factors as |xy⟩ on Alice’s two wires times a Pauli-twisted copy of |\psi⟩ on Bob’s wire. Measuring xy collapses Bob onto that twisted copy. The phone call names which Pauli undoes the twist. You never learn α or β — only which twist occurred.
+</MathAside>
+
+## What teleportation is not
+
+It is not faster-than-light messaging. Bob needs the classical bits before he can trust his Qbit as |\psi⟩. It is not cloning. Alice’s state is gone. It is not a way for Bob to *learn* α and β — he is stuck with the same unknown state Alice had. What it *can* do is hand a mid-computation Qbit to a remote machine so the computation continues elsewhere.<Cite n={1} />
+
+You can even teleport a Qbit’s *role in an entangled state*. The protocol is the same; linearity does the rest. I am not building a second demo for that. Just know the resource is more flexible than “send |+⟩ across town.”
+
+<TryIt>
+In the stepper, set |\psi⟩ = |+⟩, force Alice’s outcome to 10, and predict Bob’s pre-correction amplitudes before you look. Outcome 10 leaves Z|\psi⟩ = α|0⟩ − β|1⟩. For |+⟩ that is |−⟩ — equal bars, minus on |1⟩.
+</TryIt>
+
+## The GHZ puzzle
+
+Greenberger, Horne, and Zeilinger gave a sharp three-Qbit version of Bell’s theorem. Mermin’s presentation uses the permutation-symmetric state
+
+$$|\Psi\rangle = \frac{1}{2}\big(|000\rangle - |110\rangle - |011\rangle - |101\rangle\big).$$
+
+Measure all three in the computational basis and the outcomes always have even parity: x₂ ⊕ x₁ ⊕ x₀ = 0. Apply Hadamards to any two of the Qbits before measuring and the parity flips to odd.<Cite n={1} />
+
+In plain English: the three Qbits never settle into independent private answers. For the settings you actually run, their parity is locked. Assume instead that each Qbit carried predetermined Z-answers and H-answers that would have appeared in every setting you skipped, and the four parity rules cannot all be true at once.
+
+Four families of settings matter:
+
+- All Z → even parity
+- H on qubits 2 & 1 (Z on 0) → odd
+- H on 2 & 0 (Z on 1) → odd
+- H on 1 & 0 (Z on 2) → odd
+
+Pick settings. Sample. Then open the paradox checklist.
+
+<GhzExplorer />
+
+<Takeaway>
+Quantum outcomes obey the parity rules for the setting you actually ran. Assuming the same predetermined bits would have appeared in the settings you *didn’t* run leads to 1 = 0.
+</Takeaway>
+
+## Why “elements of reality” crack
+
+Einstein, Podolsky, and Rosen argued that if you can predict a measurement outcome without disturbing the system, that outcome corresponds to an element of reality the quantum state left out.<Cite n={1} /> Applied naively to GHZ: measure two Qbits first, and the third’s outcome looks predetermined. Because the Qbits no longer interact, that predisposition seems like it must have been sitting there all along — even if you had applied Hadamards to the first two instead.
+
+Push that story across all four setting families and you assign each Qbit a predetermined Z-answer and a predetermined H-answer. The three odd-parity equations XOR to “even parity must equal 1.” The all-Z equation says even parity equals 0. Contradiction.
+
+The way out is not “quantum mechanics is wrong.” It is that you do not get to demand a single underlying assignment that covers every counterfactual experiment on the same trio. The theory predicts the circuit you run. It does not owe you a hidden scorecard for the circuits you skipped.<Cite n={1} />
+
+Strange place to land a series about computers. I think it is the right one. The algorithms work. The protocols work. The headache starts when you demand a classical movie underneath for the experiments you did not run.
+
+## Series curtain
+
+If you started at the [math primer](/posts/quantum-math-primer/) and walked all the way here, you have the Mermin arc: Dirac notation, Cbits, Qbits, measurement, oracles, Shor’s pieces, Grover, error correction, and the few-Qbit protocols that make entanglement feel like engineering. I am still chewing on the GHZ XOR.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. D. Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), ch. 6 §§6.5–6.6",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A9145D0436E606F04A24085184DB0C7",
+    },
+  ]}
+/>

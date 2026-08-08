@@ -1,0 +1,103 @@
+import {
+  GcdFactorDemo,
+  SuccessFailDemo,
+  EndToEndDemo,
+} from "@/components/interactive/quantum-factoring";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## The last classical glue
+
+You have (or can get) the order $r$ of a random $a$ in $G_N$ with $N=pq$. The [QFT post](/posts/quantum-qft-period/) was how to learn $r$. The [RSA post](/posts/quantum-rsa/) showed you can decode with $r$ alone. This article is the other headline: turn $r$ into the prime factors of $N$.<Cite n={1} />
+
+No new quantum gates. Just Euclid, a coin-flip’s worth of luck on $a$, and a short case analysis.
+
+## What “gcd” means here
+
+The **greatest common divisor** $\gcd(u,v)$ is the largest positive integer that divides both $u$ and $v$. Euclid’s algorithm finds it without factoring either number: replace the pair $(f,c)$ by $(c,\ f - \lfloor f/c\rfloor\, c)$ — the remainder — and repeat until the remainder is $0$. The last nonzero remainder is the gcd.<Cite n={1} />
+
+That is the only classical tool you need after the quantum period finder returns $r$.
+
+## The recipe
+
+1. Pick random $a$ with $\gcd(a,N)=1$. (If the gcd is nontrivial, you already factored $N$ — absurdly lucky.)
+2. Find the order $r$: smallest positive integer with $a^r\equiv 1\pmod N$. Quantum period finding does this step.
+3. Hope $r$ is **even**.
+4. Compute $x = a^{r/2}\bmod N$.
+5. Hope $x\not\equiv -1\pmod N$.
+6. Then
+   $$x^2-1=(x-1)(x+1)\equiv 0\pmod N,$$
+   but neither factor is $0$ mod $N$. So $N$ splits across them: $\gcd(x-1,N)$ and $\gcd(x+1,N)$ are $p$ and $q$ (in some order).<Cite n={1} />
+
+Why neither factor is $0$ mod $N$: $x\not\equiv 1$ because $r$ is the *least* power giving $1$, and we assumed $x\not\equiv -1$.
+
+Walk the GCD extraction on a preset.
+
+<GcdFactorDemo />
+
+<Takeaway>
+Even order plus $a^{r/2}\not\equiv-1\pmod N$ turns period finding into two Euclid calls.
+</Takeaway>
+
+## When luck fails
+
+Two abort cases — throw $a$ away and sample again:
+
+- **$r$ odd.** There is no integer $r/2$, so you cannot form $x=a^{r/2}$.
+- **$a^{r/2}\equiv -1\pmod N$.** Then $x+1\equiv 0\pmod N$, so $\gcd(x+1,N)=N$ — the whole modulus, a trivial “factor.” The other gcd is usually $1$. No split.
+
+Mermin’s Appendix M shows that for $N=pq$, a random $a\in G_N$ succeeds with probability at least $1/2$. You do not need hundreds of trials.<Cite n={1} /> I will not reproduce the primitive-root counting argument here; the demos make the failure modes concrete.
+
+<SuccessFailDemo />
+
+<MathAside title="Why $(x-1)(x+1)$ helps">
+
+You know $N$ divides $(x-1)(x+1)$, and $N=pq$ with primes $p,q$. If $N$ divides neither factor alone, the only possibility is that $p$ divides one factor and $q$ the other. Greatest common divisors peel those primes out without guessing.
+
+</MathAside>
+
+## End-to-end on a toy $N$
+
+Put the pipeline in order. The “find period” step is classical on these sizes — labeled as a stand-in for the quantum routine you already studied.
+
+<EndToEndDemo />
+
+<TryIt>
+For $N=15$ and $a=7$: powers are $7,4,13,1$, so $r=4$. Then $x=7^2=4\bmod 15$. $\gcd(3,15)=3$ and $\gcd(5,15)=5$. Factors.
+</TryIt>
+
+## How this sits next to the RSA attack
+
+Two uses of the same period:
+
+| Goal | What you do with $r$ |
+| --- | --- |
+| Read Alice’s message | Order of ciphertext $b$; invert public $c$ mod $r$; $a\equiv b^{d'}\pmod N$ |
+| Publish $p$ and $q$ | Order of random $a$; even/$\,{-1}$ checks; Euclid on $a^{r/2}\pm 1$ |
+
+Same quantum subroutine. Different classical wrapper.<Cite n={1} />
+
+## Series checkpoint
+
+Posts 6–8 were Shor’s arc: motivate RSA, build period finding with the QFT, finish with factors. Next up in [Learn Quantum](/projects/quantum/) is Grover’s search — a different kind of quantum speedup, with its own amplitude-amplification pictures.
+
+If your brain is full, stop here and re-drag the end-to-end demo tomorrow. The algebra is short. The work was believing the period is learnable.
+
+<Takeaway>
+Shor’s “factoring algorithm” is quantum period finding plus a classical reduction that succeeds ≥ half the time for RSA moduli.
+</Takeaway>
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction, Cambridge University Press, 2007 — Ch. 3 §3.10; Appendix M",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A814819046FC99CC86ECC7227632139",
+    },
+  ]}
+/>

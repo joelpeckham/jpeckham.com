@@ -28,6 +28,7 @@ import {
 } from "@/lib/json-ld";
 import { BackToListLink, ScrollToTopOnMount } from "@/components/scroll-to-top";
 import "highlight.js/styles/an-old-hope.css";
+import "katex/dist/katex.min.css";
 
 function itemForSlug(slug: ContentSlug): ContentItem {
   const item = allContent.find((c) => c.slug === slug);

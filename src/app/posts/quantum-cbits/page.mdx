@@ -1,0 +1,145 @@
+import {
+  ReversibleGatesDemo,
+  ProductStateDemo,
+  IntegerLabelDemo,
+} from "@/components/interactive/quantum-cbits";
+import { MathAside, Takeaway, TryIt } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Classical bits, Dirac costume
+
+This is post one of [Learn Quantum](/projects/quantum/). Last time I walked through vectors and bras/kets. Today I put those same symbols on ordinary classical bits — no superposition yet.<Cite n={1} />
+
+Mermin calls the physical two-state classical system a **Cbit**, so "bit" can stay the abstract 0/1. Every state you meet today is one of the classical possibilities. The payoff is notation and reversible gates that later lift to quantum for free.
+
+## A Cbit is a box with 0 or 1
+
+A **ket** is Dirac's labeled box for a vector: write the label between $|$ and $\rangle$. For one Cbit the two legal states are
+
+$$
+|0\rangle,\qquad |1\rangle.
+$$
+
+Think "labeled box," not "mystery vector." Classically those are the *only* states. Together they are the **computational basis** (Mermin also says classical basis) for one Cbit: the orthonormal pair we expand everything in. The 2D vector space is mostly empty furniture until Qbits arrive.<Cite n={1} />
+
+Several Cbits sit side by side as a **product** (tensor product, if you want the grown-up name):
+
+$$
+|1\rangle|0\rangle|1\rangle
+\quad\text{or compactly}\quad
+|101\rangle.
+$$
+
+Same object, two fonts. I use whichever is readable. The rightmost factor is Cbit 0 (the $2^0$ place); moving left raises the power of two.
+
+## Integer labels
+
+When zeros and ones are a binary integer, pack them:
+
+$$
+|5\rangle_3 = |101\rangle.
+$$
+
+The subscript is the width $w$: how many Cbits you meant. Without it, $|3\rangle$ might be $|11\rangle$, $|011\rangle$, or $|0011\rangle$. Ambiguous on purpose until you pin $w$.<Cite n={1} />
+
+Flip the width control. Watch the same integer put on different padded costumes.
+
+<IntegerLabelDemo />
+
+<Takeaway>
+$|n\rangle_w$ is integer $n$ written in $w$ bits. Always know $w$, or the ket is under-specified.
+</Takeaway>
+
+## Build a product state
+
+For Cbits, a multi-bit state is just one product of $|0\rangle$s and $|1\rangle$s — no weird correlations yet. Flip three bits. Read the product form, the compact form, and the integer form side by side.
+
+<ProductStateDemo />
+
+<Takeaway>
+Three views, one state: $|b_2\rangle|b_1\rangle|b_0\rangle$, $|b_2b_1b_0\rangle$, and $|n\rangle_3$.
+</Takeaway>
+
+<MathAside title="Why call them vectors at all?">
+<p>Classically you barely need the vector story. We still put $|0\rangle$ and $|1\rangle$ on orthogonal axes so the quantum upgrade is a small step, not a rewrite. Column pictures from the primer still apply: $|5\rangle_3$ is an 8-slot column with a single 1 in row 5.</p>
+</MathAside>
+
+## Only reversible ops will graduate
+
+Quantum computation (aside from measurement) runs on **reversible** operations: every output came from exactly one input, so you can undo the step. Erase-to-zero is irreversible — from $|0\rangle$ alone you cannot tell whether you started at $|0\rangle$ or $|1\rangle$.<Cite n={1} />
+
+So I only care about permutations of classical computational-basis states. Those permutations are exactly the classical ops that extend to Qbits later.
+
+### NOT on one Cbit
+
+The interesting 1-Cbit reversible gate is NOT, written $\mathbf X$:
+
+$$
+\mathbf X|0\rangle = |1\rangle,\qquad
+\mathbf X|1\rangle = |0\rangle.
+$$
+
+Apply twice and you are home: $\mathbf X^2 = 1$.
+
+### cNOT on two Cbits
+
+**XOR** (exclusive OR) is addition mod 2: $y \oplus 0 = y$ and $y \oplus 1 = 1-y$. Same bit twice cancels: $x \oplus x = 0$.
+
+**Controlled-NOT** (cNOT) keeps a control bit and writes XOR onto a target when the control is 1:
+
+$$
+C_{10}|x\rangle|y\rangle = |x\rangle|y \oplus x\rangle.
+$$
+
+Control on the left in this labeling; target on the right. Swap the roles and you get $C_{01}$. Click through the truth table. Hit apply twice. Reversibility is the whole point.
+
+<ReversibleGatesDemo />
+
+<Takeaway>
+NOT flips one bit. cNOT is reversible XOR onto the target. Both survive the jump to Qbits as unitary gates.
+</Takeaway>
+
+## SWAP from three cNOTs
+
+You can swap two Cbits with three controlled-NOTs:
+
+$$
+S_{ij} = C_{ij}\, C_{ji}\, C_{ij}.
+$$
+
+I am not making you prove it in the browser. Just know the classical reversible toolkit is richer than "flip a bit," and cNOT is the workhorse.<Cite n={1} />
+
+## Operators as matrices (optional muscle)
+
+If you like components,
+
+$$
+\mathbf X =
+\begin{pmatrix}
+0 & 1 \\
+1 & 0
+\end{pmatrix}.
+$$
+
+cNOT has a $4\times 4$ matrix that permutes the four basis states. Same permutation story, heavier ink. Prefer the ket rules until a calculation forces the matrix.
+
+<TryIt>
+Start from $|10\rangle$. Apply $C_{10}$. You should land on $|11\rangle$. Apply $C_{10}$ again. Back to $|10\rangle$.
+</TryIt>
+
+## Waiting offstage
+
+Hadamard $\mathbf H$ and $\mathbf Z$ show up in Mermin's classical chapter as algebraic toys. On Cbits they barely mean anything — $H$ would turn $|0\rangle$ into a superposition, which is not a Cbit state. On Qbits they are everyday gates. That is [the next post](/posts/quantum-qbits-gates/).
+
+If you can read multi-Cbit kets, label them as integers, and describe NOT/cNOT, you are done for today.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), Chapter 1 §§1.1–1.4",
+      href: "https://www.cambridge.org/9780521876582",
+    },
+  ]}
+/>

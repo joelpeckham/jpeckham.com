@@ -1,0 +1,143 @@
+import {
+  HadamardBarsDemo,
+  GatePickerDemo,
+  CircuitStepperDemo,
+} from "@/components/interactive/quantum-qbits-gates";
+import { MathAside, Takeaway, TryIt } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Bits that are not stuck
+
+This is post two of [Learn Quantum](/projects/quantum/). Last time a **Cbit** could only sit in $|0\rangle$ or $|1\rangle$. Those two kets are the **computational basis** for one bit-sized system — the labeled axes we expand every state in. A **Qbit** uses the same axes, but its state can be any unit-length mix of them with complex coefficients.<Cite n={1} />
+
+$$
+|\psi\rangle = \alpha_0|0\rangle + \alpha_1|1\rangle,
+\qquad
+|\alpha_0|^2 + |\alpha_1|^2 = 1.
+$$
+
+That mix is a **superposition**: both basis kets appear in the state at once, each weighted by an amplitude $\alpha$. The amplitudes are not hidden classical coins waiting to be revealed. Measurement is its own post. Today I care about what states look like, which operations are allowed, and how to read a tiny circuit.
+
+## Superposition is a unit vector
+
+Pick amplitudes whose squared lengths sum to 1. Examples:
+
+$$
+|0\rangle,\quad
+|1\rangle,\quad
+\frac{1}{\sqrt{2}}(|0\rangle+|1\rangle),\quad
+\frac{1}{\sqrt{2}}(|0\rangle-|1\rangle).
+$$
+
+The last two put equal weight on $|0\rangle$ and $|1\rangle$, so a later measurement in this basis would give 50/50 either way. They differ by a **relative sign** (a simple case of relative phase): the second amplitude is $+1/\sqrt{2}$ in one state and $-1/\sqrt{2}$ in the other. Probability bars look identical. Gates still feel the sign, because later interference cares about signed (complex) amplitudes, not just $|\alpha|^2$.
+
+<MathAside title="Qbit vs Cbit in one sentence">
+<p>A Cbit's state is one of the two computational-basis kets. A Qbit's state is any unit vector in the complex plane those two span. Multi-Qbit states can also be entangled — not a product of single-Qbit states. I park entanglement for later.</p>
+</MathAside>
+
+## Unitary means "length-preserving linear"
+
+Allowed reversible Qbit ops are **unitary**: linear maps that send unit vectors to unit vectors, so they never stretch or shrink the state.<Cite n={1} />
+
+<MathAside title="The unitary badge: U†U = 1">
+<p>Write $U^\dagger$ for the conjugate-transpose of $U$ (flip rows↔columns, then conjugate each entry). $U$ is unitary when $U^\dagger U = U U^\dagger = 1$ (the identity). That is exactly the algebra of "has an inverse and preserves lengths." Every gate today — $X$, $Z$, $H$ — passes this test, and each is its own inverse: $X^2=Z^2=H^2=1$.</p>
+</MathAside>
+
+Every reversible classical permutation of basis states extends to a unitary on Qbits by linearity. So NOT and cNOT still work. Quantum also adds gates with no classical story, starting with Hadamard and $Z$.
+
+## Meet X, Z, and H
+
+$$
+\mathbf X =
+\begin{pmatrix}
+0 & 1 \\
+1 & 0
+\end{pmatrix},
+\quad
+\mathbf Z =
+\begin{pmatrix}
+1 & 0 \\
+0 & -1
+\end{pmatrix},
+\quad
+\mathbf H =
+\frac{1}{\sqrt{2}}
+\begin{pmatrix}
+1 & 1 \\
+1 & -1
+\end{pmatrix}.
+$$
+
+Action on the computational basis:
+
+$$
+\mathbf X|0\rangle = |1\rangle,\quad
+\mathbf X|1\rangle = |0\rangle
+$$
+
+$$
+\mathbf Z|0\rangle = |0\rangle,\quad
+\mathbf Z|1\rangle = -|1\rangle
+$$
+
+$$
+\mathbf H|0\rangle = \tfrac{1}{\sqrt{2}}(|0\rangle+|1\rangle),\quad
+\mathbf H|1\rangle = \tfrac{1}{\sqrt{2}}(|0\rangle-|1\rangle)
+$$
+
+Hadamard is the first gate that turns a basis state into a real superposition you can see on a bar chart. $Z$ is quieter: it leaves probabilities alone and only flips the sign of $|1\rangle$.
+
+Pick $|0\rangle$ or $|1\rangle$, apply $H$, and compare the bars to the signed $\alpha$ line. Negative amplitude still yields the same 50% probability weight.
+
+<HadamardBarsDemo />
+
+<Takeaway>
+$H$ spreads a basis state into an equal superposition. Probability cares about $|\alpha|^2$; gates care about the signed (complex) $\alpha$ too.
+</Takeaway>
+
+## Gate picker
+
+Start from a basis state. Chain $X$, $Z$, $H$, or identity with Apply — each click multiplies onto the current state. Watch the amplitude bars ($|\alpha|^2$) and the signed $\alpha$ line (phase/sign). Reset when the state gets spicy.
+
+<GatePickerDemo />
+
+<Takeaway>
+$X$ flips bits. $Z$ flips the sign of $|1\rangle$. $H$ builds (and can unbuild) superpositions. All three are their own inverses: $X^2=Z^2=H^2=1$.
+</Takeaway>
+
+## Circuit diagrams
+
+A wire runs left to right through gate boxes. State in on the left, state out on the right. The cultural clash: math writes operators to the left of the ket, so "H then X" on the diagram is the product $\mathbf X\mathbf H$ in equations.<Cite n={1} />
+
+Step the tiny circuit. Read the active column. Match the bars — and the signed $\alpha$ — to each stage.
+
+<CircuitStepperDemo />
+
+<Takeaway>
+Diagrams read left → right. Operator products read right ← left. Same history, opposite ink order.
+</Takeaway>
+
+## Many Qbits, briefly
+
+$n$ Qbits live in a $2^n$-dimensional space. The computational basis is the $2^n$ classical product states $|x\rangle_n$. A general state is any unit superposition of those basis kets. Algorithms we care about are built from 1-Qbit and 2-Qbit gates chained on those wires.<Cite n={1} />
+
+You do not need the full zoo today. Superposition, unitary, $H/X/Z$, and circuit literacy are enough.
+
+<TryIt>
+Compute $\mathbf H\mathbf X\mathbf H|0\rangle$ on paper (or with the picker: Apply H, then X, then H). You should find $\mathbf Z|0\rangle = |0\rangle$. That sandwich is $HXH=Z$.
+</TryIt>
+
+## Next
+
+We still have not pulled a classical answer out of a Qbit. Measurement and the Born rule are [next](/posts/quantum-measurement/). Bring the squared-magnitude habit from the primer.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), Chapter 1 §§1.5–1.7",
+      href: "https://www.cambridge.org/9780521876582",
+    },
+  ]}
+/>

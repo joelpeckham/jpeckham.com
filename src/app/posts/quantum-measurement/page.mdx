@@ -1,0 +1,119 @@
+import {
+  BornSamplerDemo,
+  PartialMeasureDemo,
+  PrepareMeasureDemo,
+} from "@/components/interactive/quantum-measurement";
+import { MathAside, Takeaway } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Amplitudes are not answers
+
+This is post three of [Learn Quantum](/projects/quantum/). Last time I put Qbits into superpositions and pushed them through gates. Today is the rude part: how you get a number out.
+
+**Measurement**, here, means sending Qbits through a measurement gate — hardware that returns classical 0s and 1s. It is not "peek at the amplitudes." You never read the amplitudes off the Qbits. You get one random bit-string. The odds of that string come from the amplitudes via a square-the-length rule called the **Born rule**.<Cite n={1} />
+
+Weird upside: the same gate that ends a run can also *prepare* a clean starting state for the next one.
+
+By the end you should be able to state the Born rule, measure one Qbit out of a pair without pretending the other was classical all along, and sketch the prepare → compute → measure loop every algorithm in this series uses.
+
+## The Born rule, one Qbit
+
+Take a single Qbit
+
+$$|\psi\rangle = \alpha_0 |0\rangle + \alpha_1 |1\rangle$$
+
+with $|\alpha_0|^2 + |\alpha_1|^2 = 1$. Those $\alpha$ numbers are **amplitudes**. Send the Qbit through a 1-Qbit measurement gate. The display shows $0$ with probability $|\alpha_0|^2$ and $1$ with probability $|\alpha_1|^2$. That map — amplitude → probability by squaring the length — is the Born rule.<Cite n={2} />
+
+After the gate, the Qbit is no longer $|\psi\rangle$. It is $|0\rangle$ or $|1\rangle$, matching what you saw. The old amplitudes are gone. Measurement is irreversible: from the final $|x\rangle$ you cannot reconstruct the input superposition.<Cite n={1} />
+
+<MathAside title="What $|\alpha|^2$ means">
+<p>
+If $\alpha = a + bi$ with real $a,b$, then $|\alpha|^2 = a^2 + b^2$ — the squared length of that complex number. For a real amplitude $\alpha_0 = 1/\sqrt{2}$, you get $(1/\sqrt{2})^2 = 1/2$. Equal superposition → fair coin.
+</p>
+<p>
+Normalization $|\alpha_0|^2 + |\alpha_1|^2 = 1$ is just "the probabilities add to one."
+</p>
+</MathAside>
+
+People sometimes say "the Qbit *was* already $0$ or $1$ with those probabilities." That story fails. If you start in $\frac{1}{\sqrt{2}}(|0\rangle+|1\rangle)$, apply a Hadamard, and then measure, you always get $0$. A classical mixture — already $|0\rangle$ or already $|1\rangle$ with fifty-fifty odds — would give a random bit after the same Hadamard.<Cite n={1} /> Superposition is not a coin flip that already happened.
+
+Drag the amplitude. Sample once, then a hundred times. The histogram should crawl toward the Born bars.
+
+<BornSamplerDemo />
+
+<Takeaway>
+Born rule: outcome $x$ shows up with probability $|\alpha_x|^2$, then the Qbits sit in $|x\rangle$. Amplitudes set the odds; they are not hidden classical bits.
+</Takeaway>
+
+## Many Qbits, same idea
+
+For $n$ Qbits in
+
+$$|\Psi\rangle = \sum_{x=0}^{2^n-1} \alpha_x |x\rangle_n$$
+
+an $n$-Qbit measurement gate shows integer $x$ with probability $|\alpha_x|^2$ and leaves the register in $|x\rangle_n$. You can build that big gate from $n$ copies of the 1-Qbit gate.<Cite n={1} />
+
+Most quantum algorithms boil down to shaping those amplitudes so the $x$ values you care about have big probability. You also want wrong rare outcomes to be easy to catch classically — factors of a number, for example — so a fluke readout does not fool you.
+
+## Partial measurement (the generalized Born rule)
+
+Often you only measure *some* of the Qbits. Two words first:
+
+- A **product state** factors as $|\psi\rangle|\phi\rangle$. Each block has its own state; measuring one side does not rewrite the other.
+- An **entangled** state does not factor that way. A subset of the Qbits may have *no* state of its own until you look.
+
+Write an $(n+1)$-Qbit state as
+
+$$|\Psi\rangle = \alpha_0 |0\rangle |\Phi_0\rangle + \alpha_1 |1\rangle |\Phi_1\rangle$$
+
+with normalized $|\Phi_0\rangle$, $|\Phi_1\rangle$ for the unmeasured block. Measure the left Qbit. You get $0$ with probability $|\alpha_0|^2$ and the leftover Qbits collapse to $|\Phi_0\rangle$. Or you get $1$ and they collapse to $|\Phi_1\rangle$. That is the generalized Born rule.<Cite n={1} />
+
+If $|\Phi_0\rangle = |\Phi_1\rangle$, the whole thing was a product state. The unmeasured block stays $|\Phi_0\rangle$ no matter which bit you rolled. If $|\Phi_0\rangle$ and $|\Phi_1\rangle$ differ, the pair is entangled: the measurement on one side picks which state the other side inherits.
+
+Try a Bell-like pair versus a product state. Measure one wire. Watch which amplitudes survive.
+
+<PartialMeasureDemo />
+
+<Takeaway>
+Measuring part of a system renormalizes the rest. Product: leftover state ignores the outcome. Entangled: leftover state depends on the bit you got.
+</Takeaway>
+
+## Measurement as state preparation
+
+Before a circuit runs, you need Qbits in a known state, usually $|0\rangle_n$. How? Measure whatever junk came off the shelf. The gate reports some $x$ and leaves $|x\rangle_n$. Flip every Qbit that showed $1$ with an $X$ gate. Now you have $|0\rangle_n$.<Cite n={1} />
+
+Measurement is not only the ending. It is also how you mint a standard input. Real hardware may use cryogenic reset instead. For this series, prepare-by-measure is enough.
+
+Walk the loop: shelf → measure → clean to $|0\rangle$ → Hadamard → measure again.
+
+<PrepareMeasureDemo />
+
+## Arbitrary 1- and 2-Qbit states (quick tour)
+
+Once you can prepare $|0\rangle$ or $|00\rangle$, some 1-Qbit unitary gets you any single-Qbit state. For two Qbits, a short recipe of 1-Qbit gates plus one cNOT builds any pure 2-Qbit state from $|00\rangle$ — including entangled ones.<Cite n={1} /> I am not re-deriving the Euler angles here. The takeaway for later posts: "start from zeros, hit with a small circuit" is a legitimate preparation strategy, not magic.
+
+## Cbits vs Qbits, one table in prose
+
+Cbits always have a state you can learn by looking. Subsets of Cbits still have states. Reversible ops are permutations. After you read $x$, the bits are still $|x\rangle$.
+
+Qbits can sit in superpositions and get entangled so a subset has *no* state of its own. Reversible ops are unitaries. You do not learn the state by inspecting the Qbits. You ask Alice — anyone who tracked the preparation and the gates. To extract a number you measure, and afterward the state is the classical basis vector you saw, not the superposition you had.<Cite n={1} />
+
+Rich amplitudes go in. One random $x$ comes out. That mismatch is why the next articles obsess over *relational* questions. You often throw away individual $f(x)$ values to learn something about many $x$ at once.
+
+Next up: the standard $U_f$ protocol and Deutsch's problem in [Oracles, $U_f$ & Deutsch](/posts/quantum-deutsch/).
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), §§1.8–1.12",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A69885F1B0DFCA1F66ADEA42D38EFCE",
+    },
+    {
+      n: 2,
+      title: "Max Born — Nobel Lecture (1954) on the statistical interpretation",
+      href: "https://www.nobelprize.org/prizes/physics/1954/born/lecture/",
+    },
+  ]}
+/>

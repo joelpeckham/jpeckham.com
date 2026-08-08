@@ -1,0 +1,132 @@
+import {
+  PhaseWheelDemo,
+  ModExpAmplitudeDemo,
+  ContinuedFractionDemo,
+} from "@/components/interactive/quantum-qft-period";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## The engine under Shor
+
+Last time, in [RSA, Periods & Why Factoring Matters](/posts/quantum-rsa/), we reduced breaking RSA to one ask: find the period $r$ of
+
+$$f(x) = b^x \bmod N.$$
+
+Today is how a quantum computer gets that period. Four ideas, in plain English first:
+
+1. **Two registers.** Put every possible input $x$ in superposition, compute $f(x)$ into a second register in one coherent pass, then measure the second register. What remains in the first is a comb of spikes spaced by the unknown $r$, shifted by an unknown offset.
+2. **Quantum Fourier transform (QFT).** Think “frequency meter for qubit registers.” It turns that spatial comb into bright spots in frequency space. The unknown offset becomes a harmless global phase and drops out of the measurement probabilities.
+3. **Peaks at multiples of $2^n/r$.** With $n$ input qubits you have $2^n$ possible readouts $y$. Probability piles up near $y \approx j\cdot 2^n/r$ for integers $j$. Land within half a step of one of those peaks and you hold a rational approximation to $j/r$.
+4. **Continued fractions.** Classical cleanup: peel $y/2^n$ into a short list of best rational approximations. The right convergent’s denominator is a divisor of $r$ — often $r$ itself.<Cite n={1} />
+
+I will stay closer to intuition than to every controlled-phase wire. Mermin builds the full gate product in §3.5–3.6; open the book when you want the circuit identity.
+
+## Two registers, one function call
+
+Let $n_0$ be roughly the bit length of $N$. For period finding you take an **input** register of $n=2n_0$ qubits — large enough to hold many full periods — and an **output** register that can hold values mod $N$.<Cite n={1} />
+
+Start from $\lvert 0\rangle\lvert 0\rangle$, Hadamard the input, then apply a unitary $U_f$ that maps
+
+$$\lvert x\rangle\lvert 0\rangle \mapsto \lvert x\rangle\lvert f(x)\rangle = \lvert x\rangle\lvert b^x \bmod N\rangle.$$
+
+One coherent run of modular exponentiation writes *every* $f(x)$ into the entangled state
+
+$$\frac{1}{2^{n/2}}\sum_{x=0}^{2^n-1}\lvert x\rangle\lvert f(x)\rangle.$$
+
+Measure the output register. Suppose you see some value $f_0$. The input register collapses to an equal superposition over the preimages:
+
+$$\lvert\Psi\rangle = \frac{1}{\sqrt{m}}\sum_{k=0}^{m-1}\lvert x_0 + kr\rangle,$$
+
+where $x_0$ is the smallest nonnegative residue with $f(x_0)=f_0$, and $m$ is how many such hits fit in $0,\ldots,2^n-1$.<Cite n={1} />
+
+You now hold a comb with spacing $r$, shifted by an unknown $x_0$. Measuring in the computational basis (the usual 0/1 labels for each bit string) gives one random tooth — useless alone. Cloning copies is forbidden. So you need a transform that turns the unknown shift into a global phase and concentrates probability on frequencies tied to $r$.
+
+See the comb form on a tiny modulus. Click a measured $f_0$ and watch which $x$ stay alive.
+
+<ModExpAmplitudeDemo />
+
+<Takeaway>
+After measuring $f(x)$, the input register is a periodic spike train with unknown offset $x_0$. The QFT is how you read the spacing.
+</Takeaway>
+
+## What the QFT does
+
+**Phase**, here, just means a complex factor $e^{i\theta}$ sitting on an amplitude. Born probabilities ignore overall phases — multiply every amplitude by the same $e^{i\theta}$ and nothing measurable changes. The QFT is engineered so the unknown comb offset $x_0$ becomes exactly that kind of overall phase for each frequency $y$.
+
+On basis states the $n$-qubit QFT acts as
+
+$$U_{\mathrm{FT}}\lvert x\rangle = \frac{1}{2^{n/2}}\sum_{y=0}^{2^n-1}e^{2\pi i\, xy/2^n}\lvert y\rangle.$$
+
+Ordinary product $xy$ in the phase — not the bitwise product from a pile of Hadamards.<Cite n={1} /> Applied to the comb $\lvert\Psi\rangle$, the shift $x_0$ factors out as $e^{2\pi i x_0 y/2^n}$. That phase dies when you take Born probabilities. What remains peaks when $y$ sits near an integer multiple of $2^n/r$.
+
+Roughly: with probability at least about $0.4$ (and often higher with the refinements in Appendix L), a measurement yields a $y$ within $1/2$ of some $j\cdot 2^n/r$.<Cite n={1} /> Those “special” integers are the ones continued fractions can digest.
+
+Spin the phase wheel on a toy register. Drag $r$ and watch probability pile up near those multiples.
+
+<PhaseWheelDemo />
+
+<MathAside title="Why double the register?">
+
+If $2^n &gt; N^2$, an estimate $y/2^n$ within $1/(2N^2)$ of $j/r$ is close enough that **at most one** fraction with denominator less than $N$ can sit that near. Two distinct fractions $a/b$ and $c/d$ with $b,d&lt;N$ differ by at least $1/(bd)&gt;1/N^2$. Doubling the qubits is what makes the continued-fraction step unique.<Cite n={1} />
+
+</MathAside>
+
+## From a peak to a candidate period
+
+You measured an integer $y$. You know $n$. You have a rational estimate
+
+$$\frac{y}{2^n} \approx \frac{j}{r}.$$
+
+**Continued fractions**, in one sentence: repeatedly peel off the integer part of a reciprocal to build the best rational approximations with small denominators (the *convergents*). A theorem (Hardy & Wright, cited in Mermin’s Appendix K) says: if your estimate is within $1/(2r^2)$ of $j/r$, then $j/r$ appears among those convergents.<Cite n={1} />
+
+The convergent gives $j_0/r_0$ in lowest terms. So $r_0$ divides the true period $r$. Often $j$ is coprime to $r$ and $r_0=r$ on the first try. If not, try small multiples of $r_0$, or run the quantum circuit again for another random $j'$ and take a least common multiple.<Cite n={1} />
+
+Walk Appendix K’s numbers (and a smaller toy) with the convergent table.
+
+<ContinuedFractionDemo />
+
+<MathAside title="Continued fractions, hand-held">
+
+<p>
+For a fraction $y/2^n$, run the Euclidean algorithm: $a_0=\lfloor y/2^n\rfloor$, then repeat on the remainder pair. Truncating after $k$ steps gives the convergents $j_0/r_0$. (When $y&lt;2^n$, the leading $a_0$ is $0$; Mermin’s App K writes the equivalent inverted form that starts at $\lfloor 1/x\rfloor$ and omits that $0$. Same convergents either way.)
+</p>
+<p>
+Pick the convergent with the **largest denominator still below your known bound on $r$** (in App K, below $128$). That denominator is $r_0$. Test it by checking $b^{r_0}\equiv 1\pmod N$ — the order-finding condition. (Mermin §3.7 briefly says “whether it is $b$”; that is a slip — everywhere else, including App L, the period satisfies $b^r\equiv 1$.)
+</p>
+
+</MathAside>
+
+<Takeaway>
+QFT measurement → rational $y/2^n$ → continued-fraction convergent → divisor of $r$ → classical checks / retries.
+</Takeaway>
+
+## Modular exponentiation is the expensive part
+
+Implementing $U_f$ for $f(x)=b^x\bmod N$ looks like it needs astronomically many multiplies. It does not. Square $b$ mod $N$ repeatedly to get $b^{2^j}$, then multiply together the squares picked out by the bits of $x$. That is $O(n)$ modular multiplications, done once under quantum parallelism.<Cite n={1} /> Classically you would cache a table; quantumly you recompute inside the superposition because qubits are scarce and one coherent pass writes all outputs at once.
+
+## Small phase errors are OK
+
+Real hardware will not implement $e^{i\pi/2^{100}}$ faithfully. Coppersmith’s observation, stressed by Mermin in §3.9: the QFT’s analog phases only nudge **probabilities**. The outputs are still sharp bits. Omitting ultra-fine controlled phases barely hurts the chance of landing near a good $y$.<Cite n={1} /> That is why “approximate QFT” is a feature, not a scandal.
+
+## What you still need classically
+
+After a successful run you hold a divisor of $r$, then (with luck or a second run) $r$ itself. For the RSA *decoding* path in the previous post, that is enough: invert $c$ mod $r$ and raise the ciphertext. For the textbook *factoring* path — “give me $p$ and $q$” — you still need the classical number theory in the next article: [From Periods to Factors](/posts/quantum-factoring/).
+
+<TryIt>
+On the phase-wheel demo, set $n=4$ and $r=4$. Peaks should sit exactly on multiples of $16/4=4$. Now set $r=3$ and notice the mass smears onto nearest integers — that smear is what continued fractions digest. Then open the continued-fraction demo’s App K Ex.1 preset ($y=11490$) and confirm the pick $54/77$.
+</TryIt>
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction, Cambridge University Press, 2007 — Ch. 3 §§3.4–3.9; Appendix K",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A814819046FC99CC86ECC7227632139",
+    },
+  ]}
+/>

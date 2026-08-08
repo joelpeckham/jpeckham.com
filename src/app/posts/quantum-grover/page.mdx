@@ -1,0 +1,121 @@
+import {
+  AmplitudePlayDemo,
+  GeometricRotationDemo,
+  MultiMarkDemo,
+} from "@/components/interactive/quantum-grover";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Looking for one needle, without guessing randomly
+
+Suppose you have a black-box test $f(x)$ that returns $1$ for exactly one secret $n$-bit string $a$, and $0$ for everything else. Classically, if you know nothing else about $a$, you poke random inputs until you hit it. To have even a coin-flip chance of success you need on the order of $N/2$ queries, where $N = 2^n$.<Cite n={1} />
+
+Grover’s algorithm does better. With a quantum version of that same test, you can push the success probability close to $1$ using roughly $(\pi/4)\sqrt{N}$ oracle calls when $N$ is large.<Cite n={1} /> That $\sqrt{N}$ speedup is the whole plot of this article. Shor’s period finding and Grover’s search are the two “masterpiece” algorithms in Mermin’s book — different tricks, same lesson that interference can replace brute force.<Cite n={1} />
+
+The modern name for the trick is **amplitude amplification**. You start with a tiny amplitude on the answer, then repeatedly apply a short loop that steals amplitude from the wrong basis states and piles it onto the right one. Measurement only comes at the end.
+
+This is post nine of [Learn Quantum](/projects/quantum/). You’ve already met oracles in [Deutsch](/posts/quantum-deutsch/) and friends. Today the oracle is still a phase kick. The new move is repeating a short loop until the marked amplitude stands alone.
+
+## What the oracle actually does
+
+The classical story is “evaluate $f$.” The quantum story starts from a unitary $U_f$ that flips an ancilla when $f(x) = 1$. If you park that ancilla in $H|1\rangle = (|0\rangle - |1\rangle)/\sqrt{2}$ first, the flip becomes a global minus sign on the marked input. You can forget the ancilla and talk about an $n$-Qbit operator $V$:<Cite n={1} />
+
+$$
+V|x\rangle = |x\rangle \quad (x \neq a), \qquad V|a\rangle = -|a\rangle.
+$$
+
+In operator form that’s $V = 1 - 2|a\rangle\langle a|$: leave every component alone except the one along $|a\rangle$, which you reverse. Plain English: the oracle is a **phase flip** on the secret — not a bit flip you can read out, just a minus sign in the superposition.
+
+<MathAside title="What does $1 - 2|a\rangle\langle a|$ mean?">
+<p>
+The ket-bra $|a\rangle\langle a|$ is a projector. Hit a state $|\Psi\rangle$ with it and you keep only the piece parallel to $|a\rangle$; everything orthogonal dies. So $2|a\rangle\langle a|$ doubles that parallel piece, and subtracting from the identity flips its sign: the parallel part goes to $-(\text{parallel})$, the orthogonal part is untouched. That’s a reflection through the hyperplane perpendicular to $|a\rangle$.
+</p>
+<p>
+Same pattern shows up in the diffusion operator below, with $|s\rangle$ in place of $|a\rangle$ and a plus sign out front: $W = 2|s\rangle\langle s| - 1$ keeps the $|s\rangle$ piece and flips everything orthogonal to it.
+</p>
+</MathAside>
+
+You also need a second reflection that doesn’t know $a$. Start the input register in the uniform superposition
+
+$$
+|s\rangle = H^{\otimes n}|0\rangle = \frac{1}{\sqrt{N}}\sum_x |x\rangle
+$$
+
+(Mermin writes this $|\phi\rangle$; I’m using $|s\rangle$ for “start / superposition”). Define
+
+$$
+W = 2|s\rangle\langle s| - 1.
+$$
+
+$W$ leaves the $|s\rangle$ component alone and flips the sign of everything orthogonal to $|s\rangle$. In the computational basis that’s the famous **inversion about the mean**: each amplitude $\alpha_x$ becomes $2\bar\alpha - \alpha_x$, where $\bar\alpha$ is the average of all the amplitudes.<Cite n={1} /> After the oracle has marked $|a\rangle$ with a minus sign, that state sits below the mean, so inverting about the mean boosts it — and slightly lowers everyone else.
+
+One Grover iteration is the product $WV$. Apply it many times, then measure. That loop is amplitude amplification.
+
+## Watch the marked bar grow
+
+Pick a small haystack — $N = 8$ or $16$ — mark one basis state, and step. Each play tick is one oracle call plus one diffusion. The red bar is the secret. After about $(\pi/4)\sqrt{N}$ steps it should dominate.
+
+<AmplitudePlayDemo />
+
+<Takeaway>
+Oracle flips the marked phase. Diffusion turns that phase difference into a taller probability bar. Repeat.
+</Takeaway>
+
+## It’s just a rotation in a plane
+
+Here’s the part that made Grover click for me. Both $V$ and $W$ map the plane spanned by real combinations of $|s\rangle$ and $|a\rangle$ into itself. So the whole algorithm lives in 2D geometry, not in the full $2^n$-dimensional space.<Cite n={1} />
+
+Let $|a_\perp\rangle$ be the unit vector in that plane orthogonal to $|a\rangle$. The angle $\theta$ between $|s\rangle$ and $|a_\perp\rangle$ satisfies $\sin\theta = 1/\sqrt{N}$. Geometrically: $V$ reflects about $|a_\perp\rangle$, $W$ reflects about $|s\rangle$, and the product of two reflections is a rotation. Each application of $WV$ rotates the state by $2\theta$ toward $|a\rangle$. Start at angle $\theta$ from $|a_\perp\rangle$; after $k$ iterations you’re at $(2k+1)\theta$. Choose $k$ near $(\pi/4)\sqrt{N}$ and you land near $|a\rangle$.<Cite n={1} />
+
+<GeometricRotationDemo />
+
+<Takeaway>
+Two reflections make a rotation. Grover is that rotation, applied until the state almost is $|a\rangle$.
+</Takeaway>
+
+<MathAside title="Why $(\pi/4)\sqrt{N}$?">
+<p>
+You want $(2k + 1)\theta \approx \pi/2$, so the state is nearly orthogonal to $|a_\perp\rangle$ — i.e. nearly $|a\rangle$. Solving gives $k \approx \pi/(4\theta) - 1/2$. When $N$ is large, $\theta \approx 1/\sqrt{N}$, and the $-1/2$ is negligible, so $k \approx (\pi/4)\sqrt{N}$. Mermin’s rule of thumb is the integer closest to that large-$N$ target; the demos use $\lfloor\pi/(4\theta)\rfloor$, which matches for the $N$ values you can click. For $N = 4$, one iteration hits probability $1$ exactly — the cute teaching case.
+</p>
+</MathAside>
+
+## Several needles
+
+If $m$ strings are marked and you know $m$, replace $|a\rangle$ by the uniform superposition over the marked set. The same geometry works with $\sin\Theta = \sqrt{m/N}$. Optimal iterations drop to about $(\pi/4)\sqrt{N/m}$.<Cite n={1} /> Measurement then returns a random marked item (with high probability). Classically, doubling $m$ roughly halves your expected search time. Quantumly you only gain a $\sqrt{m}$ factor — still a win when $m \ll N$, but not the same curve.
+
+If you don’t know $m$, Mermin sketches a QFT-based counting trick so you can estimate $m$ well enough to pick $k$. I’m leaving that as a footnote for later; the demos assume you know $m$.
+
+<MultiMarkDemo />
+
+<Takeaway>
+More marked items → larger angle per step → fewer iterations. You still need to know (or estimate) $m$.
+</Takeaway>
+
+## Building $W$, briefly
+
+$W$ looks mysterious until you notice $-W = H^{\otimes n}\,(1 - 2|0\ldots0\rangle\langle0\ldots0|)\,H^{\otimes n}$. The middle piece is a multi-controlled $Z$ (with $X$ sandwiches to flip $|0\rangle \leftrightarrow |1\rangle$ on the controls). You can build that from Toffolis and ancillas; Mermin spends several figures on the gate count.<Cite n={1} /> For the algorithm’s meaning, you only need “reflection about $|s\rangle$.” For $N = 4$ the controlled-$Z$ collapses to a Toffoli between Hadamards — one oracle call, success probability exactly $1$, versus a classical expected $2.25$ probes.<Cite n={1} />
+
+## What I’d actually use this for
+
+Grover is not a free database index. Loading a classical phone book into Qbits so you can “search” it is usually a bad trade — the Qbits are the expensive part.<Cite n={1} /> The honest pitch is: hard combinatorial checks you can implement as a coherent oracle, when $\sqrt{N}$ queries beat what you can afford classically, and when you’re fine with a probabilistic answer you can verify.
+
+<TryIt>
+Set $N = 16$ and marked $= 0$ in the first demo. Play to the suggested iteration count, then step once more. The marked probability should dip — overshooting the sweet spot is a real Grover footgun.
+</TryIt>
+
+Next up: [error correction for bit flips](/posts/quantum-error-bits/), because none of these algorithms survive contact with a noisy Qbit until you can fix mistakes without reading the secret state.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction, Cambridge University Press, 2007, ch. 4",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A694C7535A758457D15B492798A37F3",
+    },
+  ]}
+/>

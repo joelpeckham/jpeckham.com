@@ -1,0 +1,116 @@
+import {
+  EncodeDemo,
+  InjectFlipDemo,
+  SyndromeCorrectDemo,
+} from "@/components/interactive/quantum-error-bits";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## The sentence that shouldn’t work
+
+Quantum error correction sounds like a contradiction. The only way to notice an error is to measure. Measurement collapses superpositions. So how do you fix a corrupted $\alpha|0\rangle + \beta|1\rangle$ without learning $\alpha$ and $\beta$ — and without destroying them?<Cite n={1} />
+
+For years that objection felt decisive. Then Shor and Steane showed, independently in 1995, that you can diagnose *relations* among Qbits, park the answer on spare Qbits (ancillas), and leave the logical amplitudes alone.<Cite n={1} /> That discovery turned “useful quantum computer” from fantasy into a brutal engineering program.
+
+This is post ten of [Learn Quantum](/projects/quantum/). We’ll stay in the training-wheels model: the only allowed errors are single **bit flips**. A bit flip is the quantum version of a classical NOT — an $X$ gate that swaps $|0\rangle\leftrightarrow|1\rangle$ on one physical Qbit. Post eleven upgrades to phase flips and the codes people actually quote.
+
+## Steal the classical idea, carefully
+
+Classically, triple repetition is almost boring. Encode $0\to 000$ and $1\to 111$. Those two strings are the **codewords**: the legal “dictionary words” your encoding is allowed to send. If at most one bit flips between inspections, majority vote restores the word.<Cite n={1} />
+
+Quantumly you still want those two codewords,
+
+$$
+|\overline{0}\rangle = |000\rangle,\qquad |\overline{1}\rangle = |111\rangle,
+$$
+
+but a general logical state is a *superposition* $\alpha|\overline{0}\rangle + \beta|\overline{1}\rangle = \alpha|000\rangle + \beta|111\rangle$. You need a circuit that produces that for unknown $\alpha$, $\beta$. Two CNOTs onto fresh $|0\rangle$ ancillas do it: they copy the data Qbit onto the other two.<Cite n={1} /> Linearity takes care of superpositions.
+
+Why three Qbits? A clean codeword lives in a 2D subspace (any $\alpha$, $\beta$). Each single-Qbit bit flip moves it into a different 2D subspace. Those four subspaces (clean + three flips) must sit at right angles in the full $2^3 = 8$-dimensional space of three Qbits. You need $2(1+3)=8$ dimensions, and three Qbits give you exactly eight. In general, bit-flip-only codes need $2^{n-1}\ge 1+n$, which first holds at $n=3$.<Cite n={1} />
+
+<EncodeDemo />
+
+<Takeaway>
+Encoding doesn’t measure $\alpha$ or $\beta$. It spreads one logical Qbit across three physical ones — the codeword.
+</Takeaway>
+
+## Why you can’t just “look”
+
+If you measure any of the three Qbits in the computational basis (the usual $|0\rangle$/$|1\rangle$ labels), you collapse $\alpha|000\rangle + \beta|111\rangle$ to $|000\rangle$ or $|111\rangle$ and erase the relative amplitudes.<Cite n={1} /> Same disaster if a flip already happened — measuring a data Qbit still projects away the coherent information you wanted to save.
+
+So the diagnosis has to answer a dumber question: “are these Qbits still equal to each other?” without answering “what value do they share?”
+
+## Inject one flip
+
+Model a bit-flip error as a stray $X$ on at most one of the three wires. The four possibilities (including “nothing happened”) live in four mutually orthogonal two-dimensional subspaces.<Cite n={1} /> Label Qbits $q_2q_1q_0$ left to right:
+
+| Error | Corrupted state |
+| --- | --- |
+| none | $\alpha\lvert 000\rangle + \beta\lvert 111\rangle$ |
+| $X_0$ | $\alpha\lvert 001\rangle + \beta\lvert 110\rangle$ |
+| $X_1$ | $\alpha\lvert 010\rangle + \beta\lvert 101\rangle$ |
+| $X_2$ | $\alpha\lvert 100\rangle + \beta\lvert 011\rangle$ |
+
+<InjectFlipDemo />
+
+<Takeaway>
+A single $X$ moves the amplitude support to a different pair of basis states. The logical $\alpha$, $\beta$ hitch a ride.
+</Takeaway>
+
+## Syndrome lights, not data readout
+
+A **parity check** asks whether two bits agree, not what they are. Classically, the parity of bits $b$ and $c$ is $b\oplus c$: $0$ if they match, $1$ if they differ. Quantumly we do the same check with CNOTs onto ancillas, then measure *only the ancillas*.
+
+Couple two ancillas (start at $|0\rangle$) to the codeword so each learns a parity: $q_2\oplus q_1$ and $q_1\oplus q_0$. The two classical bits you read are the **syndrome** — a short error fingerprint that names which flip happened, without naming $\alpha$ or $\beta$:<Cite n={1} />
+
+| Syndrome $(s_1s_0)$ | Meaning |
+| --- | --- |
+| $00$ | no flip |
+| $01$ | $X$ on $q_0$ |
+| $11$ | $X$ on $q_1$ |
+| $10$ | $X$ on $q_2$ |
+
+Apply $X$ to the accused Qbit (or do nothing). The logical state returns to $\alpha|000\rangle + \beta|111\rangle$. You never learned $\alpha$ or $\beta$ — which is mandatory. If error correction leaked even partial information about the logical state, you could clone by repetition and break no-cloning.<Cite n={1} />
+
+<SyndromeCorrectDemo />
+
+<Takeaway>
+Measure correlations on ancillas. Correct. The logical amplitudes survive because you never asked what they were.
+</Takeaway>
+
+<MathAside title="Stabilizers in one minute">
+<p>
+A <strong>stabilizer</strong> is an operator that leaves every legal codeword unchanged — it “stabilizes” the code space. For this bit-flip code the two stabilizers are $Z_2Z_1$ and $Z_1Z_0$.
+</p>
+<p>
+Think of $Z$ as the gate that leaves $|0\rangle$ alone and multiplies $|1\rangle$ by $-1$. Then $Z_iZ_j$ is $+1$ when Qbits $i$ and $j$ agree, and $-1$ when they disagree — the same parity check as above. Clean codewords always give $+1,+1$. Each single $X$ flips a unique pattern of those signs, so the $\pm 1$ pair is exactly the syndrome $(s_1s_0)$.
+</p>
+<p>
+That language — measure stabilizers, read a syndrome, apply a correction — is the same one the 5- and 7-Qbit codes speak, with longer Pauli products.
+</p>
+</MathAside>
+
+## Errors aren’t only bit flips
+
+Real decoherence is messier than a rogue NOT gate. Mermin shows that a general single-Qbit corruption is a superposition of “nothing,” $X$ (bit flip), $Z$ (phase flip — a relative-sign error), and $Y=ZX$ (both).<Cite n={1} /> The 3-Qbit code only handles the $X$ column. To tell $1+3n$ two-dimensional subspaces apart you need $2^{n-1}\ge 3n+1$, which first holds at $n=5$.<Cite n={1} />
+
+That’s the door into [five- and seven-Qbit codes](/posts/quantum-error-codes/).
+
+<TryIt>
+In the syndrome demo, encode an uneven state (big $\alpha$, small $\beta$), inject $X_1$, correct, and confirm the amplitude bars return to $|000\rangle$ / $|111\rangle$ with the same weights. The LEDs should show $11$ before correction.
+</TryIt>
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction, Cambridge University Press, 2007, ch. 5 §§5.1–5.4",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A694C7535A758457D15B492798A37F3",
+    },
+  ]}
+/>

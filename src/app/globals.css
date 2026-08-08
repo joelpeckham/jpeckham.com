@@ -367,6 +367,17 @@ h4 {
   box-shadow: var(--shadow-hard);
 }
 
+/* KaTeX — keep display math readable inside Bauhaus prose */
+.prose .katex-display {
+  margin: 1.25em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.prose .katex {
+  font-size: 1.05em;
+}
+
 /* View Transitions — snappy shared-element morph between card cover and hero */
 ::view-transition-group(*) {
   animation-duration: 350ms;

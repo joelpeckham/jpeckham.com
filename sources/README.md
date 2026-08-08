@@ -37,3 +37,17 @@ Use the manual as a reference while writing original teaching posts — do not p
 ### License reminder
 
 See [Preface and Legal Notices](https://dev.mysql.com/doc/refman/9.7/en/preface.html). Personal use and format conversion are allowed if the content is unaltered; publishing or redistributing the documentation requires Oracle’s consent.
+
+## Mermin — Quantum Computer Science
+
+N. David Mermin, *Quantum Computer Science: An Introduction* (Cambridge University Press, 2007) is the primary source for the Learn Quantum series. It is **copyright Cambridge University Press / N. D. Mermin** and must not be committed or redistributed.
+
+### Local corpus (outside this repo)
+
+Parsed research text lives at:
+
+`/Users/joel/Documents/quantum/output/book.md`
+
+(also `book.html`, `structure.json`, `figures/`, `docling_images/`).
+
+Use that tree as a reading aid while writing original teaching posts. Do **not** paste Mermin prose into published MDX. Paraphrase. Cite the book in `<References>`. OCR in the parse is imperfect — verify mangled equations before teaching from them.

@@ -1,0 +1,124 @@
+import {
+  UfStepperDemo,
+  DeutschCircuitDemo,
+  GarbageCleanupDemo,
+} from "@/components/interactive/quantum-deutsch";
+import { MathAside, Takeaway } from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## One query, a relational answer
+
+This is post four of [Learn Quantum](/projects/quantum/). You have Qbits, gates, and measurement. Next I need a standard way to plug a classical function $f$ into a quantum circuit. Deutsch's problem is the smallest example where that setup beats a classical black box.
+
+**Constant vs balanced, in plain English.** A 1-bit function $f$ is *constant* if $f(0)=f(1)$ (same answer for both inputs). It is *balanced* if $f(0)\neq f(1)$ (the two answers disagree). Classically you evaluate both inputs to tell which case you are in. Quantumly, one careful use of the oracle is enough — if you agree to learn *only* that relational fact, not the individual values $f(0)$ and $f(1)$.<Cite n={1} /><Cite n={2} /> (Feynman's 1982 simulation paper often gets the historical citation. I'm sticking with Mermin's always-works protocol, not Deutsch's original half-the-time version.)<Cite n={3} />
+
+## Input register, output register, oracle $U_f$
+
+**Registers.** Think of two labeled bundles of Qbits. The **input register** holds the question $x$. The **output register** is a workspace bit string $y$ that will absorb the answer. You need both: if $f$ maps many $x$ to the same value, overwriting a single register with $f(x)$ would not be reversible, and quantum gates must be reversible (until you measure).<Cite n={1} />
+
+**Oracle / $U_f$.** The standard black box is the unitary that leaves $x$ alone and XORs $f(x)$ into $y$:
+
+$$U_f \bigl(|x\rangle_n |y\rangle_m\bigr) = |x\rangle_n |y \oplus f(x)\rangle_m$$
+
+Here $\oplus$ is bitwise XOR (mod-2 add, no carry). If $y$ starts at $0$, the output register ends holding $f(x)$. For any $y$, applying $U_f$ twice is the identity — the box is its own inverse.<Cite n={1} />
+
+Separate registers also set up the phase-kick trick later algorithms abuse.
+
+For one bit in and one bit out there are exactly four functions:
+
+| | $f(0)$ | $f(1)$ | kind |
+| --- | --- | --- | --- |
+| $f_0$ | 0 | 0 | constant |
+| $f_1$ | 0 | 1 | balanced (identity) |
+| $f_2$ | 1 | 0 | balanced (NOT) |
+| $f_3$ | 1 | 1 | constant |
+
+Pick a function. Step $U_f$ on a computational-basis pair $|x\rangle|y\rangle$. Watch the output flip exactly when $f(x)=1$.
+
+<UfStepperDemo />
+
+<Takeaway>
+$U_f$ never "returns $f(x)$ into a void." It XORs $f(x)$ into the output register and leaves $x$ alone.
+</Takeaway>
+
+## Superposition is not free parallel answers
+
+If you put the input in $(|0\rangle+|1\rangle)/\sqrt{2}$ and run $U_f$ once, the joint state carries both $f(0)$ and $f(1)$ in amplitudes. Measure, and Born's rule hands you **one** random $x$ and its $f(x)$. The rest collapses away. No cloning shortcut either: you cannot copy an unknown state to measure twice.<Cite n={1} />
+
+So the naive "evaluate all $x$ at once" story dies at the measurement step. The interesting algorithms apply more gates so that a *relation* among the $f(x)$ values shows up in the probabilities.
+
+## Phase kickback, said plainly
+
+Deutsch's prep puts the output in the odd superposition $|-\rangle = (|0\rangle-|1\rangle)/\sqrt{2}$. If $U_f$ would have flipped that wire ($f(x)=1$), the joint state instead just picks up a minus sign. The bit flip got "kicked back" into a phase hanging on the input:
+
+$$U_f\,|x\rangle|-\rangle = (-1)^{f(x)}\,|x\rangle|-\rangle.$$
+
+(Mermin spells this identity out when he hits Bernstein–Vazirani; the same trick is already doing the work in Deutsch.) If $f(0)$ and $f(1)$ agree, those phases match. If they disagree, the input picks up a relative minus between $|0\rangle$ and $|1\rangle$. One more Hadamard turns that relative phase into a definite $|0\rangle$ or $|1\rangle$ you can measure. You never read $f(0)$ or $f(1)$ themselves — only whether their phases matched.
+
+## Deutsch's protocol
+
+Here is the working version (the one that succeeds every time, not Deutsch's original half-the-time trick).<Cite n={1} /><Cite n={2} />
+
+1. Start both Qbits in $|0\rangle$.
+2. Apply $X$ to both, then $H$ to both. Input and output each sit in $|-\rangle = (|0\rangle-|1\rangle)/\sqrt{2}$.
+3. Apply $U_f$ once (phase kickback runs on every branch).
+4. Apply $H$ to the **input** register.
+5. Measure the input.
+
+If $f$ is constant ($f(0)=f(1)$), the input is left in $|1\rangle$. If $f$ is balanced, it is left in $|0\rangle$. The output register ends in a state that carries **no** usable information about the individual values $f(0)$ and $f(1)$. Overall phases hide them.<Cite n={1} />
+
+<MathAside title="Why the output looks useless">
+<p>
+After the protocol the output is essentially $\pm(|0\rangle-|1\rangle)/\sqrt{2}$ (up to which value $f(0)$ had). A global sign does not change measurement odds. Measuring the output is a fair coin that tells you nothing about $f$.
+</p>
+<p>
+You paid for the relational bit on the <em>input</em> wire by agreeing not to learn the local bits on the output wire.
+</p>
+</MathAside>
+
+Step the circuit. Hide the oracle. See constant vs balanced fall out of one query.
+
+<DeutschCircuitDemo />
+
+<Takeaway>
+Deutsch trades individual $f(x)$ values for one relational bit: constant or balanced. One $U_f$ call, if you set the phase kick up correctly.
+</Takeaway>
+
+## Workspace Qbits and "garbage"
+
+Real $f$ evaluations often need extra Qbits — scratch space for a subroutine. The big unitary $W_f$ on input + output + workspace does **not** automatically look like a tidy $U_f$ on the two registers alone. Leftover entanglement with dirty workspace means the registers may not even have a state of their own.<Cite n={1} />
+
+The fix is cleanup: design the scratch so you can apply $V^\dagger$ (uncompute) and return workspace to $|0\ldots0\rangle$, disentangled. Then the net map on the registers *is* $U_f$, and the Deutsch (and later) analyses go through.
+
+There is a catch for the "millionth bit of $\sqrt{2}$ vs $\sqrt{3}$" story. Evaluating $f$ once classically does not need uncomputation. The quantum relational trick does. So in that interpretation the wall-clock win is not "half the subroutine time." You roughly pay for $V$ and $V^\dagger$.<Cite n={1} /> The black-box / query-complexity win still stands.
+
+Toggle dirty vs cleaned workspace. When scratch depends on $x$ and you skip $V^\dagger$, the registers refuse a state of their own.
+
+<GarbageCleanupDemo />
+
+<Takeaway>
+Ignore workspace only after you have cleaned it. Uncomputation is part of the algorithm, not housekeeping you can skip.
+</Takeaway>
+
+Next: Bernstein–Vazirani, Simon's period, and the Toffoli gate in [Bernstein–Vazirani, Simon & Toffoli](/posts/quantum-oracles/).
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. David Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), §§2.1–2.3",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A69885F1B0DFCA1F66ADEA42D38EFCE",
+    },
+    {
+      n: 2,
+      title: "D. Deutsch, Quantum theory, the Church–Turing principle and the universal quantum computer, Proc. R. Soc. Lond. A 400, 97 (1985)",
+      href: "https://royalsocietypublishing.org/doi/10.1098/rspa.1985.0070",
+    },
+    {
+      n: 3,
+      title: "R. P. Feynman, Simulating physics with computers, Int. J. Theor. Phys. 21, 467 (1982)",
+      href: "https://link.springer.com/article/10.1007/BF02650179",
+    },
+  ]}
+/>

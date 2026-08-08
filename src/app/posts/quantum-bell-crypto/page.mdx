@@ -1,0 +1,127 @@
+import {
+  BellPairBuilder,
+  BB84Sampler,
+  DenseCodingDemo,
+  BitCommitmentSketch,
+} from "@/components/interactive/quantum-bell-crypto";
+import {
+  MathAside,
+  Takeaway,
+  TryIt,
+} from "@/components/interactive/quantum-shared";
+import { Cite, References } from "@/components/cite";
+
+## Two Qbits that refuse to be two stories
+
+This is post twelve of [Learn Quantum](/projects/quantum/). Earlier posts treated entanglement as something that *happens* inside algorithms. Today I treat it as something you can *spend*: a shared Bell pair is a resource, like a charged battery waiting for a protocol.
+
+**Entanglement**, in one line: a joint state of two (or more) Qbits that cannot be written as a product $|a\rangle|b\rangle$. Neither half has a state of its own. **Bell states** are four special entangled two-Qbit states that form a complete orthonormal basis — as good a basis for two Qbits as $|00\rangle$, $|01\rangle$, $|10\rangle$, $|11\rangle$, just entangled instead of product.<Cite n={1} />
+
+Mermin’s Chapter 6 covers small-Qbit protocols labs have actually run — cryptography, dense coding, and (next article) teleportation.<Cite n={1} /> None of them need a thousand-Qbit machine. They need a clean entangled pair and a few 1-Qbit gates.
+
+By the end you should be able to build the four Bell states from H and cNOT, explain why BB84 can notice an eavesdropper, and say how Alice stuffs two classical bits into one transmitted Qbit when she already shares entanglement with Bob.
+
+## Bell states from H then cNOT
+
+Start with two Qbits in a computational-basis state $|xy\rangle$ — meaning each wire is definitely $0$ or $1$, with $x$ on Qbit 1 and $y$ on Qbit 0. Apply H to the first Qbit, then a cNOT with that Qbit as control and the second as target:
+
+$$|\psi_{xy}\rangle = C_{10}\, H_1\, |xy\rangle.$$
+
+The four outputs are an orthonormal set — the **Bell basis**. The friendliest member is
+
+$$|\psi_{00}\rangle = \frac{1}{\sqrt{2}}\big(|00\rangle + |11\rangle\big).$$
+
+The other three look like the same pair with a bit flip on Bob’s wire, a relative minus sign, or both. Equivalently, you can build $|\psi_{00}\rangle$ once and then apply Z on the control and/or X on the target:
+
+$$|\psi_{xy}\rangle = Z_1^x\, X_0^y\, |\psi_{00}\rangle.$$
+
+Pick an input $|xy\rangle$ below. Watch H then cNOT light up. The amplitude bars should show two equal-weight basis states — never a product of two independent 1-Qbit stories.
+
+<BellPairBuilder />
+
+<Takeaway>
+H then cNOT turns $|xy\rangle$ into a Bell state $|\psi_{xy}\rangle$. The four Bell states are as good a basis for two Qbits as $|00\rangle$, $|01\rangle$, $|10\rangle$, $|11\rangle$ — just entangled.
+</Takeaway>
+
+<MathAside title="Why these four are orthonormal">
+The computational states $|xy\rangle$ are orthonormal (inner product 1 with themselves, 0 with each other). H and cNOT are unitary, so they preserve inner products. Four orthonormal inputs map to four orthonormal outputs. That is the whole proof that the Bell basis is a basis — no extra magic.
+</MathAside>
+
+## Quantum cryptography (BB84-style)
+
+A decade before Shor threatened RSA, Bennett and Brassard pointed out that Qbits can help Alice and Bob share a *fresh random key* — a one-time pad — with a detectable eavesdropper.<Cite n={1} />
+
+The classical setup first. If Alice and Bob share an identical random bit string $S$, Alice can send message $M$ as $M \oplus S$. Bob recovers $M$ by XORing with his copy of $S$. Reuse $S$ twice and an eavesdropper can XOR the two ciphertexts and start peeling. So they need a way to refresh $S$ securely.
+
+BB84 does not send the message through quantum mechanics. It sends *noise that becomes a key*. Alice prepares photons (or Qbits) randomly in one of four states: $|0\rangle$, $|1\rangle$, $H|0\rangle$, or $H|1\rangle$.
+
+Those four states come in two **bases** (Mermin calls them *types*):
+
+- **Type Z** — the computational pair $\{|0\rangle, |1\rangle\}$. Measure in Z and you read the bit Alice packed.
+- **Type H** — the Hadamard pair $\{H|0\rangle, H|1\rangle\}$, often written $|+\rangle$ and $|-\rangle$. Measure in H (apply H, then measure in Z) and you read *that* bit.
+
+Bob, for each arriving Qbit, randomly measures in type Z or type H. Later they announce which *types* they used — not the bits — over a public channel. Where types matched, they keep the bits. Where types mismatched, they throw the bits away. About half survive. Those survivors are their sifted key.
+
+Why the random types? If Alice always sent type Z, Eve could measure in Z, learn the bit, and forward a fresh $|0\rangle$ or $|1\rangle$. Bob would never notice. Random types make Eve guess. When she guesses wrong she disturbs the state. Alice and Bob can sacrifice a sample of sifted bits and check agreement. Systematic eavesdropping shows up as roughly 25% errors on that sample.<Cite n={1} />
+
+Run the sampler. Toggle Eve. Watch matched-basis agreement collapse from ~100% toward ~75%.
+
+<BB84Sampler />
+
+<Takeaway>
+Matching bases sift a shared random bit. Mismatched bases are discarded. Eve who measures before forwarding leaves a statistical bruise Alice and Bob can see.
+</Takeaway>
+
+There is also an entangled variant: a source ships $|\psi_{00}\rangle$ halves to Alice and Bob. Same sifting logic. If Alice measures her half first, she has effectively prepared Bob’s half in a random known state — back to BB84 with the randomness supplied by measurement instead of Alice’s coin.<Cite n={1} />
+
+## Bit commitment (and the cheat)
+
+**Bit commitment** is the “locked box” game: Alice wants to prove she decided YES or NO *now*, without telling Bob until later. Classically she can put a card in a locked box and mail Bob the box but not the key. Quantumly, a naive protocol has Alice send Bob many Qbits prepared randomly in the computational basis (YES) or the Hadamard basis (NO). Bob cannot tell which pair of orthogonal states he was given. Later Alice announces which basis and which bits, and Bob checks.<Cite n={1} />
+
+That works — until Alice cheats with entanglement. She keeps one half of each Bell pair and sends Bob the other. His local measurements still look random. When “reveal” time comes she measures *her* halves in whichever basis matches the story she wants to tell. Entanglement lets her postpone the commitment.
+
+<BitCommitmentSketch />
+
+<Takeaway>
+The honest Qbit protocol looks like a locked box. Shared entanglement lets Alice pick the “card” after Bob already holds the box. Consensus: no entanglement-proof quantum bit commitment.
+</Takeaway>
+
+## Dense coding: two bits, one Qbit on the wire
+
+**Dense coding** means: with a pre-shared Bell pair (sometimes called an *e-bit*), Alice can send Bob *two* classical bits by transmitting only *one* Qbit. Alone, a single Qbit can communicate at most one classical bit — Bob measures and gets 0 or 1, and the original amplitudes are gone. But if Alice and Bob already share $|\psi_{00}\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$, Alice can encode a two-bit message by applying $I$, $X$, $Z$, or $ZX$ to her half, then sending that one Qbit to Bob.<Cite n={1} />
+
+Those four local operations map the shared pair onto the four Bell states. Bob reunites the pair, undoes the Bell preparation (cNOT then H — a Bell-basis measurement), and reads $xy$ directly:
+
+| Message | Alice’s gate | Shared state (up to global phase) |
+| --- | --- | --- |
+| 00 | $I$ | $\frac{1}{\sqrt{2}}(\lvert 00\rangle + \lvert 11\rangle)$ |
+| 01 | $X$ | $\frac{1}{\sqrt{2}}(\lvert 10\rangle + \lvert 01\rangle)$ |
+| 10 | $Z$ | $\frac{1}{\sqrt{2}}(\lvert 00\rangle - \lvert 11\rangle)$ |
+| 11 | $ZX$ | $\frac{1}{\sqrt{2}}(\lvert 01\rangle - \lvert 10\rangle)$ |
+
+Pick a message. Watch Alice’s encode gate, then Bob’s decode. The final computational amplitudes pile onto a single $|xy\rangle$.
+
+<DenseCodingDemo />
+
+<Takeaway>
+Dense coding spends a pre-shared e-bit so one transmitted Qbit carries two classical bits. The “density” is in the resource accounting, not in stuffing infinite $\alpha,\beta$ down a fiber.
+</Takeaway>
+
+<TryIt>
+Without looking: which Alice gate sends 10? Check that Bob’s decode circuit (cNOT with Alice as control, then H on Alice) lands on $|10\rangle$ in the dense-coding demo.
+</TryIt>
+
+## What this bought us
+
+Bell states are not a curiosity. They are the battery for the rest of the chapter. Cryptography uses randomness and disturbance. Dense coding uses the full Bell basis as an alphabet. Next post — [teleportation](/posts/quantum-teleportation/) — spends the same battery to move an *unknown* Qbit state, then trips over the three-party GHZ puzzle that makes “predetermined outcomes” look impossible.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "N. D. Mermin, Quantum Computer Science: An Introduction (Cambridge University Press, 2007), ch. 6 §§6.1–6.4",
+      href: "https://www.cambridge.org/core/books/quantum-computer-science/8A9145D0436E606F04A24085184DB0C7",
+    },
+  ]}
+/>
