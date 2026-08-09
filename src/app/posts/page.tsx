@@ -3,7 +3,7 @@ import { ContentCard } from "@/components/content-card";
 import { Reveal } from "@/components/reveal";
 import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { posts } from "@/lib/content";
+import { publishedPosts } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export default function PostsPage() {
-  const sorted = [...posts].sort(
+  const sorted = [...publishedPosts].sort(
     (a, b) => +new Date(b.date) - +new Date(a.date),
   );
 

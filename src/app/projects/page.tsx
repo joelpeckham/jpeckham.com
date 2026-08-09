@@ -3,7 +3,7 @@ import { ContentCard } from "@/components/content-card";
 import { Reveal } from "@/components/reveal";
 import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { projects } from "@/lib/content";
+import { publishedProjects } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export default function ProjectsPage() {
-  const sorted = [...projects].sort(
+  const sorted = [...publishedProjects].sort(
     (a, b) => +new Date(b.date) - +new Date(a.date),
   );
 

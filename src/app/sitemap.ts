@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { allContent } from "@/lib/content";
+import { publishedContent } from "@/lib/content";
 import { siteLastUpdated, siteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -10,7 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: path === "/" ? 1 : 0.8,
   }));
 
-  const contentRoutes = allContent.map((item) => ({
+  const contentRoutes = publishedContent.map((item) => ({
     url: `${siteUrl}${item.href}`,
     lastModified: new Date(item.date),
     changeFrequency: "yearly" as const,

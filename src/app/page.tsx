@@ -8,7 +8,7 @@ import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
 import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
-import { allContent } from "@/lib/content";
+import { publishedContent } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
 import { cn, cssVars } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 const FEATURED_PROJECT_COUNT = 6;
 
 export default function Home() {
-  const projects = allContent.filter((item) => item.kind === "project");
+  const projects = publishedContent.filter((item) => item.kind === "project");
   const featuredProjects = projects.slice(0, FEATURED_PROJECT_COUNT);
   const hasMoreProjects = projects.length > featuredProjects.length;
 

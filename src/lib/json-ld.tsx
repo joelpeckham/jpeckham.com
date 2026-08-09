@@ -2,7 +2,7 @@ import {
   contentSectionHref,
   contentSectionName,
   getAdjacentInSeries,
-  projects,
+  publishedProjects,
   type ContentItem,
 } from "@/lib/content";
 import { siteName, siteUrl } from "@/lib/site";
@@ -23,7 +23,7 @@ const socialSameAs = [
 
 /** Product sites from the catalog, plus social profiles. */
 export function personSameAs(): string[] {
-  const productUrls = projects
+  const productUrls = publishedProjects
     .map((p) => p.productUrl)
     .filter((url): url is string => Boolean(url));
   return [...socialSameAs, ...productUrls];

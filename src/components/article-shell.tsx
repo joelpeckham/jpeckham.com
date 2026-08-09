@@ -49,6 +49,7 @@ export function articleMetadata(slug: ContentSlug): Metadata {
     description: item.description,
     keywords: item.tags,
     authors: [{ name: siteName }],
+    ...(item.draft ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       type: "article",
       title: item.title,
@@ -94,12 +95,14 @@ export function ArticleShell({
     ? adjacent.series.title
     : `All ${contentSectionName(item.kind)}`;
 
-  const productSchema = softwareApplicationJsonLd(item);
+  const productSchema = item.draft
+    ? null
+    : softwareApplicationJsonLd(item);
 
   return (
     <>
-      <JsonLd data={articleJsonLd(item)} />
-      <JsonLd data={breadcrumbJsonLd(item)} />
+      {item.draft ? null : <JsonLd data={articleJsonLd(item)} />}
+      {item.draft ? null : <JsonLd data={breadcrumbJsonLd(item)} />}
       {productSchema ? <JsonLd data={productSchema} /> : null}
       <ScrollToTopOnMount />
       <ViewTransition name={coverTransitionKey(item.slug)} share="cover-piece">

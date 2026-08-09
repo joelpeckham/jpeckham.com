@@ -1,4 +1,4 @@
-import { allContent } from "@/lib/content";
+import { publishedContent } from "@/lib/content";
 import { siteName, siteUrl } from "@/lib/site";
 
 function escapeXml(unsafe: string): string {
@@ -11,7 +11,7 @@ function escapeXml(unsafe: string): string {
 }
 
 export function GET() {
-  const items = allContent
+  const items = publishedContent
     .map(
       (item) => `    <item>
       <title>${escapeXml(item.title)}</title>

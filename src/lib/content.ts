@@ -47,6 +47,11 @@ export type ContentItem = {
   seriesId?: string;
   /** Shipped product URL — feeds Person sameAs + SoftwareApplication JSON-LD. */
   productUrl?: string;
+  /**
+   * When true, the route still works for preview, but the item is omitted
+   * from public listings, sitemap, and RSS, and pages are noindex.
+   */
+  draft?: boolean;
 };
 
 export type Series = {
@@ -223,6 +228,7 @@ export const projects: ContentItem[] = [
       "Interactive tour of Mermin’s Quantum Computer Science. Cbits, Qbits, oracles, Shor, Grover, error correction — with math hand-holding.",
     date: "2026-08-07",
     kind: "project",
+    draft: true,
     tags: ["Quantum", "Series", "Computer Science"],
     art: {
       bg: "ink",
@@ -314,6 +320,7 @@ export const posts: ContentItem[] = [
       "The linear-algebra minimum for Mermin: bases, complex amplitudes, bras and kets, inner products — with no physics assumed.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Math"],
     art: {
@@ -332,6 +339,7 @@ export const posts: ContentItem[] = [
       "Classical bits dressed in Dirac notation. Reversible operations on Cbits before any quantum weirdness.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Cbits"],
     art: {
@@ -350,6 +358,7 @@ export const posts: ContentItem[] = [
       "From Cbits to Qbits: superposition, unitary gates, and how to read a quantum circuit.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Qbits"],
     art: {
@@ -368,6 +377,7 @@ export const posts: ContentItem[] = [
       "How measuring a Qbit turns amplitudes into outcomes, prepares states, and differs from reading a Cbit.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Measurement"],
     art: {
@@ -386,6 +396,7 @@ export const posts: ContentItem[] = [
       "The standard quantum protocol for computing f, and Deutsch’s problem as the first taste of quantum speed-up.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Algorithms"],
     art: {
@@ -404,6 +415,7 @@ export const posts: ContentItem[] = [
       "More oracle games: learn a secret string, find a hidden period mod 2, and build the Toffoli gate.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Algorithms"],
     art: {
@@ -422,6 +434,7 @@ export const posts: ContentItem[] = [
       "Number-theory warm-up for Shor: modular groups, RSA encryption, and why period finding breaks it.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Cryptography"],
     art: {
@@ -440,6 +453,7 @@ export const posts: ContentItem[] = [
       "Shor’s engine room: the QFT, phase kickback intuition, and recovering a period from measured peaks.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Shor"],
     art: {
@@ -458,6 +472,7 @@ export const posts: ContentItem[] = [
       "How a found period becomes the factors of N — the last classical glue in Shor’s algorithm.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Shor"],
     art: {
@@ -476,6 +491,7 @@ export const posts: ContentItem[] = [
       "Amplitude amplification on an unstructured search space — Grover’s iteration, visually.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Algorithms"],
     art: {
@@ -494,6 +510,7 @@ export const posts: ContentItem[] = [
       "Why measuring usually destroys information — and how a 3-Qbit code still catches bit-flip errors.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Error Correction"],
     art: {
@@ -512,6 +529,7 @@ export const posts: ContentItem[] = [
       "Steane and friends: codes that handle more than bit flips, plus encoding circuits you can step through.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Error Correction"],
     art: {
@@ -530,6 +548,7 @@ export const posts: ContentItem[] = [
       "Entangled pairs as a resource: Bell basis, BB84-style crypto intuition, and packing two classical bits into one Qbit.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Protocols"],
     art: {
@@ -548,6 +567,7 @@ export const posts: ContentItem[] = [
       "Move a Qbit’s state with entanglement plus two classical bits, then meet the three-party GHZ paradox.",
     date: "2026-08-07",
     kind: "post",
+    draft: true,
     seriesId: "quantum",
     tags: ["Quantum", "Protocols"],
     art: {
@@ -606,6 +626,14 @@ export type ContentSlug =
 export const allContent: ContentItem[] = [...projects, ...posts].sort(
   (a, b) => +new Date(b.date) - +new Date(a.date),
 );
+
+export function isPublished(item: ContentItem): boolean {
+  return !item.draft;
+}
+
+export const publishedContent = allContent.filter(isPublished);
+export const publishedPosts = posts.filter(isPublished);
+export const publishedProjects = projects.filter(isPublished);
 
 export function getSeries(id: string): Series | undefined {
   return seriesList.find((s) => s.id === id);
