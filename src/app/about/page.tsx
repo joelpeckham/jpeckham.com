@@ -47,6 +47,7 @@ const stack = [
   { label: "Next.js", href: "https://nextjs.org/" },
   { label: "Tailwind CSS", href: "https://tailwindcss.com/" },
   { label: "Postgres", href: "https://www.postgresql.org/" },
+  { label: "MySQL", href: "https://www.mysql.com/" },
 ] as const;
 
 export default function AboutPage() {
@@ -66,7 +67,7 @@ export default function AboutPage() {
               <p className="max-w-[560px] text-lg leading-relaxed">
                 I&apos;m a software developer and former graphic designer in
                 Laramie, Wyoming. I earned a B.S. in Computer Science in 2022. I
-                work across the full stack. I like doing things right{" "}
+                work across the full stack and I like doing things right{" "}
                 <em>before </em> they come back to bite me. For the last three
                 years I&apos;ve been at{" "}
                 <a
