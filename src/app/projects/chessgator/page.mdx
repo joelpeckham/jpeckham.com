@@ -1,0 +1,175 @@
+import {
+  BoardEncodingDemo,
+  EvalDeltaPipelineDemo,
+  JobBookDemo,
+  MaskedSamplingDemo,
+} from "@/components/interactive/chessgator";
+import { Takeaway, TryIt } from "@/components/interactive/mysql-shared";
+import { Cite, References } from "@/components/cite";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+
+<div className="not-prose -mt-2 mb-8 flex flex-wrap gap-3">
+  <a
+    href="https://chessgator.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "yellow", size: "md" }))}
+  >
+    Open chessgator.com
+  </a>
+  <a
+    href="https://github.com/joelpeckham/chessgator"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+  >
+    GitHub
+  </a>
+</div>
+
+## I wanted to beat my roommate
+
+My roommate is better at chess than I am. Apple's Mac app crushed me on the easiest setting, then offered nothing useful about the move that ended me. "Easy" there is a strong engine told to play worse. It doesn't hang a knight because it got distracted.
+
+I wanted an opponent that moves like a person at my rating, a rewind that keeps the board, and a sentence that points at the hanging piece. So I built [chessgator](https://chessgator.com/).
+
+It's a free chess coach that runs in the browser, with no account and no server. Maia plays the other side, Stockfish writes the coaching card, and both of them live in Web Workers on your machine.
+
+## A neural net as the opponent
+
+Most "easy" computers are Stockfish with a blindfold. They still see the tactics you miss; they just refuse to play them sometimes.
+
+I split the jobs. [Maia](https://csslab.cs.toronto.edu/projects/maia/) is the only opponent: a 5 million parameter net trained to move the way humans at a given rating move, not the way a perfect engine would.<Cite n={1} /> Chessgator ships Maia-3 5M as an ONNX file, about 10.7 MB, and runs it with `onnxruntime-web` in a dedicated worker (`numThreads = 1`, SIMD). You pick an Elo from 1100 to 1900 in 100-point steps. That number is an input tensor, not a search-depth handicap. Stockfish never takes a turn; it only coaches.<Cite n={2} />
+
+If Maia fails to load, the game doesn't start. A silent fallback to a dumbed-down engine would just bring back the original complaint. If Stockfish fails, you can still play. You just lose the card after each move.
+
+The awkward part of putting Maia in a browser is how much the Python training code takes for granted. When Black is to move, `board.mirror()` runs: vertical flip plus piece-color swap, so the side to move is always White in token space. Promotions stay on ranks 7 to 8 in vocab UCI. I ported `tokenize_board` and `mirror_move` so the 5M net picks the same move in WASM that it picks upstream.
+
+Pick 1. e4 (Black to move). The token-space board is the real one flipped and recolored. Turn the mirror off and you're feeding the net a position it was never trained on.
+
+<BoardEncodingDemo />
+
+<Takeaway>
+The input is a `[1, 64, 12]` one-hot. Channel order is P,N,B,R,Q,K then p,n,b,r,q,k. History planes aren't used; the published export repeats the current board.
+</Takeaway>
+
+The output head is a 4352-wide move vocabulary: every from-to square pair (4096) plus 256 white-perspective promotions `*[7][a-h]8[qrbn]`. Most of those slots are illegal in any given position. Before sampling, illegal logits become `-Infinity`. Playtime sampling then uses temperature 0.8 and top-p 0.9, otherwise Maia plays the same game twice.
+
+Temperature 0 skips softmax and takes argmax. That's the parity mode. I keep a synthetic-policy test that temperature 0 never selects a masked-illegal move, and a Playwright smoke that loads the real ONNX.
+
+The board below is a fake policy after 1. e4 e5. A few illegal moves have high logits on purpose. Mask them, then drag temperature. Sample 100 times.
+
+<MaskedSamplingDemo />
+
+<Takeaway>
+Without legal masking, a 5M browser net would play illegal moves. Temperature is how I keep it from repeating the same game.
+</Takeaway>
+
+## Async engines under time travel
+
+The game is an immutable tree. Each node is a position plus the move that got you there. Play the same move twice from the same node and you reuse the child. Play a different one and you get a branch. Ghost lines (exploration you haven't committed) die on reload. Every engine job is tagged with a `gameNodeId`. Without that id, rewind is a race.
+
+Stockfish lives in a nested worker. A typed outer worker speaks a small request/response protocol, and inside it the classic UCI Stockfish.js process does `uci` / `isready` / `go movetime`. The client keeps a priority queue (`user` before `background`) and a shared `EngineJobBook`. Coaching searches run 180 ms on the position before your move (MultiPV 3), then 135 ms after (MultiPV 2, `0.75×` with an 80 ms floor). Cancel posts `stop` and waits up to 5 seconds for a `bestmove` ack before freeing the slot.
+
+180 ms is plenty of time to hit rewind, so a late result had better not land on the wrong node. `takeResult(requestId, gameNodeId)` only returns the job if that node is still the live pointer. Rewind, and a late `info`/`bestmove` for the old node is rejected instead of writing a coach card onto the wrong position.
+
+Start a search on e5, then click back to e4 before the bar fills.
+
+<JobBookDemo />
+
+<Takeaway>
+A 180 ms search is long enough to rewind through. Jobs carry the node they belong to, and a mismatch gets dropped so the card stays on the right position.
+</Takeaway>
+
+Maia uses the same book. It only thinks when you're on a leaf where it's the opponent's turn. Sitting in the middle of a finished line is review, so the opponent stays quiet.
+
+## A coach you can unit test
+
+I didn't want a language model narrating my games. They drift, and they will invent a pin that isn't on the board. I wanted a sentence I could put in a test.
+
+After each of my moves, Stockfish does those two short searches. Both scores are White-perspective. `evalLossForMover` flips the sign if I'm Black. The loss becomes a label:
+
+| loss (cp) | label |
+| --- | --- |
+| 0 | best |
+| ≤ 20 | excellent |
+| ≤ 50 | good |
+| ≤ 100 | inaccuracy |
+| ≤ 200 | mistake |
+| &gt; 200 | blunder |
+
+Only blunders auto-open the card. Everything else waits until I ask.
+
+The label tells you how bad it was. The useful part is which tactic fired. Detectors run first: hanging pieces (including a recursive SEE), then threats, king safety, checks, captures, development. Motifs (pins, forks, skewers, discovered attacks) feed the same fact bag. `chooseConcept` walks a fixed priority list and takes the first match. Mate against you overrides into `king_safety`. Then `renderExplanation` stitches a sentence from those slots.
+
+A golden corpus pins the prose. e4 has to mention the center, not print `e4 is an inaccuracy`. A hanging queen has to be named. Mate positions have to say mate. A recapture can't explain itself as "because you captured." The word "centipawn" is banned from the card.
+
+<EvalDeltaPipelineDemo />
+
+<Takeaway>
+I'd rather the coach repeat itself than invent a pin.
+</Takeaway>
+
+If I still don't see it, there's a three-rung hint ladder. Squares first, then the candidate move, then a short line. The card is supposed to push me toward the idea before it spoils the move.
+
+## The rest of the machine
+
+The production build is a static export. There's no Next server. `vercel.json` sets `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` so ORT can take SharedArrayBuffer paths, plus a CSP that allows `wasm-unsafe-eval`. Engine, model, and ONNX Runtime files are cached immutable.
+
+Those files are pinned in `assets.lock.json` by SHA-256. `prebuild` copies Stockfish 18.0.8 lite-single and ORT 1.27.0 out of `node_modules`, downloads the Maia ONNX to a content-addressed name (`maia3-5m.fp16.ca22fc303197.onnx`), and refuses to ship if the bytes don't match. CI runs the same script with `--verify-only`.
+
+The save format is a nested UCI tree with no node ids. Lessons hang off the committed nodes they belong to. On load, every UCI is replayed with `tryApplyMove`, fresh UUIDs are assigned, and lessons are re-keyed. Ghost variations aren't written. If the JSON is corrupt, it starts a new game.
+
+```json
+{
+  "version": 2,
+  "rootFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "currentPath": [0, 1],
+  "maiaElo": 1500,
+  "tree": {
+    "children": [
+      {
+        "uci": "e2e4",
+        "lesson": {
+          "classification": "best",
+          "concept": "best_move",
+          "explanation": "Pawn to e4 is the strongest move because it claims the center and frees the bishop."
+        },
+        "children": [
+          { "uci": "e7e5" },
+          { "uci": "c7c5" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`currentPath` is a list of child indexes among committed children, root to cursor. The first visit downloads the 10.7 MB model, then it feels instant, like any other game asset.
+
+<TryIt>
+Open [chessgator.com](https://chessgator.com/), pick an Elo that feels slightly rude, and play until you hang something. When the card opens, play the suggested move, then jump back and play your original one again. Both lines should still be there. Close the tab and reopen it: the committed tree comes back, the ghost line you only hovered does not.
+</TryIt>
+
+## Loose ends
+
+The templates can't explain a deep positional squeeze. They're good at "you hung a piece" and thinner at "you drifted into a bad ending." Ghost variations vanish on reload. First-visit Maia is a wait on a slow connection, and a blocked model download is a hard stop. Stockfish is a single thread in this build, which keeps the static host simple and makes cancel-before-next-search a real concern.
+
+I haven't beaten my roommate. I do have a record of the moves that got me mated, and a branch where I tried the other one.
+
+<References
+  items={[
+    {
+      n: 1,
+      title:
+        "R. McIlroy-Young, S. Sen, J. Kleinberg, and A. Anderson, \"Aligning Superhuman AI with Human Behavior: Chess as a Model System,\" KDD 2020",
+      href: "https://arxiv.org/abs/2006.01855",
+    },
+    {
+      n: 2,
+      title: "Stockfish, open-source chess engine",
+      href: "https://stockfishchess.org/",
+    },
+  ]}
+/>

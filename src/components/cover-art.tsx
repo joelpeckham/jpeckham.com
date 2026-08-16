@@ -180,6 +180,38 @@ function Newspaper({ color, accent }: { color: string; accent: string }) {
 }
 
 /**
+ * 4×4 checkerboard with two piece dots.
+ * Filled squares, not grid lines — distinct from the 3×3 puzzle mark.
+ */
+function Chess({
+  color,
+  accent,
+  accent2,
+}: {
+  color: string;
+  accent: string;
+  accent2: string;
+}) {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+      <rect x="8" y="8" width="84" height="84" stroke={color} strokeWidth="8" />
+      {/* Dark squares, origin 12 / cell 19 so the fill sits inside the stroke. */}
+      <rect x="12" y="12" width="19" height="19" fill={color} />
+      <rect x="50" y="12" width="19" height="19" fill={color} />
+      <rect x="31" y="31" width="19" height="19" fill={color} />
+      <rect x="69" y="31" width="19" height="19" fill={color} />
+      <rect x="12" y="50" width="19" height="19" fill={color} />
+      <rect x="50" y="50" width="19" height="19" fill={color} />
+      <rect x="31" y="69" width="19" height="19" fill={color} />
+      <rect x="69" y="69" width="19" height="19" fill={color} />
+      {/* Pieces on light squares (1,2) and (3,0). */}
+      <circle cx="41" cy="60" r="7" fill={accent} />
+      <circle cx="79" cy="22" r="7" fill={accent2} />
+    </svg>
+  );
+}
+
+/**
  * Prosody / scansion: syllable bars with stress marks above (iambic ˘ / ˘ /).
  * Flat primitives only — satori rejects <g> and React fragments.
  */
@@ -212,10 +244,12 @@ function Icon({
   name,
   color,
   accent,
+  accent2,
 }: {
   name: CoverIcon;
   color: string;
   accent: string;
+  accent2: string;
 }) {
   switch (name) {
     case "qr":
@@ -234,6 +268,8 @@ function Icon({
       return <Drive color={color} accent={accent} />;
     case "lyrics":
       return <Lyrics color={color} accent={accent} />;
+    case "chess":
+      return <Chess color={color} accent={accent} accent2={accent2} />;
   }
 }
 
@@ -330,37 +366,72 @@ export function CoverArt({
     </Piece>
   );
 
+  const iconOnRight = art.iconSide === "right";
+
   if (art.variant === "split") {
-    return (
-      <div style={{ ...root, alignItems: "center", padding: u(70) }}>
-        <CornerBlocks u={u} palette={p} corners={art.corners} />
-        <Piece tkey={transitionKey} id="icon">
+    const iconBlock = (
+      <Piece tkey={transitionKey} id="icon">
+        <div
+          style={{
+            display: "flex",
+            width: u(300),
+            height: u(300),
+            flexShrink: 0,
+            marginLeft: iconOnRight ? u(56) : 0,
+            marginRight: iconOnRight ? 0 : u(56),
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            name={art.icon}
+            color={p.fg}
+            accent={p.a1}
+            accent2={p.a2}
+          />
+        </div>
+      </Piece>
+    );
+    const textBlock = (
+      <div style={{ display: "flex", flexDirection: "column", gap: u(20) }}>
+        {eyebrow ? (
+          <Piece tkey={transitionKey} id="eyebrow">
+            <div style={eyebrowStyle}>{eyebrow}</div>
+          </Piece>
+        ) : null}
+        <div style={{ ...headlineStyle, fontSize: u(150) }}>
+          {art.headline.map(renderLine)}
+        </div>
+      </div>
+    );
+
+    // Extra relative shell when the icon is on the right: satori treats the
+    // first in-flow flex child as the containing block for corner marks.
+    if (iconOnRight) {
+      return (
+        <div style={root}>
+          <CornerBlocks u={u} palette={p} corners={art.corners} />
           <div
             style={{
               display: "flex",
-              width: u(300),
-              height: u(300),
-              flexShrink: 0,
-              marginRight: u(56),
               alignItems: "center",
-              justifyContent: "center",
+              padding: u(70),
+              width: "100%",
+              height: "100%",
             }}
           >
-            <Icon name={art.icon} color={p.fg} accent={p.a1} />
-          </div>
-        </Piece>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: u(20) }}
-        >
-          {eyebrow ? (
-            <Piece tkey={transitionKey} id="eyebrow">
-              <div style={eyebrowStyle}>{eyebrow}</div>
-            </Piece>
-          ) : null}
-          <div style={{ ...headlineStyle, fontSize: u(150) }}>
-            {art.headline.map(renderLine)}
+            {textBlock}
+            {iconBlock}
           </div>
         </div>
+      );
+    }
+
+    return (
+      <div style={{ ...root, alignItems: "center", padding: u(70) }}>
+        <CornerBlocks u={u} palette={p} corners={art.corners} />
+        {iconBlock}
+        {textBlock}
       </div>
     );
   }
@@ -427,7 +498,12 @@ export function CoverArt({
             }}
           >
             <div style={{ display: "flex", width: u(190), height: u(190) }}>
-              <Icon name={art.icon} color={p.fg} accent={p.a2} />
+              <Icon
+                name={art.icon}
+                color={p.fg}
+                accent={p.a2}
+                accent2={p.a1}
+              />
             </div>
           </div>
         </Piece>
@@ -457,7 +533,12 @@ export function CoverArt({
             opacity: 0.96,
           }}
         >
-          <Icon name={art.icon} color={p.a1} accent={p.a2} />
+          <Icon
+            name={art.icon}
+            color={p.a1}
+            accent={p.a2}
+            accent2={p.fg}
+          />
         </div>
       </Piece>
       {eyebrow ? (

@@ -7,8 +7,10 @@ export type CoverIcon =
   | "stack"
   | "newspaper"
   | "drive"
-  | "lyrics";
+  | "lyrics"
+  | "chess";
 export type CoverVariant = "split" | "stamp" | "band";
+export type CoverIconSide = "left" | "right";
 
 export type CornerMarkColor = "a1" | "a2" | "fg";
 
@@ -26,6 +28,8 @@ export type CoverArtSpec = {
   icon: CoverIcon;
   variant: CoverVariant;
   label?: string;
+  /** Split layout only. Defaults to the icon on the left. */
+  iconSide?: CoverIconSide;
   /** Optional overrides for the split layout's corner square and circle. */
   corners?: {
     square?: CornerMark;
@@ -65,6 +69,29 @@ export type Series = {
 };
 
 export const projects: ContentItem[] = [
+  {
+    slug: "chessgator",
+    href: "/projects/chessgator/",
+    title: "chessgator",
+    description:
+      "I wanted to beat my roommate at chess. Mac Chess was too strong, wouldn't let me undo, and never explained the punch. So I built a local coach with time travel.",
+    date: "2026-08-16",
+    kind: "project",
+    interactive: true,
+    productUrl: "https://chessgator.com/",
+    tags: ["Product", "TypeScript", "Chess"],
+    art: {
+      bg: "yellow",
+      headline: ["CHESS", "GATOR"],
+      icon: "chess",
+      variant: "split",
+      iconSide: "right",
+      corners: {
+        square: { color: "a2", top: 526, right: 60 },
+        circle: { color: "a1", top: 60, left: 60 },
+      },
+    },
+  },
   {
     slug: "lyriic",
     href: "/projects/lyriic/",
