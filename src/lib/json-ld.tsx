@@ -6,6 +6,10 @@ import {
   type ContentItem,
 } from "@/lib/content";
 import {
+  PERSON_DESCRIPTION,
+  PERSON_EMAIL,
+  PERSON_LINKEDIN,
+  personProfile,
   personRef,
   productByContentSlug,
   PRODUCTS,
@@ -49,21 +53,15 @@ export function JsonLd({ data }: JsonLdProps) {
 }
 
 export function personJsonLd() {
+  const profile = personProfile();
   return {
     "@context": "https://schema.org",
-    "@type": "Person",
-    "@id": personId,
-    name: siteName,
-    givenName: "Joel",
-    familyName: "Peckham",
-    url: siteUrl,
+    ...profile,
     image: `${siteUrl}/snowboard_joel.webp`,
-    email: "mail@jpeckham.com",
-    jobTitle: "Software Developer",
-    description:
-      "Full-stack and AI software developer in Laramie, Wyoming.",
+    email: PERSON_EMAIL,
+    description: PERSON_DESCRIPTION,
     disambiguatingDescription:
-      "Software engineer and full-stack developer in Laramie, Wyoming. Not the poet Joel B. Peckham.",
+      "Software engineer and full-stack developer in Laramie, Wyoming. Dual US and Canadian citizen. Not the poet Joel B. Peckham.",
     worksFor: {
       "@type": "Organization",
       name: "BetterRx",
@@ -73,15 +71,6 @@ export function personJsonLd() {
       "@type": "CollegeOrUniversity",
       name: "Southern Adventist University",
       url: "https://www.southern.edu/",
-    },
-    homeLocation: {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: "Laramie",
-        addressRegion: "WY",
-        addressCountry: "US",
-      },
     },
     knowsAbout: [
       "Software Engineering",
@@ -96,6 +85,13 @@ export function personJsonLd() {
       "Python",
     ],
     sameAs: personSameAs(),
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: PERSON_EMAIL,
+      url: PERSON_LINKEDIN,
+      contactType: "professional",
+      availableLanguage: ["English"],
+    },
   };
 }
 

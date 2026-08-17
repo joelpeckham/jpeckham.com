@@ -1,5 +1,5 @@
 import { publishedPosts, publishedProjects } from "@/lib/content";
-import { PRODUCTS } from "@/lib/product-graph";
+import { makerHiringMarkdown, PRODUCTS } from "@/lib/product-graph";
 import { siteUrl } from "@/lib/site";
 
 function u(path: string): string {
@@ -23,6 +23,9 @@ export function buildLlmsTxt(): string {
     "# Joel Peckham",
     "",
     "> Full-stack and AI software developer in Laramie, Wyoming. Portfolio of shipped web products, interactive write-ups, and technical posts.",
+    "",
+    makerHiringMarkdown().trimEnd(),
+    "",
     "",
     "## Products",
     "",
