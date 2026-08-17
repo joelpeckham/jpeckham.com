@@ -73,16 +73,11 @@ export function personJsonLd() {
       url: "https://www.southern.edu/",
     },
     knowsAbout: [
+      ...profile.knowsAbout,
       "Software Engineering",
       "Full-Stack Development",
       "Artificial Intelligence",
       "Machine Learning",
-      "TypeScript",
-      "React",
-      "Next.js",
-      "PHP",
-      "Laravel",
-      "Python",
     ],
     sameAs: personSameAs(),
     contactPoint: {
