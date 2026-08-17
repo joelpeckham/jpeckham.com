@@ -27,7 +27,9 @@ export function SiteFooter() {
               key={link.label}
               href={link.href}
               target={link.external ? "_blank" : undefined}
-              rel={link.external ? "noopener noreferrer" : undefined}
+              rel={
+                link.external ? "me noopener noreferrer" : undefined
+              }
               className="relative pb-0.5 after:absolute after:-bottom-px after:left-0 after:h-[2px] after:w-0 after:bg-paper after:transition-[width] after:duration-200 after:ease-[cubic-bezier(0.2,0.8,0.2,1)] [@media(hover:hover)]:hover:after:w-full"
             >
               {link.label}

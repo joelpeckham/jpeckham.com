@@ -3,11 +3,18 @@ import { publishedContent } from "@/lib/content";
 import { siteLastUpdated, siteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["/", "/projects/", "/posts/", "/about/", "/design/"].map((path) => ({
+  const staticRoutes = [
+    "/",
+    "/projects/",
+    "/posts/",
+    "/about/",
+    "/design/",
+    "/llms.txt",
+  ].map((path) => ({
     url: `${siteUrl}${path}`,
     lastModified: siteLastUpdated,
     changeFrequency: "monthly" as const,
-    priority: path === "/" ? 1 : 0.8,
+    priority: path === "/" ? 1 : path === "/llms.txt" ? 0.3 : 0.8,
   }));
 
   const contentRoutes = publishedContent.map((item) => ({

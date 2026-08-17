@@ -7,7 +7,12 @@ import { Reveal } from "@/components/reveal";
 import { RestoreCardScrollOnMount } from "@/components/scroll-to-top";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Shape } from "@/components/ui/shape";
-import { JsonLd, personJsonLd, websiteJsonLd } from "@/lib/json-ld";
+import {
+  JsonLd,
+  personJsonLd,
+  productItemListJsonLd,
+  websiteJsonLd,
+} from "@/lib/json-ld";
 import { publishedContent } from "@/lib/content";
 import { defaultOgImage } from "@/lib/site";
 import { cn, cssVars } from "@/lib/utils";
@@ -30,6 +35,7 @@ export default function Home() {
       <RestoreCardScrollOnMount />
       <JsonLd data={websiteJsonLd()} />
       <JsonLd data={personJsonLd()} />
+      <JsonLd data={productItemListJsonLd()} />
       <section className="relative overflow-hidden border-b-[3px] border-ink bg-paper">
         <span
           aria-hidden="true"

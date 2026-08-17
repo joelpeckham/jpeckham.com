@@ -5,6 +5,12 @@ import {
   publishedProjects,
   type ContentItem,
 } from "@/lib/content";
+import {
+  personRef,
+  productByContentSlug,
+  PRODUCTS,
+  relatedApps,
+} from "@/lib/product-graph";
 import { siteName, siteUrl } from "@/lib/site";
 
 type JsonLdProps = {
@@ -113,6 +119,7 @@ export function articleJsonLd(item: ContentItem) {
       ? {
           about: {
             "@type": "SoftwareApplication",
+            "@id": productByContentSlug(item.slug)?.appId,
             name: item.title,
             url: item.productUrl,
           },
@@ -124,9 +131,13 @@ export function articleJsonLd(item: ContentItem) {
 /** Product schema for write-ups that ship a live site. */
 export function softwareApplicationJsonLd(item: ContentItem) {
   if (!item.productUrl) return null;
+  const product = productByContentSlug(item.slug);
+  const sameAs = [`${siteUrl}${item.href}`];
+  if (product?.github) sameAs.push(product.github);
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    ...(product ? { "@id": product.appId } : {}),
     name: item.title,
     description: item.description,
     url: item.productUrl,
@@ -138,13 +149,28 @@ export function softwareApplicationJsonLd(item: ContentItem) {
       price: "0",
       priceCurrency: "USD",
     },
-    author: {
-      "@type": "Person",
-      "@id": personId,
-      name: siteName,
-      url: siteUrl,
-    },
-    sameAs: [`${siteUrl}${item.href}`],
+    author: personRef(),
+    creator: personRef(),
+    sameAs,
+    ...(product ? { isRelatedTo: relatedApps(product.id) } : {}),
+  };
+}
+
+export function productItemListJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Shipped products",
+    itemListElement: PRODUCTS.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
+        "@type": "SoftwareApplication",
+        "@id": product.appId,
+        name: product.name,
+        url: product.url,
+      },
+    })),
   };
 }
 
