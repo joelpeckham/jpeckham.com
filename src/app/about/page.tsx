@@ -66,7 +66,9 @@ export default function AboutPage() {
               </h1>
               <p className="max-w-[560px] text-lg leading-relaxed">
                 I&apos;m a software developer and former graphic designer in
-                Laramie, Wyoming. I earned a B.S. in Computer Science in 2022. I
+                Laramie, Wyoming. I&apos;m a US and Canadian citizen, so I can
+                work in both countries. I earned a B.S. in Computer Science in
+                2022. I
                 work across the full stack and I like doing things right{" "}
                 <em>before </em> they come back to bite me. For the last three
                 years I&apos;ve been at{" "}
@@ -129,6 +131,12 @@ export default function AboutPage() {
               </span>
               <ArrowLink href="tel:13076311986">+1 (307) 631-1986</ArrowLink>
               <span className="text-xs text-grey">(I prefer a text.)</span>
+            </li>
+            <li className="flex flex-wrap items-baseline gap-x-3">
+              <span className="text-meta uppercase tracking-[0.18em] text-grey">
+                Citizenship
+              </span>
+              <span>US and Canadian citizen — I can work in both countries.</span>
             </li>
             <li className="flex flex-wrap items-baseline gap-x-3">
               <span className="text-meta uppercase tracking-[0.18em] text-grey">
