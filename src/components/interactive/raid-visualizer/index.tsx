@@ -61,7 +61,7 @@ const WORKFLOW: {
     phase: "write",
     step: 1,
     label: "Write data",
-    hint: "Type text. Spaces become underscores. Then write it to the array.",
+    hint: "Data is already on the array. Edit the text and write again to overwrite.",
   },
   {
     phase: "corrupt",
@@ -73,7 +73,7 @@ const WORKFLOW: {
     phase: "rebuild",
     step: 3,
     label: "Rebuild array",
-    hint: "Rebuild recovers data from XOR or copies. Blue is source. Red is target.",
+    hint: "Hit Fix on a failed drive. Source blocks light up blue, then the recovered block turns red.",
   },
 ];
 
@@ -98,6 +98,24 @@ function prefersReducedMotion(): boolean {
 function clampText(text: string, capacity: number): string {
   if (capacity <= 0) return text;
   return text.slice(0, capacity);
+}
+
+function filledState(
+  level: RaidLevel,
+  text: string,
+  driveCount?: number,
+): ArrayState {
+  return writeData(createInitialState(level, driveCount), text);
+}
+
+function writeStatus(text: string, writtenLength: number): string {
+  return text.length > writtenLength
+    ? `Wrote ${writtenLength} of ${text.length} characters. Array is full.`
+    : `Wrote ${writtenLength} character(s) across the array.`;
+}
+
+function driveHasFailure(drive: Drive): boolean {
+  return drive.failed || drive.blocks.some((block) => block.failed);
 }
 
 type Highlight = {
@@ -178,49 +196,71 @@ function DriveCard({
   drive,
   state,
   highlight,
+  rebuilding,
   onFailBlock,
   onFailDrive,
+  onRebuild,
 }: {
   driveIndex: number;
   drive: Drive;
   state: ArrayState;
   highlight: Highlight | null;
+  rebuilding: boolean;
   onFailBlock: (driveIndex: number, blockIndex: number) => void;
   onFailDrive: (driveIndex: number) => void;
+  onRebuild: () => void;
 }) {
   const canFail = drive.blocks.some(
     (block) => isBlockOccupied(block) && !block.failed,
   );
+  const failed = driveHasFailure(drive);
 
   return (
-    <Card className="min-w-[140px] shrink-0 snap-start p-2 sm:min-w-[152px]">
-      <div className="mb-1.5 flex items-center justify-between gap-1.5">
-        <span className={cn("label text-[10px]", drive.failed && "text-red")}>
-          D{driveIndex + 1}
-          {drive.failed ? " ✕" : ""}
-        </span>
-        <Button
-          type="button"
-          variant="red"
-          size="sm"
-          disabled={!canFail}
-          onClick={() => onFailDrive(driveIndex)}
-          aria-label={`Fail drive ${driveIndex + 1}`}
-        >
-          Fail
-        </Button>
-      </div>
-      <div className="grid grid-cols-4">
-        {drive.blocks.map((_, blockIndex) => (
-          <RaidBlock
-            key={blockIndex}
-            driveIndex={driveIndex}
-            blockIndex={blockIndex}
-            state={state}
-            highlight={highlight}
-            onFail={onFailBlock}
-          />
-        ))}
+    <Card className="w-min shrink-0 snap-start p-2">
+      <div className="w-36 sm:w-32">
+        <div className="mb-1.5 flex h-8 items-center justify-between gap-1.5">
+          <span
+            className={cn(
+              "label min-w-0 shrink truncate text-[10px]",
+              drive.failed && "text-red",
+            )}
+          >
+            D{driveIndex + 1}
+            {drive.failed ? " ✕" : ""}
+          </span>
+          <Button
+            type="button"
+            variant={failed ? "red" : "outline"}
+            size="sm"
+            className={cn(
+              "@container min-w-0 w-16 max-w-16 shrink-0 overflow-hidden px-1.5",
+              !failed && "bg-grey-line text-ink",
+            )}
+            disabled={failed ? rebuilding : !canFail}
+            onClick={() => (failed ? onRebuild() : onFailDrive(driveIndex))}
+            aria-label={
+              failed
+                ? `Fix drive ${driveIndex + 1}`
+                : `Fail drive ${driveIndex + 1}`
+            }
+          >
+            <span className="block w-full overflow-hidden text-center text-[clamp(0.55rem,32cqi,0.75rem)] leading-none">
+              {failed ? "Fix" : "Fail"}
+            </span>
+          </Button>
+        </div>
+        <div className="grid grid-cols-4">
+          {drive.blocks.map((_, blockIndex) => (
+            <RaidBlock
+              key={blockIndex}
+              driveIndex={driveIndex}
+              blockIndex={blockIndex}
+              state={state}
+              highlight={highlight}
+              onFail={onFailBlock}
+            />
+          ))}
+        </div>
       </div>
     </Card>
   );
@@ -260,9 +300,14 @@ function WorkflowStep({
 }
 
 export function RaidVisualizer() {
-  const [state, setState] = useState<ArrayState>(() => createInitialState("0"));
+  const [state, setState] = useState<ArrayState>(() =>
+    filledState("0", DEFAULT_TEXT),
+  );
   const [text, setText] = useState(DEFAULT_TEXT);
-  const [status, setStatus] = useState("Ready. Write data to fill the array.");
+  const [status, setStatus] = useState(() => {
+    const initial = filledState("0", DEFAULT_TEXT);
+    return writeStatus(DEFAULT_TEXT, initial.writtenLength);
+  });
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [, setStaticTick] = useState(0);
   const [rebuilding, setRebuilding] = useState(false);
@@ -322,29 +367,28 @@ export function RaidVisualizer() {
         nextLevel,
         defaultDriveCount(nextLevel),
       );
-      setState(createInitialState(nextLevel));
-      setText((prev) => clampText(prev, nextCapacity));
-      setStatus("Array reset for the new RAID level.");
+      const nextText = clampText(text, nextCapacity);
+      const next = filledState(nextLevel, nextText);
+      setState(next);
+      setText(nextText);
+      setStatus(writeStatus(nextText, next.writtenLength));
     },
-    [cancelRebuildAnimation],
+    [cancelRebuildAnimation, text],
   );
 
   const handleReset = useCallback(() => {
     cancelRebuildAnimation();
-    setState(createInitialState(level));
+    const next = filledState(level, DEFAULT_TEXT);
+    setState(next);
     setText(DEFAULT_TEXT);
-    setStatus("Array reset.");
+    setStatus(writeStatus(DEFAULT_TEXT, next.writtenLength));
   }, [cancelRebuildAnimation, level]);
 
   const handleWrite = useCallback(() => {
     cancelRebuildAnimation();
     const next = writeData(state, text);
     setState(next);
-    setStatus(
-      text.length > next.writtenLength
-        ? `Wrote ${next.writtenLength} of ${text.length} characters. Array is full.`
-        : `Wrote ${next.writtenLength} character(s) across the array.`,
-    );
+    setStatus(writeStatus(text, next.writtenLength));
   }, [cancelRebuildAnimation, state, text]);
 
   const handleFailBlock = useCallback(
@@ -426,25 +470,29 @@ export function RaidVisualizer() {
 
   const handleAddDrives = useCallback(() => {
     cancelRebuildAnimation();
-    const next = addDrives(state);
-    setState(next);
-    setText((current) =>
-      clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
+    const nextGeometry = addDrives(state);
+    const nextText = clampText(
+      text,
+      maxLogicalCapacity(nextGeometry.level, nextGeometry.drives.length),
     );
-    setStatus("Drives added. Data cleared. Write again to see the new layout.");
-  }, [cancelRebuildAnimation, state]);
+    const next = writeData(nextGeometry, nextText);
+    setState(next);
+    setText(nextText);
+    setStatus(writeStatus(nextText, next.writtenLength));
+  }, [cancelRebuildAnimation, state, text]);
 
   const handleRemoveDrives = useCallback(() => {
     cancelRebuildAnimation();
-    const next = setDriveCount(state, state.drives.length - stepCount);
+    const nextGeometry = setDriveCount(state, state.drives.length - stepCount);
+    const nextText = clampText(
+      text,
+      maxLogicalCapacity(nextGeometry.level, nextGeometry.drives.length),
+    );
+    const next = writeData(nextGeometry, nextText);
     setState(next);
-    setText((current) =>
-      clampText(current, maxLogicalCapacity(next.level, next.drives.length)),
-    );
-    setStatus(
-      "Drives removed. Data cleared. Write again to see the new layout.",
-    );
-  }, [cancelRebuildAnimation, state, stepCount]);
+    setText(nextText);
+    setStatus(writeStatus(nextText, next.writtenLength));
+  }, [cancelRebuildAnimation, state, stepCount, text]);
 
   return (
     <div className="not-prose my-8 flex flex-col gap-3">
@@ -530,8 +578,10 @@ export function RaidVisualizer() {
                 drive={drive}
                 state={state}
                 highlight={highlight}
+                rebuilding={rebuilding}
                 onFailBlock={handleFailBlock}
                 onFailDrive={handleFailDrive}
+                onRebuild={handleRebuild}
               />
             ))}
           </div>
@@ -617,15 +667,6 @@ export function RaidVisualizer() {
             )}
           >
             <span className="label w-full sm:w-auto">3 · Rebuild</span>
-            <Button
-              type="button"
-              variant="red"
-              size="sm"
-              onClick={handleRebuild}
-              disabled={rebuilding || !hasData}
-            >
-              {rebuilding ? "Rebuilding…" : "Rebuild array"}
-            </Button>
             <p
               id={statusId}
               aria-live="polite"

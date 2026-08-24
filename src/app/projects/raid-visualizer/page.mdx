@@ -5,10 +5,10 @@ import { RaidVisualizer } from "@/components/interactive/raid-visualizer";
 ## Things to Play With
 
 - **Pick a RAID level.** Switch between RAID 0, 1, 4, 5, and 10. Watch how each layout stripes, mirrors, or computes parity across the drive bay.
-- **Write data.** Type a string (spaces become underscores), or hit **Random**. Then press **Write Data** to lay characters across the array. Parity blocks appear in yellow as two-digit hex bytes.
+- **Write data.** The array fills automatically when the page loads and when you change the RAID level or drive count. Edit the string (spaces become underscores) or hit **Random**, then press **Write →** only if you want to overwrite. Parity blocks appear in yellow as two-digit hex bytes.
 - **Corrupt storage.** Click any occupied block to fail it. Or hit **Fail** on a drive to wipe the whole disk. **Random Failure** is a quick way to demo recovery.
-- **Rebuild the array.** Press **Rebuild Array**. Source blocks light up blue, then the recovered block turns red. Parity levels XOR surviving blocks. Mirrored levels copy from the paired drive.
-- **Scale the array.** Add or remove drives within the limits of each RAID level. Usable capacity and fault tolerance update live. Changing the geometry clears the array — write again to see the new layout.
+- **Rebuild the array.** After a drive fails, its **Fail** button becomes **Fix**. Source blocks light up blue, then the recovered block turns red. Parity levels XOR surviving blocks. Mirrored levels copy from the paired drive.
+- **Scale the array.** Add or remove drives within the limits of each RAID level. Usable capacity and fault tolerance update live, and the current text is rewritten across the new layout.
 
 ## About
 
