@@ -35,11 +35,6 @@ export function InsertLocalityDemo() {
   const sequence = useMemo(() => insertSequence(shape), [shape]);
 
   useEffect(() => {
-    setStep(-1);
-    setManual(false);
-  }, [shape]);
-
-  useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -132,7 +127,11 @@ export function InsertLocalityDemo() {
               type="button"
               size="sm"
               variant={shape === id ? "ink" : "outline"}
-              onClick={() => setShape(id)}
+              onClick={() => {
+                setShape(id);
+                setStep(-1);
+                setManual(false);
+              }}
             >
               {label}
             </Button>

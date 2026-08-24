@@ -145,15 +145,22 @@ export function SecondaryBounceDemo() {
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
-  // Idle auto-cycle until the user clicks.
+  // Idle auto-cycle until the user clicks. Kick off in a timer callback so
+  // the first bounce is not a synchronous setState inside the effect body.
   useEffect(() => {
     if (manual) return;
-    runBounce(rows[0].id);
-    const id = window.setInterval(() => {
-      cycleIdx.current = (cycleIdx.current + 1) % rows.length;
+    const playNext = (first: boolean) => {
+      if (!first) {
+        cycleIdx.current = (cycleIdx.current + 1) % rows.length;
+      }
       runBounce(rows[cycleIdx.current].id);
-    }, 3400);
-    return () => window.clearInterval(id);
+    };
+    const start = window.setTimeout(() => playNext(true), 0);
+    const id = window.setInterval(() => playNext(false), 3400);
+    return () => {
+      window.clearTimeout(start);
+      window.clearInterval(id);
+    };
   }, [manual, rows, runBounce]);
 
   const done = phase === "done";

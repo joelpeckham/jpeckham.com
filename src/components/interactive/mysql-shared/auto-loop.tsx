@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/utils";
@@ -37,16 +38,26 @@ type AutoLoopProps = {
   children: (args: AutoLoopRenderArgs) => ReactNode;
 };
 
+function subscribeReducedMotion(onStoreChange: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function getReducedMotionServerSnapshot() {
+  return false;
+}
+
 function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot,
+  );
 }
 
 /**
@@ -65,19 +76,18 @@ export function AutoLoop({
 }: AutoLoopProps) {
   const reducedMotion = usePrefersReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(!pauseOffscreen);
+  const [observedInView, setObservedInView] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const [t, setT] = useState(reducedMotion ? 1 : 0);
+  const [loopT, setLoopT] = useState(0);
+  const inView = pauseOffscreen ? observedInView : true;
+  const t = reducedMotion ? 1 : loopT;
 
   useEffect(() => {
-    if (!pauseOffscreen) {
-      setInView(true);
-      return;
-    }
+    if (!pauseOffscreen) return;
     const el = rootRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
+      ([entry]) => setObservedInView(entry.isIntersecting),
       { threshold: 0.15 },
     );
     io.observe(el);
@@ -99,28 +109,17 @@ export function AutoLoop({
   );
 
   useEffect(() => {
-    if (reducedMotion) {
-      setT(1);
-      return;
-    }
-    if (!playing) return;
+    if (reducedMotion || !playing) return;
 
     let raf = 0;
     const start = performance.now();
     const loop = (now: number) => {
-      setT(tick(now - start));
+      setLoopT(tick(now - start));
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [playing, reducedMotion, tick]);
-
-  // When pausing mid-loop, freeze; when re-entering view after reduced motion off, resume from 0.
-  useEffect(() => {
-    if (!playing && !reducedMotion && !inView) {
-      // keep current t frozen
-    }
-  }, [playing, reducedMotion, inView]);
 
   const frame =
     frameCount && frameCount > 0

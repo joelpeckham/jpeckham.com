@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AutoLoop,
@@ -124,12 +124,9 @@ export function SargabilityDemo() {
   );
 }
 
-/** Forces AutoLoop remount key already handles reset; placeholder for a11y live region. */
+/** Live region so mode flips are announced. AutoLoop remount key handles reset. */
 function BeamSync({ wrapped }: { wrapped: boolean }) {
-  const [msg, setMsg] = useState("");
-  useEffect(() => {
-    setMsg(wrapped ? "Scanning mode" : "Seek mode");
-  }, [wrapped]);
+  const msg = wrapped ? "Scanning mode" : "Seek mode";
   return (
     <span className="sr-only" aria-live="polite">
       {msg}

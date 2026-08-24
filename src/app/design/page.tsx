@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
@@ -78,13 +79,13 @@ export default function DesignPage() {
         <ol className="flex list-none flex-col gap-8 p-0 sm:gap-12">
           {pages.map((page, i) => {
             const image = (
-              <img
+              <Image
                 src={`/design-portfolio/page-${page}.svg`}
                 alt={`Design portfolio, page ${page} of ${PAGE_COUNT}`}
                 width={612}
                 height={792}
-                loading={page === 1 ? "eager" : "lazy"}
-                decoding="async"
+                priority={page === 1}
+                unoptimized
                 className="mx-auto block h-auto w-full border-2 border-ink"
               />
             );

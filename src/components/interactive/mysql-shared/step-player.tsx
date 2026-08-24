@@ -34,7 +34,19 @@ export function StepPlayer({
 }: StepPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const stepRef = useRef(step);
-  stepRef.current = step;
+  const [prevStep, setPrevStep] = useState(step);
+
+  if (step !== prevStep) {
+    setPrevStep(step);
+    // Parent (or Reset) moved from a started step back to idle — stop play.
+    if (playing && step < 0 && prevStep >= 0) {
+      setPlaying(false);
+    }
+  }
+
+  if (playing && stepCount <= 0) {
+    setPlaying(false);
+  }
 
   const atEnd = stepCount > 0 && step >= stepCount - 1;
   const atStart = step < 0;
@@ -63,11 +75,11 @@ export function StepPlayer({
   }, [onStepChange, stepCount, stopAtEnd]);
 
   useEffect(() => {
-    if (!playing) return;
-    if (stepCount <= 0) {
-      setPlaying(false);
-      return;
-    }
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    if (!playing || stepCount <= 0) return;
     const id = window.setInterval(() => {
       const current = stepRef.current;
       if (current < 0) {
@@ -86,11 +98,6 @@ export function StepPlayer({
     }, intervalMs);
     return () => window.clearInterval(id);
   }, [playing, intervalMs, stepCount, onStepChange, stopAtEnd]);
-
-  // Stop play when parent resets externally.
-  useEffect(() => {
-    if (step < 0 && playing) setPlaying(false);
-  }, [step, playing]);
 
   return (
     <div
