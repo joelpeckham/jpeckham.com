@@ -8,7 +8,8 @@ export type CoverIcon =
   | "newspaper"
   | "drive"
   | "lyrics"
-  | "chess";
+  | "chess"
+  | "screenshot";
 export type CoverVariant = "split" | "stamp" | "band";
 export type CoverIconSide = "left" | "right";
 
@@ -69,6 +70,23 @@ export type Series = {
 };
 
 export const projects: ContentItem[] = [
+  {
+    slug: "ocrogram",
+    href: "/projects/ocrogram/",
+    title: "ocrogram",
+    description:
+      "I already screenshot error dialogs and Slack messages I can't select. Live Text is a gesture every time. So I built a login item that OCRs the screenshot I already take.",
+    date: "2026-08-26",
+    kind: "project",
+    productUrl: "https://ocrogram.com/",
+    tags: ["Product", "Go", "macOS"],
+    art: {
+      bg: "ink",
+      headline: ["OCRO", "GRAM"],
+      icon: "screenshot",
+      variant: "split",
+    },
+  },
   {
     slug: "chessgator",
     href: "/projects/chessgator/",

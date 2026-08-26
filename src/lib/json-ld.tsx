@@ -133,8 +133,8 @@ export function softwareApplicationJsonLd(item: ContentItem) {
     description: item.description,
     url: item.productUrl,
     image: `${siteUrl}/og/${item.slug}/`,
-    applicationCategory: "BrowserApplication",
-    operatingSystem: "Web",
+    applicationCategory: product?.applicationCategory ?? "BrowserApplication",
+    operatingSystem: product?.operatingSystem ?? "Web",
     offers: {
       "@type": "Offer",
       price: "0",

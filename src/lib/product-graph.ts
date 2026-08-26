@@ -47,6 +47,9 @@ export type ProductNode = {
   github: string;
   llms: string;
   description: string;
+  /** Defaults to BrowserApplication / Web in JSON-LD. */
+  applicationCategory?: string;
+  operatingSystem?: string;
 };
 
 export const HUB = {
@@ -117,6 +120,8 @@ export const PRODUCTS: readonly ProductNode[] = [
     llms: "https://ocrogram.com/llms.txt",
     description:
       "Set-and-forget Mac screenshot OCR. Text lands on the clipboard.",
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "macOS",
   },
 ];
 

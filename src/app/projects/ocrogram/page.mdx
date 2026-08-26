@@ -1,0 +1,96 @@
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+
+<div className="not-prose -mt-2 mb-8 flex flex-wrap gap-3">
+  <a
+    href="https://ocrogram.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "yellow", size: "md" }))}
+  >
+    Open ocrogram.com
+  </a>
+  <a
+    href="https://github.com/joelpeckham/ocrogram"
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(buttonVariants({ variant: "outline", size: "md" }))}
+  >
+    GitHub
+  </a>
+</div>
+
+Take a screenshot. Paste the text.
+
+## I already take the screenshot
+
+I copy a lot of text I can't select. Error dialogs, Slack screenshots people send me, a table locked in a PDF. Live Text can read those, but I have to click, drag, and copy every time. I already hit Cmd+Shift+4 for the picture. I wanted that to be the whole job.
+
+So I built [ocrogram](https://ocrogram.com/). You install it, run `ocrogram start`, and leave it as a login item. After that, a normal macOS screenshot puts the text on the clipboard. Cmd+V works anywhere. Apple Vision runs on the Mac. I never added an upload path.
+
+## The shortcut you already use
+
+<div className="not-prose my-8">
+  <figure className="border-2 border-ink bg-white p-5 shadow-[var(--shadow-hard)]">
+    <figcaption className="mb-3 font-mono text-meta uppercase tracking-[0.18em] text-grey">
+      Day to day
+    </figcaption>
+    <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
+      <span className="border-2 border-ink bg-yellow px-2 py-1 font-medium">Cmd+Shift+4</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">PNG in screenshot folder</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">Text on clipboard</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-yellow px-2 py-1 font-medium">Cmd+V</span>
+    </div>
+    <p className="mt-3 text-sm leading-normal text-ink/80">
+      {"The screenshot shortcut you already use. You don't get a new hotkey or a crop window."}
+    </p>
+  </figure>
+</div>
+
+Install is two commands:
+
+```bash
+brew install joelpeckham/ocrogram/ocrogram
+ocrogram start
+```
+
+That writes a LaunchAgent and loads it. Next login, it's already running. You need macOS 14 or later, and a screenshot that writes a file. Cmd+Ctrl+Shift+3/4 never writes one, so those are out of scope on purpose. If you leave screenshots on the Desktop, macOS may ask for Full Disk Access. I send mine to `~/Pictures/Screenshots` instead.
+
+## Two binaries
+
+The Go side is the daemon. It watches the screenshot folder (`defaults read com.apple.screencapture location`, or Desktop). When a file shows up, it waits 400ms of quiet so the PNG is finished writing. Then it checks whether the file is actually a screenshot: localized "Screenshot …" names first, Spotlight `kMDItemIsScreenCapture` if you renamed it.
+
+The Swift side is `ocrogram-helper`. Vision is a Swift API, so the helper is the smallest process that can call it. It takes a path, runs `VNRecognizeTextRequest`, and writes the result to `NSPasteboard`. Exit 0 if it found text. That's the whole contract. There is a Go test that feeds it `hello.png` and asserts `HELLO`.
+
+Homebrew upgrades used to leave the LaunchAgent pointing at a dead Cellar path. The installer now rewrites that to the stable `bin/ocrogram` prefix, so the login item survives `brew upgrade`.
+
+<div className="not-prose my-8">
+  <figure className="border-2 border-ink bg-white p-5 shadow-[var(--shadow-hard)]">
+    <figcaption className="mb-3 font-mono text-meta uppercase tracking-[0.18em] text-grey">
+      Inside the daemon
+    </figcaption>
+    <div className="flex flex-wrap items-center gap-2 font-mono text-sm">
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">fsnotify</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">400ms settler</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">name or mdls</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-yellow px-2 py-1 font-medium">Swift Vision helper</span>
+      <span aria-hidden="true" className="text-grey">→</span>
+      <span className="border-2 border-ink bg-paper-2 px-2 py-1">NSPasteboard</span>
+    </div>
+    <p className="mt-3 text-sm leading-normal text-ink/80">
+      {"Watch the folder, wait for the write to finish, OCR on-device, copy the text."}
+    </p>
+  </figure>
+</div>
+
+## I didn't build another OCR hotkey
+
+Those exist, and they're fine if that's your habit. ocrogram watches files. I built it because I already hit Cmd+Shift+4 and then wanted the text.
+
+MIT, Homebrew, source on [GitHub](https://github.com/joelpeckham/ocrogram). I leave it running.

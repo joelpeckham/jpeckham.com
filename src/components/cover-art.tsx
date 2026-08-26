@@ -212,6 +212,23 @@ function Chess({
 }
 
 /**
+ * Screenshot of text: window chrome, three bars, yellow capture mark.
+ * Flat primitives only — satori rejects <g> and React fragments.
+ */
+function Screenshot({ color, accent }: { color: string; accent: string }) {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+      <rect x="8" y="12" width="84" height="76" stroke={color} strokeWidth="8" />
+      <rect x="8" y="12" width="84" height="16" fill={color} />
+      <rect x="20" y="40" width="48" height="8" fill={color} />
+      <rect x="20" y="56" width="36" height="8" fill={color} />
+      <rect x="20" y="72" width="42" height="8" fill={color} />
+      <rect x="72" y="68" width="12" height="12" fill={accent} />
+    </svg>
+  );
+}
+
+/**
  * Prosody / scansion: syllable bars with stress marks above (iambic ˘ / ˘ /).
  * Flat primitives only — satori rejects <g> and React fragments.
  */
@@ -270,6 +287,8 @@ function Icon({
       return <Lyrics color={color} accent={accent} />;
     case "chess":
       return <Chess color={color} accent={accent} accent2={accent2} />;
+    case "screenshot":
+      return <Screenshot color={color} accent={accent} />;
   }
 }
 
