@@ -10,6 +10,17 @@ import {
   type ReactNode,
 } from "react";
 import {
+  LoaderCircle,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Settings,
+  SkipBack,
+  SkipForward,
+  X,
+} from "lucide-react";
+import {
   emptyTransport,
   parseWireMessage,
   type DjCommandName,
@@ -45,78 +56,6 @@ const fallbackVibes = [
 function wsUrl() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${protocol}://${window.location.host}/api/dj/ws/`;
-}
-
-function IconPrev() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 5h2.4v14H6V5Zm3.3 7L20 18.8V5.2L9.3 12Z" />
-    </svg>
-  );
-}
-
-function IconNext() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M15.6 5H18v14h-2.4V5ZM4 5.2v13.6L14.7 12 4 5.2Z" />
-    </svg>
-  );
-}
-
-function IconPlay() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8 5.2v13.6L19.2 12 8 5.2Z" />
-    </svg>
-  );
-}
-
-function IconPause() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6.5 5h3.6v14H6.5V5Zm7.4 0h3.6v14h-3.6V5Z" />
-    </svg>
-  );
-}
-
-function IconRestart() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 5V2.2L8.2 6 12 9.8V7a5 5 0 1 1-4.6 3.1l-1.8-.8A7 7 0 1 0 12 5Z" />
-    </svg>
-  );
-}
-
-function IconPlus() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" />
-    </svg>
-  );
-}
-
-function IconGear() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M10.1 3h3.8l.4 2.2a7 7 0 0 1 1.8.8l2-1.1 2.7 2.7-1.1 2a7 7 0 0 1 .8 1.8L23 10.1v3.8l-2.2.4a7 7 0 0 1-.8 1.8l1.1 2-2.7 2.7-2-1.1a7 7 0 0 1-1.8.8l-.4 2.2h-3.8l-.4-2.2a7 7 0 0 1-1.8-.8l-2 1.1-2.7-2.7 1.1-2a7 7 0 0 1-.8-1.8L1 13.9v-3.8l2.2-.4a7 7 0 0 1 .8-1.8l-1.1-2L5.6 3.2l2 1.1a7 7 0 0 1 1.8-.8Zm1.9 6.2A2.8 2.8 0 1 0 15 12a2.8 2.8 0 0 0-3-2.8Z" />
-    </svg>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6.2 5.1 12 10.9l5.8-5.8 1.1 1.1L13.1 12l5.8 5.8-1.1 1.1L12 13.1l-5.8 5.8-1.1-1.1L10.9 12 5.1 6.2l1.1-1.1Z" />
-    </svg>
-  );
-}
-
-function IconSpinner() {
-  return (
-    <svg className="dj-spinner" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3.2a8.8 8.8 0 1 0 8.8 8.8h-2.2A6.6 6.6 0 1 1 12 5.4V3.2Z" />
-    </svg>
-  );
 }
 
 function DjModal({
@@ -160,7 +99,7 @@ function DjModal({
             {title}
           </h2>
           <button type="button" className="dj-icon-btn" aria-label="Close" onClick={onClose}>
-            <IconClose />
+            <X aria-hidden="true" />
           </button>
         </div>
         {children}
@@ -419,7 +358,7 @@ export function DjApp() {
         <p className="mt-2 font-[family-name:var(--font-dj-display)] text-2xl leading-tight">
           {pending ? (
             <span className="dj-pending-title">
-              <IconSpinner />
+              <LoaderCircle className="dj-spinner" aria-hidden="true" />
               {title}
             </span>
           ) : (
@@ -439,7 +378,7 @@ export function DjApp() {
             aria-label="Previous"
             onClick={() => send("prev")}
           >
-            <IconPrev />
+            <SkipBack aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -448,7 +387,11 @@ export function DjApp() {
             aria-label={state.transport.playing ? "Pause" : "Play"}
             onClick={() => send(state.transport.playing ? "pause" : "resume")}
           >
-            {state.transport.playing ? <IconPause /> : <IconPlay />}
+            {state.transport.playing ? (
+              <Pause aria-hidden="true" />
+            ) : (
+              <Play aria-hidden="true" />
+            )}
           </button>
           <button
             type="button"
@@ -457,7 +400,7 @@ export function DjApp() {
             aria-label="Next"
             onClick={() => send("next")}
           >
-            <IconNext />
+            <SkipForward aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -469,7 +412,7 @@ export function DjApp() {
               send("playVibe", { vibeId: state.transport.vibeId })
             }
           >
-            <IconRestart />
+            <RotateCcw aria-hidden="true" />
           </button>
         </div>
 
@@ -514,7 +457,7 @@ export function DjApp() {
                   {opening ? "Opening…" : `${vibe.tracks.length} tracks`}
                 </span>
                 <span className="mt-1 flex items-center gap-2 font-[family-name:var(--font-dj-display)] text-xl">
-                  {opening ? <IconSpinner /> : null}
+                  {opening ? <LoaderCircle className="dj-spinner" aria-hidden="true" /> : null}
                   {vibe.name}
                 </span>
               </button>
@@ -532,7 +475,7 @@ export function DjApp() {
             aria-label="Add anthem"
             onClick={() => setAnthemOpen(true)}
           >
-            <IconPlus />
+            <Plus aria-hidden="true" />
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -581,7 +524,7 @@ export function DjApp() {
             aria-label="Edit playlist"
             onClick={() => setPlaylistOpen(true)}
           >
-            <IconGear />
+            <Settings aria-hidden="true" />
           </button>
         </div>
       </section>
