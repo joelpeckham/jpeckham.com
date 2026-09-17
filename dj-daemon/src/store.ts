@@ -39,11 +39,6 @@ function readSeed(): SeedFile {
   return JSON.parse(readFileSync(seedPath, "utf8")) as SeedFile;
 }
 
-export function getSeedTracks(vibeId: string): DjTrack[] {
-  const seedVibe = readSeed().vibes.find((item) => item.id === vibeId);
-  return seedVibe?.tracks.map((track) => ({ ...track })) ?? [];
-}
-
 export function reconcileTracks(
   previous: DjTrack[],
   incoming: Array<Partial<DjTrack> & { title: string; tidalId: string }>,
@@ -99,7 +94,6 @@ function hydrateFromSeed(saved: DjState | undefined, seed: SeedFile): DjState {
     characters: saved?.characters ?? seed.characters ?? [],
     transport: saved?.transport ?? emptyTransport(),
     nowPlaying: saved?.nowPlaying ?? null,
-    search: null,
     pending: null,
     lastError: undefined,
   };
@@ -134,29 +128,6 @@ export function persistVibeMeta(state: DjState) {
   if (changed) writeFileSync(seedPath, JSON.stringify(seed, null, 2) + "\n");
 }
 
-export function persistResolvedIds(state: DjState) {
-  const seed = readSeed();
-  let changed = false;
-  for (const vibe of state.vibes) {
-    const seedVibe = seed.vibes.find((item) => item.id === vibe.id);
-    if (!seedVibe) continue;
-    if (vibe.tidalPlaylistId && seedVibe.tidalPlaylistId !== vibe.tidalPlaylistId) {
-      seedVibe.tidalPlaylistId = vibe.tidalPlaylistId;
-      changed = true;
-    }
-    for (const track of vibe.tracks) {
-      const seedTrack = seedVibe.tracks.find((item) => item.id === track.id);
-      if (!seedTrack || !track.tidalId) continue;
-      if (seedTrack.tidalId !== track.tidalId) {
-        seedTrack.tidalId = track.tidalId;
-        seedTrack.tidalUrl = track.tidalUrl;
-        changed = true;
-      }
-    }
-  }
-  if (changed) writeFileSync(seedPath, JSON.stringify(seed, null, 2) + "\n");
-}
-
 export function bump(state: DjState): DjState {
   state.version += 1;
   state.daemonOnline = true;
@@ -185,15 +156,6 @@ export function findTrack(state: DjState, trackId: string): DjTrack | undefined 
     if (character.anthem?.id === trackId) return character.anthem;
   }
   return undefined;
-}
-
-export function shuffleIds(ids: string[]): string[] {
-  const next = [...ids];
-  for (let i = next.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j]!, next[i]!];
-  }
-  return next;
 }
 
 export { newId };

@@ -42,14 +42,7 @@ export type DjNowPlaying = {
   title: string;
   artist: string;
   isPlaying: boolean;
-};
-
-export type DjSearch = {
-  requestId: string;
-  query: string;
-  status: "idle" | "searching" | "done" | "error";
-  results: DjTrack[];
-  error?: string;
+  tidalId?: string;
 };
 
 export type DjPendingAction =
@@ -74,7 +67,6 @@ export type DjState = {
   characters: DjCharacter[];
   transport: DjTransport;
   nowPlaying: DjNowPlaying | null;
-  search: DjSearch | null;
   pending?: DjPending | null;
   lastError?: string;
 };
@@ -85,7 +77,6 @@ export type DjLive = {
   daemonOnline: boolean;
   transport: DjTransport;
   nowPlaying: DjNowPlaying | null;
-  search: DjSearch | null;
   pending?: DjPending | null;
   lastError?: string;
 };
@@ -104,14 +95,9 @@ export type DjCommandName =
   | "next"
   | "prev"
   | "setVolume"
-  | "addTrack"
-  | "removeTrack"
-  | "reorderTracks"
   | "addCharacter"
   | "removeCharacter"
   | "updateCharacter"
-  | "search"
-  | "setShuffle"
   | "refreshVibe";
 
 export type DjCommand = {
@@ -171,7 +157,6 @@ export function liveFromState(state: DjState): DjLive {
     daemonOnline: state.daemonOnline,
     transport: state.transport,
     nowPlaying: state.nowPlaying,
-    search: state.search,
     pending: state.pending,
     lastError: state.lastError,
   };
@@ -194,7 +179,6 @@ export function emptyState(overrides?: Partial<DjState>): DjState {
     characters: [],
     transport: emptyTransport(),
     nowPlaying: null,
-    search: null,
     pending: null,
     ...overrides,
   };
@@ -208,7 +192,6 @@ export function mergeLive(state: DjState, live: DjLive): DjState {
     daemonOnline: live.daemonOnline,
     transport: live.transport,
     nowPlaying: live.nowPlaying,
-    search: live.search,
     pending: live.pending,
     lastError: live.lastError,
   };
@@ -236,7 +219,6 @@ export function mergeParts(
     characters: catalog?.characters ?? [],
     transport: live?.transport ?? emptyTransport(),
     nowPlaying: live?.nowPlaying ?? null,
-    search: live?.search ?? null,
     pending: live?.pending ?? null,
     lastError: live?.lastError,
   };

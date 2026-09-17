@@ -15,6 +15,8 @@ export type PlaylistTrack = {
 export type LoadedPlaylist = {
   uuid: string;
   tracks: PlaylistTrack[];
+  etag: string | null;
+  unchanged?: boolean;
 };
 
 let cached: { token: Token; expires: number } | null = null;
@@ -128,6 +130,7 @@ async function findPlaylistId(title: string): Promise<string | undefined> {
       "GET",
       `/v1/users/${token.userId}/playlists?limit=50&offset=${offset}&countryCode=US`,
     );
+    if (result.status >= 400) throw tidalFailure("list TIDAL playlists", result);
     const items =
       (result.json as { items?: { uuid?: string; title?: string }[] })?.items ?? [];
     const match = items.find((item) => item.title === title)?.uuid;
@@ -135,6 +138,13 @@ async function findPlaylistId(title: string): Promise<string | undefined> {
     if (items.length < 50) return undefined;
     offset += 50;
   }
+}
+
+async function playlistMeta(uuid: string): Promise<{ etag: string | null } | null> {
+  const result = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
+  if (result.status === 404) return null;
+  if (result.status >= 400) throw tidalFailure("load TIDAL playlist", result);
+  return { etag: result.etag };
 }
 
 export async function playlistItems(uuid: string): Promise<PlaylistTrack[]> {
@@ -145,6 +155,9 @@ export async function playlistItems(uuid: string): Promise<PlaylistTrack[]> {
       "GET",
       `/v1/playlists/${uuid}/items?limit=100&offset=${offset}&countryCode=US`,
     );
+    if (result.status >= 400) {
+      throw tidalFailure("load TIDAL playlist tracks", result);
+    }
     const items =
       (
         result.json as {
@@ -212,14 +225,6 @@ async function deletePlaylistItems(uuid: string, indices: number[]) {
   );
 }
 
-export async function removePlaylistItem(uuid: string, index: number) {
-  const removed = await deletePlaylistItems(uuid, [index]);
-  if (removed.status >= 400) {
-    console.error("TIDAL remove failed", removed.status, removed.json);
-    throw tidalFailure("remove track from TIDAL playlist", removed);
-  }
-}
-
 async function createPlaylist(title: string): Promise<string> {
   const token = await captureAccessToken();
   const created = await tidalRequestRetry(
@@ -228,7 +233,7 @@ async function createPlaylist(title: string): Promise<string> {
     {
       form: new URLSearchParams({
         title,
-        description: "Asperabad DJ vibe. Add tracks here or from the remote.",
+        description: "Asperabad DJ anthem. Managed from the remote.",
       }),
     },
   );
@@ -239,36 +244,37 @@ async function createPlaylist(title: string): Promise<string> {
   return createdUuid;
 }
 
+async function loadPlaylistByUuid(
+  uuid: string,
+  ifNoneMatch?: string,
+): Promise<LoadedPlaylist | null> {
+  const meta = await playlistMeta(uuid);
+  if (!meta) return null;
+  if (ifNoneMatch && meta.etag && meta.etag === ifNoneMatch) {
+    return { uuid, tracks: [], etag: meta.etag, unchanged: true };
+  }
+  return { uuid, tracks: await playlistItems(uuid), etag: meta.etag };
+}
+
 export async function loadVibePlaylist(
   vibeName: string,
   existingId?: string,
+  options?: { ifNoneMatch?: string },
 ): Promise<LoadedPlaylist> {
   const title = playlistTitle(vibeName);
-  let uuid = existingId;
-  if (uuid) {
-    const tracks = await playlistItems(uuid);
-    if (tracks.length > 0 || (await playlistExists(uuid))) {
-      return { uuid, tracks };
-    }
-    uuid = undefined;
+  if (existingId) {
+    const loaded = await loadPlaylistByUuid(existingId, options?.ifNoneMatch);
+    if (loaded) return loaded;
   }
-  uuid = await findPlaylistId(title);
-  if (uuid) {
-    return { uuid, tracks: await playlistItems(uuid) };
+  const uuid = await findPlaylistId(title);
+  if (!uuid) {
+    throw new Error(`TIDAL playlist “${title}” was not found`);
   }
-  return { uuid: await createPlaylist(title), tracks: [] };
-}
-
-async function playlistExists(uuid: string): Promise<boolean> {
-  const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
-  return meta.status < 400;
-}
-
-export async function bootstrapIfEmpty(uuid: string, trackIds: string[]): Promise<PlaylistTrack[]> {
-  const current = await playlistItems(uuid);
-  if (current.length > 0 || trackIds.length === 0) return current;
-  await addTracks(uuid, trackIds);
-  return playlistItems(uuid);
+  const loaded = await loadPlaylistByUuid(uuid, options?.ifNoneMatch);
+  if (!loaded) {
+    throw new Error(`TIDAL playlist “${title}” was not found`);
+  }
+  return loaded;
 }
 
 function sameTrackSet(left: string[], right: string[]) {
@@ -281,26 +287,6 @@ function sameTrackSet(left: string[], right: string[]) {
     counts.set(id, count - 1);
   }
   return true;
-}
-
-export async function getTrack(id: string): Promise<PlaylistTrack | null> {
-  const result = await tidalRequestRetry(
-    "GET",
-    `/v1/tracks/${id}?countryCode=US`,
-  );
-  const item = result.json as {
-    id?: number;
-    title?: string;
-    artist?: { name?: string };
-    artists?: { name?: string }[];
-  } | null;
-  if (result.status >= 400 || !item?.id || !item.title) return null;
-  return {
-    tidalId: String(item.id),
-    title: item.title,
-    artist: artistName(item),
-    tidalUrl: `https://listen.tidal.com/track/${item.id}`,
-  };
 }
 
 export async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean> {
@@ -322,9 +308,14 @@ export async function replaceTracks(uuid: string, trackIds: string[]): Promise<b
 }
 
 export async function syncAnthemPlaylist(trackId: string): Promise<string> {
-  const loaded = await loadVibePlaylist("Anthem");
-  if (await replaceTracks(loaded.uuid, [trackId])) return loaded.uuid;
-  await tidalRequestRetry("DELETE", `/v1/playlists/${loaded.uuid}?countryCode=US`);
+  let uuid: string;
+  try {
+    uuid = (await loadVibePlaylist("Anthem")).uuid;
+  } catch {
+    uuid = await createPlaylist(playlistTitle("Anthem"));
+  }
+  if (await replaceTracks(uuid, [trackId])) return uuid;
+  await tidalRequestRetry("DELETE", `/v1/playlists/${uuid}?countryCode=US`);
   const created = await createPlaylist(playlistTitle("Anthem"));
   await addTracks(created, [trackId]);
   return created;

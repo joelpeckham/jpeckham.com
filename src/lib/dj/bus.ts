@@ -116,7 +116,6 @@ export async function writeSnapshot(state: DjState): Promise<void> {
     daemonOnline: true,
     transport: state.transport,
     nowPlaying: state.nowPlaying,
-    search: state.search,
     pending: state.pending,
     lastError: state.lastError,
   };

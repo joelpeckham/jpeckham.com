@@ -164,7 +164,6 @@ async function runRemoteSocket(ws: WebSocket) {
       daemonOnline,
       transport: emptyState().transport,
       nowPlaying: null,
-      search: null,
       pending: null,
     };
     if (current.catalogVersion !== lastCatalogVersion) {
