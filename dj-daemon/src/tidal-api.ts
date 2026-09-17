@@ -206,9 +206,21 @@ async function addTracks(uuid: string, trackIds: string[]) {
   }
 }
 
+function sameTrackSet(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  const counts = new Map<string, number>();
+  for (const id of left) counts.set(id, (counts.get(id) ?? 0) + 1);
+  for (const id of right) {
+    const count = counts.get(id);
+    if (!count) return false;
+    counts.set(id, count - 1);
+  }
+  return true;
+}
+
 async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean> {
   const current = await playlistTrackIds(uuid);
-  if (current.join(",") === trackIds.join(",")) return true;
+  if (sameTrackSet(current, trackIds)) return true;
   if (current.length > 0) {
     const meta = await tidalRequest("GET", `/v1/playlists/${uuid}?countryCode=US`);
     const removed = await tidalRequest(

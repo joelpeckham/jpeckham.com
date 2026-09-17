@@ -52,6 +52,20 @@ export type DjSearch = {
   error?: string;
 };
 
+export type DjPendingAction =
+  | "playVibe"
+  | "playAnthem"
+  | "next"
+  | "prev"
+  | "pause"
+  | "resume";
+
+export type DjPending = {
+  action: DjPendingAction;
+  label: string;
+  vibeId?: string;
+};
+
 export type DjState = {
   version: number;
   daemonOnline: boolean;
@@ -60,6 +74,7 @@ export type DjState = {
   transport: DjTransport;
   nowPlaying: DjNowPlaying | null;
   search: DjSearch | null;
+  pending?: DjPending | null;
   lastError?: string;
 };
 

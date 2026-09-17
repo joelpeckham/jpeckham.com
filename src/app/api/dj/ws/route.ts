@@ -143,6 +143,7 @@ async function runRemoteSocket(ws: WebSocket) {
           },
           nowPlaying: null,
           search: null,
+          pending: null,
         };
     const changed =
       envelope.version !== lastVersion || envelope.daemonOnline !== lastOnline;

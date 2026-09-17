@@ -13,6 +13,7 @@ import {
   emptyTransport,
   parseWireMessage,
   type DjCommandName,
+  type DjPending,
   type DjState,
   type DjTrack,
 } from "@/lib/dj/protocol";
@@ -25,6 +26,7 @@ const idleState: DjState = {
   transport: emptyTransport(),
   nowPlaying: null,
   search: null,
+  pending: null,
 };
 
 const fallbackVibes = [
@@ -34,7 +36,7 @@ const fallbackVibes = [
   { id: "court", name: "Court", hue: "violet", shuffle: true, tracks: [] },
   { id: "tension", name: "Tension", hue: "moss", shuffle: true, tracks: [] },
   { id: "combat", name: "Combat", hue: "blood", shuffle: true, tracks: [] },
-  { id: "boss", name: "Boss", hue: "ember", shuffle: false, tracks: [] },
+  { id: "boss", name: "Boss", hue: "ember", shuffle: true, tracks: [] },
   { id: "sorrow", name: "Sorrow", hue: "blue", shuffle: true, tracks: [] },
   { id: "triumph", name: "Triumph", hue: "gold", shuffle: true, tracks: [] },
   { id: "travel", name: "Travel", hue: "dust", shuffle: true, tracks: [] },
@@ -105,6 +107,14 @@ function IconClose() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M6.2 5.1 12 10.9l5.8-5.8 1.1 1.1L13.1 12l5.8 5.8-1.1 1.1L12 13.1l-5.8 5.8-1.1-1.1L10.9 12 5.1 6.2l1.1-1.1Z" />
+    </svg>
+  );
+}
+
+function IconSpinner() {
+  return (
+    <svg className="dj-spinner" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.2a8.8 8.8 0 1 0 8.8 8.8h-2.2A6.6 6.6 0 1 1 12 5.4V3.2Z" />
     </svg>
   );
 }
@@ -238,20 +248,47 @@ export function DjApp() {
   const [characterInput, setCharacterInput] = useState("");
   const [anthemOpen, setAnthemOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [localPending, setLocalPending] = useState<DjPending | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const versionRef = useRef(0);
+  const sentVersionRef = useRef(0);
 
-  const send = useCallback((name: DjCommandName, payload: Record<string, unknown> = {}) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(
-      JSON.stringify({
-        type: "command",
-        id: crypto.randomUUID(),
-        name,
-        payload,
-      }),
-    );
-  }, []);
+  const send = useCallback(
+    (name: DjCommandName, payload: Record<string, unknown> = {}, pending?: DjPending) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const pendingLabels: Partial<Record<DjCommandName, string>> = {
+        playVibe: "Opening playlist",
+        playAnthem: "Playing anthem",
+        next: "Skipping forward",
+        prev: "Skipping back",
+        pause: "Pausing",
+        resume: "Resuming",
+      };
+      const nextPending =
+        pending ??
+        (pendingLabels[name]
+          ? {
+              action: name as NonNullable<DjPending["action"]>,
+              label: pendingLabels[name]!,
+              vibeId: typeof payload.vibeId === "string" ? payload.vibeId : undefined,
+            }
+          : null);
+      if (nextPending) {
+        sentVersionRef.current = versionRef.current;
+        setLocalPending(nextPending);
+      }
+      ws.send(
+        JSON.stringify({
+          type: "command",
+          id: crypto.randomUUID(),
+          name,
+          payload,
+        }),
+      );
+    },
+    [],
+  );
 
   const commitVolume = useCallback(
     (volume: number) => {
@@ -314,13 +351,43 @@ export function DjApp() {
     };
   }, []);
 
+  versionRef.current = state.version;
+
+  useEffect(() => {
+    if (!localPending) return;
+    if (state.pending) return;
+    if (state.version > sentVersionRef.current) {
+      setLocalPending(null);
+    }
+  }, [localPending, state.pending, state.version]);
+
+  useEffect(() => {
+    if (!localPending) return;
+    const timer = window.setTimeout(() => setLocalPending(null), 45000);
+    return () => window.clearTimeout(timer);
+  }, [localPending]);
+
   const vibes = state.vibes.length > 0 ? state.vibes : fallbackVibes;
-  const activeVibeId = selectedVibeId ?? state.transport.vibeId ?? vibes[0]?.id ?? null;
+  const pending = localPending ?? state.pending ?? null;
+  const switching = pending?.action === "playVibe" || pending?.action === "playAnthem";
+  const activeVibeId =
+    pending?.vibeId ?? selectedVibeId ?? state.transport.vibeId ?? vibes[0]?.id ?? null;
   const activeVibe = vibes.find((vibe) => vibe.id === activeVibeId) ?? null;
   const currentTrackId = state.transport.queue[state.transport.queueIndex];
   const live = socketOpen && state.daemonOnline;
-  const title = state.nowPlaying?.title || "Silence in the quarter";
-  const artist = state.nowPlaying?.artist || "Waiting on the daemon";
+  const title = pending
+    ? pending.label
+    : state.nowPlaying?.title || "Silence in the quarter";
+  const artist = pending
+    ? "Waiting on TIDAL…"
+    : state.nowPlaying?.artist || "Waiting on the daemon";
+  const pill = !socketOpen
+    ? "Connecting"
+    : !state.daemonOnline
+      ? "Daemon dark"
+      : pending
+        ? "Working"
+        : "Live";
 
   const queueTracks = useMemo(() => {
     if (!activeVibe) return [];
@@ -335,15 +402,29 @@ export function DjApp() {
           <h1 className="dj-title mt-2 text-4xl sm:text-5xl">Noble Quarter DJ</h1>
         </div>
         <span className="dj-pill" aria-live="polite">
-          <span className="dj-dot" data-on={live ? "true" : "false"} />
-          {live ? "Live" : socketOpen ? "Daemon dark" : "Connecting"}
+          <span
+            className="dj-dot"
+            data-on={live ? "true" : "false"}
+            data-busy={pending ? "true" : "false"}
+          />
+          {pill}
         </span>
       </header>
 
-      <section className="rounded-sm border border-[var(--dj-line)] bg-[var(--dj-panel)] p-4 shadow-[var(--dj-shadow)]">
-        <p className="dj-kicker">Now playing</p>
+      <section
+        className="rounded-sm border border-[var(--dj-line)] bg-[var(--dj-panel)] p-4 shadow-[var(--dj-shadow)]"
+        aria-busy={pending ? true : undefined}
+      >
+        <p className="dj-kicker">{pending ? "Working" : "Now playing"}</p>
         <p className="mt-2 font-[family-name:var(--font-dj-display)] text-2xl leading-tight">
-          {title}
+          {pending ? (
+            <span className="dj-pending-title">
+              <IconSpinner />
+              {title}
+            </span>
+          ) : (
+            title
+          )}
         </p>
         <p className="mt-1 text-[var(--dj-muted)]">{artist}</p>
         {state.lastError ? (
@@ -354,7 +435,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live}
+            disabled={!live || Boolean(pending)}
             aria-label="Previous"
             onClick={() => send("prev")}
           >
@@ -363,7 +444,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn dj-transport-play"
-            disabled={!live}
+            disabled={!live || Boolean(pending)}
             aria-label={state.transport.playing ? "Pause" : "Play"}
             onClick={() => send(state.transport.playing ? "pause" : "resume")}
           >
@@ -372,7 +453,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live}
+            disabled={!live || Boolean(pending)}
             aria-label="Next"
             onClick={() => send("next")}
           >
@@ -381,7 +462,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live || !state.transport.vibeId}
+            disabled={!live || !state.transport.vibeId || Boolean(pending)}
             aria-label="Restart vibe"
             onClick={() =>
               state.transport.vibeId &&
@@ -406,6 +487,7 @@ export function DjApp() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {vibes.map((vibe) => {
             const active = state.transport.vibeId === vibe.id;
+            const opening = pending?.action === "playVibe" && pending.vibeId === vibe.id;
             return (
               <button
                 key={vibe.id}
@@ -413,14 +495,26 @@ export function DjApp() {
                 className="dj-vibe"
                 data-hue={vibe.hue}
                 data-active={active ? "true" : "false"}
-                disabled={!live || vibe.tracks.length === 0}
+                data-pending={opening ? "true" : "false"}
+                disabled={
+                  !live ||
+                  vibe.tracks.length === 0 ||
+                  (switching && !opening)
+                }
                 onClick={() => {
                   setSelectedVibeId(vibe.id);
-                  send("playVibe", { vibeId: vibe.id });
+                  send("playVibe", { vibeId: vibe.id }, {
+                    action: "playVibe",
+                    vibeId: vibe.id,
+                    label: `Opening ${vibe.name}`,
+                  });
                 }}
               >
-                <span className="dj-kicker">{vibe.tracks.length} tracks</span>
-                <span className="mt-1 block font-[family-name:var(--font-dj-display)] text-xl">
+                <span className="dj-kicker">
+                  {opening ? "Opening…" : `${vibe.tracks.length} tracks`}
+                </span>
+                <span className="mt-1 flex items-center gap-2 font-[family-name:var(--font-dj-display)] text-xl">
+                  {opening ? <IconSpinner /> : null}
                   {vibe.name}
                 </span>
               </button>
@@ -450,8 +544,17 @@ export function DjApp() {
                 key={character.id}
                 type="button"
                 className="dj-solid"
-                disabled={!live || !character.anthem}
-                onClick={() => send("playAnthem", { characterId: character.id })}
+                disabled={!live || !character.anthem || Boolean(pending)}
+                onClick={() =>
+                  send(
+                    "playAnthem",
+                    { characterId: character.id },
+                    {
+                      action: "playAnthem",
+                      label: `Playing ${character.name}`,
+                    },
+                  )
+                }
               >
                 {character.name}
               </button>
@@ -468,7 +571,7 @@ export function DjApp() {
             </h2>
             <p className="mt-1 text-sm text-[var(--dj-muted)]">
               {activeVibe
-                ? `${activeVibe.tracks.length} tracks${activeVibe.shuffle ? " · shuffle" : ""}`
+                ? `${activeVibe.tracks.length} tracks`
                 : "Choose a vibe"}
             </p>
           </div>
@@ -555,23 +658,6 @@ export function DjApp() {
             </button>
           ))}
         </div>
-        {activeVibe ? (
-          <label className="mb-4 block text-sm text-[var(--dj-muted)]">
-            <input
-              type="checkbox"
-              className="mr-2 accent-[var(--dj-gold)]"
-              checked={activeVibe.shuffle}
-              disabled={!live}
-              onChange={(event) =>
-                send("setShuffle", {
-                  vibeId: activeVibe.id,
-                  shuffle: event.target.checked,
-                })
-              }
-            />
-            Shuffle
-          </label>
-        ) : null}
         <form
           className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]"
           onSubmit={(event) => {

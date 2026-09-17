@@ -63,6 +63,7 @@ function repairSeededTracks(saved: DjState, seed: SeedFile): DjState {
       }),
       ...extras,
     ];
+    vibe.shuffle = true;
     if (vibe.tidalPlaylistId && !/^[0-9a-f-]{36}$/i.test(vibe.tidalPlaylistId)) {
       vibe.tidalPlaylistId = undefined;
     }
@@ -78,6 +79,7 @@ export function loadState(): DjState {
       {
         ...saved,
         daemonOnline: true,
+        pending: null,
         version: saved.version ?? 1,
       },
       seed,
@@ -91,6 +93,7 @@ export function loadState(): DjState {
       transport: emptyTransport(),
       nowPlaying: null,
       search: null,
+      pending: null,
     };
   }
 }

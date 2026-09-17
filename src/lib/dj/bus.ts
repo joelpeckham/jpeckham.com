@@ -63,7 +63,12 @@ export async function markDaemonOffline(): Promise<void> {
     version: (current?.version ?? 0) + 1,
     daemonOnline: false,
     state: current?.state
-      ? { ...current.state, daemonOnline: false, version: (current.version ?? 0) + 1 }
+      ? {
+          ...current.state,
+          daemonOnline: false,
+          pending: null,
+          version: (current.version ?? 0) + 1,
+        }
       : null,
   };
   await Promise.all([

@@ -253,7 +253,7 @@ async function waitForPlaylist(playlistId: string, timeoutMs = 12000): Promise<b
         const id = ${JSON.stringify(playlistId)};
         const onPage = location.pathname.includes("/playlist/" + id);
         const playAll = document.querySelector(
-          '[data-test="playlist-header-container"] [data-test="play-all"]',
+          '[data-test="playlist-header-container"] [data-test="play-all"], [data-test="playlist-header-container"] [data-test="shuffle-all"]',
         );
         const rows = [...document.querySelectorAll('[data-test="tracklist-row"]')].filter(
           (row) =>
@@ -269,13 +269,13 @@ async function waitForPlaylist(playlistId: string, timeoutMs = 12000): Promise<b
   return false;
 }
 
-async function clickPlaylistPlayAll(): Promise<boolean> {
+async function clickPlaylistShuffleAll(): Promise<boolean> {
   return (
     (await evaluate<boolean>(
       `(() => {
         const btn =
-          document.querySelector('[data-test="playlist-header-container"] [data-test="play-all"]') ||
-          document.querySelector('[data-test="playlist-page"] [data-test="play-all"]');
+          document.querySelector('[data-test="playlist-header-container"] [data-test="shuffle-all"]') ||
+          document.querySelector('[data-test="playlist-page"] [data-test="shuffle-all"]');
         if (!btn) return false;
         btn.click();
         return true;
@@ -284,17 +284,21 @@ async function clickPlaylistPlayAll(): Promise<boolean> {
   );
 }
 
-async function clickPlaylistRowPlay(index: number): Promise<boolean> {
+async function clickPlaylistTrackPlay(tidalId: string): Promise<boolean> {
   return (
     (await evaluate<boolean>(
       `(() => {
-        const index = ${JSON.stringify(index)};
+        const id = ${JSON.stringify(tidalId)};
         const rows = [...document.querySelectorAll('[data-test="tracklist-row"]')].filter(
           (row) =>
             !row.closest('[data-test="media-table-suggested-items"]') &&
             !row.querySelector('[data-test="add-suggested-item-to-playlist-button"]'),
         );
-        const btn = rows[index]?.querySelector('[data-test="play-button"]');
+        const row = rows.find((item) => {
+          const href = item.querySelector('a[href*="/track/"]')?.getAttribute("href") || "";
+          return href.includes("/track/" + id);
+        });
+        const btn = row?.querySelector('[data-test="play-button"]');
         if (!btn) return false;
         btn.click();
         return true;
@@ -305,7 +309,6 @@ async function clickPlaylistRowPlay(index: number): Promise<boolean> {
 
 export async function playTidalPlaylist(
   playlistId: string,
-  startIndex = 0,
   expectedTidalId?: string,
 ): Promise<boolean> {
   await spaNavigate(`/playlist/${playlistId}`);
@@ -316,18 +319,18 @@ export async function playTidalPlaylist(
     await delay(2500);
     if (!(await waitForPlaylist(playlistId))) return false;
   }
-  await setShuffleOff();
-  const start = async () =>
-    startIndex > 0
-      ? (await clickPlaylistRowPlay(startIndex)) || (await clickPlaylistPlayAll())
-      : await clickPlaylistPlayAll();
+  await setShuffleOn();
+  const start = async () => {
+    if (expectedTidalId && (await clickPlaylistTrackPlay(expectedTidalId))) return true;
+    return clickPlaylistShuffleAll();
+  };
   if (!(await start())) return false;
   if (expectedTidalId && !(await waitForPlayingTrack(expectedTidalId))) {
-    await start();
-    if (!(await waitForPlayingTrack(expectedTidalId))) return false;
-  } else {
+    await clickPlaylistShuffleAll();
     await delay(900);
+    return (await readPlayerBar()).isPlaying;
   }
+  await delay(700);
   return true;
 }
 
@@ -341,7 +344,7 @@ async function waitForPlayingTrack(tidalId: string, timeoutMs = 6000): Promise<b
   return false;
 }
 
-export async function setShuffleOff(): Promise<void> {
+export async function setShuffleOn(): Promise<void> {
   await evaluate(
     `(() => {
       const btn =
@@ -351,7 +354,7 @@ export async function setShuffleOff(): Promise<void> {
       const pressed =
         btn.getAttribute("aria-pressed") === "true" ||
         btn.getAttribute("aria-checked") === "true";
-      if (pressed) btn.click();
+      if (!pressed) btn.click();
       return true;
     })()`,
   );
