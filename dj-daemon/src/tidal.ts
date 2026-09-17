@@ -9,6 +9,23 @@ type CdpTarget = {
   webSocketDebuggerUrl: string;
 };
 
+type PendingCdp = {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+
+type CdpSession = {
+  ws: WebSocket;
+  debuggerUrl: string;
+  nextId: number;
+  pending: Map<number, PendingCdp>;
+};
+
+let session: CdpSession | null = null;
+let connecting: Promise<CdpSession> | null = null;
+let capturedAuthorization = "";
+
 async function httpGet(url: string, timeoutMs = 2500): Promise<string> {
   return new Promise((resolve, reject) => {
     const req = http.get(url, (res) => {
@@ -95,81 +112,170 @@ async function findMainTarget(): Promise<CdpTarget> {
   return main;
 }
 
+function resetSession(reason = "CDP session closed") {
+  if (!session) return;
+  const current = session;
+  session = null;
+  for (const item of current.pending.values()) {
+    clearTimeout(item.timer);
+    item.reject(new Error(reason));
+  }
+  current.pending.clear();
+  try {
+    current.ws.close();
+  } catch {
+    // ignore
+  }
+}
+
+function attachSession(ws: WebSocket, debuggerUrl: string): CdpSession {
+  const next: CdpSession = {
+    ws,
+    debuggerUrl,
+    nextId: 1,
+    pending: new Map(),
+  };
+  ws.on("message", (data) => {
+    const msg = JSON.parse(data.toString()) as {
+      id?: number;
+      method?: string;
+      params?: { request?: { headers?: Record<string, string> } };
+      result?: {
+        result?: { value?: unknown };
+        exceptionDetails?: {
+          text?: string;
+          exception?: { description?: string };
+        };
+      };
+      error?: { message?: string };
+    };
+    if (msg.method === "Network.requestWillBeSent") {
+      const header =
+        msg.params?.request?.headers?.Authorization ??
+        msg.params?.request?.headers?.authorization;
+      if (header?.startsWith("Bearer ")) capturedAuthorization = header;
+    }
+    if (!msg.id || !next.pending.has(msg.id)) return;
+    const pending = next.pending.get(msg.id)!;
+    next.pending.delete(msg.id);
+    clearTimeout(pending.timer);
+    if (msg.error) {
+      pending.reject(new Error(msg.error.message ?? "CDP error"));
+      return;
+    }
+    if (msg.result?.exceptionDetails) {
+      const ex = msg.result.exceptionDetails;
+      pending.reject(new Error(ex.exception?.description ?? ex.text ?? "JS evaluation error"));
+      return;
+    }
+    pending.resolve(msg.result?.result?.value);
+  });
+  ws.on("close", () => {
+    if (session === next) resetSession();
+  });
+  ws.on("error", () => {
+    if (session === next) resetSession("CDP socket error");
+  });
+  return next;
+}
+
+async function ensureSession(): Promise<CdpSession> {
+  if (session && session.ws.readyState === WebSocket.OPEN) return session;
+  if (connecting) return connecting;
+  connecting = (async () => {
+    const target = await findMainTarget();
+    const ws = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise<void>((resolve, reject) => {
+      ws.once("open", () => resolve());
+      ws.once("error", reject);
+    });
+    session = attachSession(ws, target.webSocketDebuggerUrl);
+    await cdpSend("Network.enable");
+    return session;
+  })();
+  try {
+    return await connecting;
+  } finally {
+    connecting = null;
+  }
+}
+
+async function cdpSend(
+  method: string,
+  params: Record<string, unknown> = {},
+  timeoutMs = 8000,
+): Promise<unknown> {
+  const current = await ensureSession();
+  const id = current.nextId++;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      current.pending.delete(id);
+      reject(new Error(`CDP ${method} timed out`));
+    }, timeoutMs);
+    current.pending.set(id, { resolve, reject, timer });
+    current.ws.send(JSON.stringify({ id, method, params }));
+  });
+}
+
+export function clearCapturedAuthorization() {
+  capturedAuthorization = "";
+}
+
+export async function captureAuthorization(): Promise<string> {
+  if (capturedAuthorization) return capturedAuthorization;
+  await ensureSession();
+  await evaluate(
+    "fetch('https://api.tidal.com/v1/sessions?countryCode=US',{headers:{accept:'application/json'}}).catch(()=>{})",
+    { awaitPromise: true },
+  );
+  const start = Date.now();
+  while (!capturedAuthorization && Date.now() - start < 4000) {
+    await delay(100);
+  }
+  if (!capturedAuthorization) {
+    await evaluate(
+      "(() => { history.pushState({}, '', '/my-collection/playlists'); dispatchEvent(new PopStateEvent('popstate')); return true; })()",
+    );
+    while (!capturedAuthorization && Date.now() - start < 8000) {
+      await delay(100);
+    }
+  }
+  if (!capturedAuthorization) throw new Error("Could not capture TIDAL session");
+  return capturedAuthorization;
+}
+
 export async function evaluate<T = unknown>(
   expression: string,
   options?: { awaitPromise?: boolean; timeoutMs?: number },
 ): Promise<T> {
-  const target = await findMainTarget();
-  const timeoutMs = options?.timeoutMs ?? 8000;
+  const run = () =>
+    cdpSend(
+      "Runtime.evaluate",
+      {
+        expression,
+        returnByValue: true,
+        awaitPromise: options?.awaitPromise ?? false,
+      },
+      options?.timeoutMs ?? 8000,
+    ) as Promise<T>;
 
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(target.webSocketDebuggerUrl);
-    let settled = false;
+  try {
+    return await run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/session closed|socket/i.test(message)) throw error;
+    resetSession(message);
+    return run();
+  }
+}
 
-    const finish = (error?: Error, value?: T) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        ws.close();
-      } catch {
-        // ignore
-      }
-      if (error) reject(error);
-      else resolve(value as T);
-    };
-
-    const timer = setTimeout(() => {
-      finish(new Error("CDP evaluation timed out"));
-    }, timeoutMs);
-
-    ws.on("open", () => {
-      ws.send(
-        JSON.stringify({
-          id: 1,
-          method: "Runtime.evaluate",
-          params: {
-            expression,
-            returnByValue: true,
-            awaitPromise: options?.awaitPromise ?? false,
-          },
-        }),
-      );
-    });
-
-    ws.on("message", (data) => {
-      try {
-        const msg = JSON.parse(data.toString()) as {
-          id?: number;
-          result?: {
-            result?: { value?: T };
-            exceptionDetails?: {
-              text?: string;
-              exception?: { description?: string };
-            };
-          };
-        };
-        if (msg.id !== 1) return;
-        if (msg.result?.exceptionDetails) {
-          const ex = msg.result.exceptionDetails;
-          finish(
-            new Error(ex.exception?.description ?? ex.text ?? "JS evaluation error"),
-          );
-          return;
-        }
-        finish(undefined, msg.result?.result?.value);
-      } catch (error) {
-        finish(error instanceof Error ? error : new Error(String(error)));
-      }
-    });
-
-    ws.on("error", (error) => {
-      finish(new Error(`CDP socket: ${error.message}`));
-    });
-  });
+export async function currentPath(): Promise<string> {
+  return (await evaluate<string>("location.pathname")) ?? "";
 }
 
 export async function spaNavigate(spaPath: string): Promise<void> {
+  const already = await currentPath();
+  if (already === spaPath || already.endsWith(spaPath)) return;
   await evaluate(
     `(() => {
       const path = ${JSON.stringify(spaPath)};
@@ -180,7 +286,12 @@ export async function spaNavigate(spaPath: string): Promise<void> {
       return "pushState";
     })()`,
   );
-  await delay(2800);
+  const start = Date.now();
+  while (Date.now() - start < 4000) {
+    const path = await currentPath();
+    if (path === spaPath || path.endsWith(spaPath)) return;
+    await delay(200);
+  }
 }
 
 async function waitForTracks(timeoutMs = 10000): Promise<number> {
@@ -190,7 +301,7 @@ async function waitForTracks(timeoutMs = 10000): Promise<number> {
       `document.querySelectorAll('a[href*="/track/"]').length`,
     );
     if ((count ?? 0) > 0) return count;
-    await delay(400);
+    await delay(200);
   }
   return 0;
 }
@@ -245,7 +356,7 @@ export async function playTidalTrack(tidalId: string): Promise<boolean> {
   return clickHeroPlay();
 }
 
-async function waitForPlaylist(playlistId: string, timeoutMs = 12000): Promise<boolean> {
+async function waitForPlaylist(playlistId: string, timeoutMs = 4000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const ready = await evaluate<boolean>(
@@ -264,7 +375,7 @@ async function waitForPlaylist(playlistId: string, timeoutMs = 12000): Promise<b
       })()`,
     );
     if (ready) return true;
-    await delay(350);
+    await delay(200);
   }
   return false;
 }
@@ -307,39 +418,47 @@ async function clickPlaylistTrackPlay(tidalId: string): Promise<boolean> {
   );
 }
 
+async function waitUntilPlaying(timeoutMs = 2500): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if ((await readPlayerBar()).isPlaying) return true;
+    await delay(200);
+  }
+  return (await readPlayerBar()).isPlaying;
+}
+
 export async function playTidalPlaylist(
   playlistId: string,
   expectedTidalId?: string,
 ): Promise<boolean> {
-  await spaNavigate(`/playlist/${playlistId}`);
-  if (!(await waitForPlaylist(playlistId))) {
-    await evaluate(
-      `location.assign(${JSON.stringify(`https://desktop.tidal.com/playlist/${playlistId}`)})`,
-    );
-    await delay(2500);
-    if (!(await waitForPlaylist(playlistId))) return false;
+  const path = await currentPath();
+  const onPage = path.includes(`/playlist/${playlistId}`);
+  if (!onPage) {
+    await spaNavigate(`/playlist/${playlistId}`);
+    if (!(await waitForPlaylist(playlistId))) {
+      await evaluate(
+        `location.assign(${JSON.stringify(`https://desktop.tidal.com/playlist/${playlistId}`)})`,
+      );
+      if (!(await waitForPlaylist(playlistId))) return false;
+    }
+  } else if (!(await waitForPlaylist(playlistId, 1500))) {
+    // already on the page; keep going even if rows are still painting
   }
   await setShuffleOn();
-  const start = async () => {
-    if (expectedTidalId && (await clickPlaylistTrackPlay(expectedTidalId))) return true;
-    return clickPlaylistShuffleAll();
-  };
-  if (!(await start())) return false;
-  if (expectedTidalId && !(await waitForPlayingTrack(expectedTidalId))) {
-    await clickPlaylistShuffleAll();
-    await delay(900);
-    return (await readPlayerBar()).isPlaying;
+  if (expectedTidalId && (await clickPlaylistTrackPlay(expectedTidalId))) {
+    return waitForPlayingTrack(expectedTidalId, 4000);
   }
-  await delay(700);
-  return true;
+  if (await clickPlaylistShuffleAll()) return waitUntilPlaying();
+  if (await clickHeroPlay()) return waitUntilPlaying();
+  return false;
 }
 
-async function waitForPlayingTrack(tidalId: string, timeoutMs = 6000): Promise<boolean> {
+async function waitForPlayingTrack(tidalId: string, timeoutMs = 4000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const info = await readPlayerBar();
     if (info.tidalId === tidalId && info.isPlaying) return true;
-    await delay(350);
+    await delay(200);
   }
   return false;
 }
@@ -438,6 +557,21 @@ export async function readPlayerBar(): Promise<PlayerBarInfo> {
   return result ?? { isPlaying: false, title: null, artist: null, tidalId: null };
 }
 
+export async function waitForPlayerChange(
+  previous: PlayerBarInfo,
+  timeoutMs = 1500,
+): Promise<PlayerBarInfo> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const info = await readPlayerBar();
+    if (info.tidalId && info.tidalId !== previous.tidalId) return info;
+    if (info.title && previous.title && info.title !== previous.title) return info;
+    if (info.isPlaying !== previous.isPlaying && (info.title || info.tidalId)) return info;
+    await delay(150);
+  }
+  return readPlayerBar();
+}
+
 export type SearchHit = {
   tidalId: string;
   title: string;
@@ -489,7 +623,7 @@ export async function searchTidal(query: string): Promise<SearchHit[]> {
   if (sessionHits.length > 0) return sessionHits;
   const path = `/search/${encodeURIComponent(query)}`;
   await spaNavigate(path);
-  await delay(2000);
+  await delay(800);
   const hits = await evaluate<SearchHit[]>(
     `(() => {
       const rows = [];

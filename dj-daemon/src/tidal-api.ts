@@ -1,10 +1,20 @@
-import WebSocket from "ws";
-import { tidalCdpPort } from "./env";
-import type { SearchHit } from "./tidal";
+import { captureAuthorization, clearCapturedAuthorization, type SearchHit } from "./tidal";
 
 type Token = {
   authorization: string;
   userId: string;
+};
+
+export type PlaylistTrack = {
+  tidalId: string;
+  title: string;
+  artist: string;
+  tidalUrl: string;
+};
+
+export type LoadedPlaylist = {
+  uuid: string;
+  tracks: PlaylistTrack[];
 };
 
 let cached: { token: Token; expires: number } | null = null;
@@ -22,96 +32,29 @@ function userIdFromAuth(authorization: string): string | null {
   }
 }
 
+function artistName(item: {
+  artist?: { name?: string };
+  artists?: { name?: string }[];
+}): string {
+  return (
+    item.artist?.name ??
+    (item.artists ?? []).map((artist) => artist.name).filter(Boolean).join(", ")
+  );
+}
+
 async function captureAccessToken(): Promise<Token> {
   if (cached && cached.expires > Date.now() + 10_000) return cached.token;
-
-  const raw = await fetch(`http://127.0.0.1:${tidalCdpPort}/json`).then((res) => res.text());
-  const targets = JSON.parse(raw) as {
-    type: string;
-    url: string;
-    webSocketDebuggerUrl?: string;
-  }[];
-  const main = targets.find(
-    (target) =>
-      target.type === "page" &&
-      target.webSocketDebuggerUrl &&
-      (target.url.includes("desktop.tidal.com") || target.url.includes("tidal.com")),
-  );
-  if (!main?.webSocketDebuggerUrl) throw new Error("No TIDAL page for API session");
-
-  const ws = new WebSocket(main.webSocketDebuggerUrl);
-  await new Promise<void>((resolve, reject) => {
-    ws.once("open", () => resolve());
-    ws.once("error", reject);
-  });
-
-  let authorization = "";
-  let nextId = 1;
-  const pending = new Map<number, (value: unknown) => void>();
-
-  ws.on("message", (data) => {
-    const msg = JSON.parse(data.toString()) as {
-      id?: number;
-      method?: string;
-      params?: { request?: { headers?: Record<string, string> } };
-    };
-    if (msg.method === "Network.requestWillBeSent") {
-      const header =
-        msg.params?.request?.headers?.Authorization ??
-        msg.params?.request?.headers?.authorization;
-      if (header?.startsWith("Bearer ") && !authorization) authorization = header;
-    }
-    if (msg.id && pending.has(msg.id)) {
-      pending.get(msg.id)!(msg);
-      pending.delete(msg.id);
-    }
-  });
-
-  const send = (method: string, params: Record<string, unknown> = {}) => {
-    const id = nextId++;
-    return new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`CDP ${method} timed out`)), 8000);
-      pending.set(id, (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      });
-      ws.send(JSON.stringify({ id, method, params }));
-    });
-  };
-
-  await send("Network.enable");
-  await send("Runtime.evaluate", {
-    expression:
-      "fetch('https://api.tidal.com/v1/sessions?countryCode=US',{headers:{accept:'application/json'}}).catch(()=>{})",
-    awaitPromise: true,
-    returnByValue: true,
-  });
-
-  const start = Date.now();
-  while (!authorization && Date.now() - start < 4000) {
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-  if (!authorization) {
-    await send("Runtime.evaluate", {
-      expression:
-        "(() => { history.pushState({}, '', '/my-collection/playlists'); dispatchEvent(new PopStateEvent('popstate')); return true; })()",
-      returnByValue: true,
-    });
-    while (!authorization && Date.now() - start < 8000) {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
-  }
-  try {
-    ws.close();
-  } catch {
-    // ignore
-  }
+  const authorization = await captureAuthorization();
   const userId = userIdFromAuth(authorization);
   if (!authorization || !userId) throw new Error("Could not capture TIDAL session");
-
   const token = { authorization, userId };
   cached = { token, expires: Date.now() + 20 * 60_000 };
   return token;
+}
+
+function clearToken() {
+  cached = null;
+  clearCapturedAuthorization();
 }
 
 async function tidalRequest(
@@ -132,6 +75,9 @@ async function tidalRequest(
     },
     body: options?.form?.toString(),
   });
+  if (response.status === 401) {
+    clearToken();
+  }
   const text = await response.text();
   let json: unknown = null;
   if (text) {
@@ -144,8 +90,18 @@ async function tidalRequest(
   return { status: response.status, etag: response.headers.get("etag"), json };
 }
 
+async function tidalRequestRetry(
+  method: string,
+  path: string,
+  options?: { form?: URLSearchParams; headers?: Record<string, string> },
+) {
+  const first = await tidalRequest(method, path, options);
+  if (first.status !== 401) return first;
+  return tidalRequest(method, path, options);
+}
+
 export async function searchTracksApi(query: string): Promise<SearchHit[]> {
-  const result = await tidalRequest(
+  const result = await tidalRequestRetry(
     "GET",
     `/v1/search/tracks?query=${encodeURIComponent(query)}&limit=8&offset=0&countryCode=US`,
   );
@@ -155,9 +111,7 @@ export async function searchTracksApi(query: string): Promise<SearchHit[]> {
   return items.map((item) => ({
     tidalId: String(item.id),
     title: item.title,
-    artist:
-      item.artist?.name ??
-      (item.artists ?? []).map((artist) => artist.name).filter(Boolean).join(", "),
+    artist: artistName(item),
     tidalUrl: `https://listen.tidal.com/track/${item.id}`,
   }));
 }
@@ -168,29 +122,63 @@ function playlistTitle(name: string) {
 
 async function findPlaylistId(title: string): Promise<string | undefined> {
   const token = await captureAccessToken();
-  const result = await tidalRequest(
-    "GET",
-    `/v1/users/${token.userId}/playlists?limit=50&offset=0&countryCode=US`,
-  );
-  const items =
-    (result.json as { items?: { uuid?: string; title?: string }[] })?.items ?? [];
-  return items.find((item) => item.title === title)?.uuid;
+  let offset = 0;
+  while (true) {
+    const result = await tidalRequestRetry(
+      "GET",
+      `/v1/users/${token.userId}/playlists?limit=50&offset=${offset}&countryCode=US`,
+    );
+    const items =
+      (result.json as { items?: { uuid?: string; title?: string }[] })?.items ?? [];
+    const match = items.find((item) => item.title === title)?.uuid;
+    if (match) return match;
+    if (items.length < 50) return undefined;
+    offset += 50;
+  }
 }
 
-async function playlistTrackIds(uuid: string): Promise<string[]> {
-  const result = await tidalRequest(
-    "GET",
-    `/v1/playlists/${uuid}/items?limit=100&offset=0&countryCode=US`,
-  );
-  const items =
-    (result.json as { items?: { item?: { id?: number } }[] })?.items ?? [];
-  return items.map((row) => String(row.item?.id ?? "")).filter(Boolean);
+export async function playlistItems(uuid: string): Promise<PlaylistTrack[]> {
+  const tracks: PlaylistTrack[] = [];
+  let offset = 0;
+  while (true) {
+    const result = await tidalRequestRetry(
+      "GET",
+      `/v1/playlists/${uuid}/items?limit=100&offset=${offset}&countryCode=US`,
+    );
+    const items =
+      (
+        result.json as {
+          items?: {
+            item?: {
+              id?: number;
+              title?: string;
+              artist?: { name?: string };
+              artists?: { name?: string }[];
+            };
+          }[];
+        }
+      )?.items ?? [];
+    for (const row of items) {
+      const id = row.item?.id;
+      const title = row.item?.title;
+      if (!id || !title) continue;
+      tracks.push({
+        tidalId: String(id),
+        title,
+        artist: artistName(row.item ?? {}),
+        tidalUrl: `https://listen.tidal.com/track/${id}`,
+      });
+    }
+    if (items.length < 100) break;
+    offset += 100;
+  }
+  return tracks;
 }
 
-async function addTracks(uuid: string, trackIds: string[]) {
+export async function addTracks(uuid: string, trackIds: string[]) {
   if (trackIds.length === 0) return;
-  const meta = await tidalRequest("GET", `/v1/playlists/${uuid}?countryCode=US`);
-  const added = await tidalRequest(
+  const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
+  const added = await tidalRequestRetry(
     "POST",
     `/v1/playlists/${uuid}/items?countryCode=US`,
     {
@@ -206,6 +194,74 @@ async function addTracks(uuid: string, trackIds: string[]) {
   }
 }
 
+export async function removePlaylistItem(uuid: string, index: number) {
+  const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
+  const removed = await tidalRequestRetry(
+    "DELETE",
+    `/v1/playlists/${uuid}/items?countryCode=US`,
+    {
+      form: new URLSearchParams({
+        order: String(index),
+      }),
+      headers: { "if-none-match": meta.etag ?? "*" },
+    },
+  );
+  if (removed.status >= 400) {
+    throw new Error(`Could not remove track from TIDAL playlist (${removed.status})`);
+  }
+}
+
+async function createPlaylist(title: string): Promise<string> {
+  const token = await captureAccessToken();
+  const created = await tidalRequestRetry(
+    "POST",
+    `/v1/users/${token.userId}/playlists?countryCode=US`,
+    {
+      form: new URLSearchParams({
+        title,
+        description: "Asperabad DJ vibe. Add tracks here or from the remote.",
+      }),
+    },
+  );
+  const createdUuid = (created.json as { uuid?: string } | null)?.uuid;
+  if (created.status >= 400 || !createdUuid) {
+    throw new Error(`Could not create TIDAL playlist “${title}”`);
+  }
+  return createdUuid;
+}
+
+export async function loadVibePlaylist(
+  vibeName: string,
+  existingId?: string,
+): Promise<LoadedPlaylist> {
+  const title = playlistTitle(vibeName);
+  let uuid = existingId;
+  if (uuid) {
+    const tracks = await playlistItems(uuid);
+    if (tracks.length > 0 || (await playlistExists(uuid))) {
+      return { uuid, tracks };
+    }
+    uuid = undefined;
+  }
+  uuid = await findPlaylistId(title);
+  if (uuid) {
+    return { uuid, tracks: await playlistItems(uuid) };
+  }
+  return { uuid: await createPlaylist(title), tracks: [] };
+}
+
+async function playlistExists(uuid: string): Promise<boolean> {
+  const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
+  return meta.status < 400;
+}
+
+export async function bootstrapIfEmpty(uuid: string, trackIds: string[]): Promise<PlaylistTrack[]> {
+  const current = await playlistItems(uuid);
+  if (current.length > 0 || trackIds.length === 0) return current;
+  await addTracks(uuid, trackIds);
+  return playlistItems(uuid);
+}
+
 function sameTrackSet(left: string[], right: string[]) {
   if (left.length !== right.length) return false;
   const counts = new Map<string, number>();
@@ -219,11 +275,11 @@ function sameTrackSet(left: string[], right: string[]) {
 }
 
 async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean> {
-  const current = await playlistTrackIds(uuid);
+  const current = (await playlistItems(uuid)).map((track) => track.tidalId);
   if (sameTrackSet(current, trackIds)) return true;
   if (current.length > 0) {
-    const meta = await tidalRequest("GET", `/v1/playlists/${uuid}?countryCode=US`);
-    const removed = await tidalRequest(
+    const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
+    const removed = await tidalRequestRetry(
       "DELETE",
       `/v1/playlists/${uuid}/items?countryCode=US`,
       {
@@ -236,43 +292,15 @@ async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean>
     if (removed.status >= 400) return false;
   }
   await addTracks(uuid, trackIds);
-  const next = await playlistTrackIds(uuid);
+  const next = (await playlistItems(uuid)).map((track) => track.tidalId);
   return next.join(",") === trackIds.join(",");
 }
 
-export async function syncVibePlaylist(
-  vibeName: string,
-  trackIds: string[],
-  existingId?: string,
-): Promise<string> {
-  const title = playlistTitle(vibeName);
-  let uuid = existingId ?? (await findPlaylistId(title));
-
-  if (uuid) {
-    if (await replaceTracks(uuid, trackIds)) return uuid;
-    await tidalRequest("DELETE", `/v1/playlists/${uuid}?countryCode=US`);
-    uuid = undefined;
-  }
-
-  const token = await captureAccessToken();
-  const created = await tidalRequest(
-    "POST",
-    `/v1/users/${token.userId}/playlists?countryCode=US`,
-    {
-      form: new URLSearchParams({
-        title,
-        description: "Managed by Asperabad DJ. Safe to leave; the daemon rewrites it.",
-      }),
-    },
-  );
-  const createdUuid = (created.json as { uuid?: string } | null)?.uuid;
-  if (created.status >= 400 || !createdUuid) {
-    throw new Error(`Could not create TIDAL playlist “${title}”`);
-  }
-  await addTracks(createdUuid, trackIds);
-  return createdUuid;
-}
-
 export async function syncAnthemPlaylist(trackId: string): Promise<string> {
-  return syncVibePlaylist("Anthem", [trackId]);
+  const loaded = await loadVibePlaylist("Anthem");
+  if (await replaceTracks(loaded.uuid, [trackId])) return loaded.uuid;
+  await tidalRequestRetry("DELETE", `/v1/playlists/${loaded.uuid}?countryCode=US`);
+  const created = await createPlaylist(playlistTitle("Anthem"));
+  await addTracks(created, [trackId]);
+  return created;
 }

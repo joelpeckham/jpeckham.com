@@ -3,17 +3,23 @@ import { experimental_upgradeWebSocket } from "@vercel/functions";
 import type { WebSocket } from "ws";
 import {
   markDaemonOffline,
-  popCommand,
+  popCommandBlocking,
   pushCommand,
+  readCatalog,
+  readDaemonOnline,
+  readLive,
   readSnapshot,
   refreshDaemonHeartbeat,
+  writeCatalog,
+  writeLive,
   writeSnapshot,
 } from "@/lib/dj/bus";
 import {
+  emptyState,
   parseWireMessage,
   type DaemonMessage,
   type DjCommand,
-  type DjState,
+  type DjLive,
 } from "@/lib/dj/protocol";
 
 export const runtime = "nodejs";
@@ -54,6 +60,23 @@ function waitForHello(ws: WebSocket, timeoutMs = 8000): Promise<string> {
   });
 }
 
+async function persistDaemonMessage(message: DaemonMessage) {
+  if (message.type === "snapshot" && message.snapshot) {
+    await writeSnapshot({
+      ...message.snapshot,
+      catalogVersion: message.snapshot.catalogVersion ?? 0,
+    });
+    return;
+  }
+  if (message.type === "live") {
+    await writeLive(message.live);
+    return;
+  }
+  if (message.type === "catalog") {
+    await writeCatalog(message.catalog);
+  }
+}
+
 async function runDaemonSocket(ws: WebSocket) {
   let alive = true;
   ws.once("close", () => {
@@ -63,10 +86,15 @@ async function runDaemonSocket(ws: WebSocket) {
   ws.on("message", (data) => {
     const raw = typeof data === "string" ? data : data.toString();
     const message = parseWireMessage(raw);
-    if (!message || message.type !== "snapshot") return;
-    const snapshot = (message as DaemonMessage).snapshot;
-    if (!snapshot) return;
-    void writeSnapshot(snapshot).catch((error: unknown) => {
+    if (
+      !message ||
+      (message.type !== "snapshot" &&
+        message.type !== "live" &&
+        message.type !== "catalog")
+    ) {
+      return;
+    }
+    void persistDaemonMessage(message as DaemonMessage).catch((error: unknown) => {
       console.error("dj relay: failed to persist snapshot", error);
     });
   });
@@ -82,10 +110,9 @@ async function runDaemonSocket(ws: WebSocket) {
   try {
     while (alive && ws.readyState === ws.OPEN) {
       await refreshDaemonHeartbeat();
-      const command = await popCommand();
+      const command = await popCommandBlocking(10);
       if (!alive) break;
       if (command) send(ws, command);
-      else await sleep(250);
     }
   } finally {
     await markDaemonOffline().catch((error: unknown) => {
@@ -110,6 +137,7 @@ async function runRemoteSocket(ws: WebSocket) {
   });
 
   let lastVersion = -1;
+  let lastCatalogVersion = -1;
   let lastOnline = false;
   const first = await readSnapshot();
   send(ws, {
@@ -120,37 +148,39 @@ async function runRemoteSocket(ws: WebSocket) {
       : null,
   });
   lastVersion = first.version;
+  lastCatalogVersion = first.catalogVersion;
   lastOnline = first.daemonOnline;
 
   while (alive && ws.readyState === ws.OPEN) {
-    await sleep(350);
+    await sleep(150);
     if (!alive) break;
-    const envelope = await readSnapshot();
-    const snapshot: DjState | null = envelope.state
-      ? { ...envelope.state, daemonOnline: envelope.daemonOnline }
-      : {
-          version: envelope.version,
-          daemonOnline: envelope.daemonOnline,
-          vibes: [],
-          characters: [],
-          transport: {
-            playing: false,
-            vibeId: null,
-            queue: [],
-            queueIndex: 0,
-            volume: 80,
-            oneshot: null,
-          },
-          nowPlaying: null,
-          search: null,
-          pending: null,
-        };
+    const [live, daemonOnline] = await Promise.all([
+      readLive(),
+      readDaemonOnline(),
+    ]);
+    const current: DjLive = live ?? {
+      version: lastVersion,
+      catalogVersion: lastCatalogVersion,
+      daemonOnline,
+      transport: emptyState().transport,
+      nowPlaying: null,
+      search: null,
+      pending: null,
+    };
+    if (current.catalogVersion !== lastCatalogVersion) {
+      const catalog = await readCatalog();
+      if (catalog) send(ws, { type: "catalog", catalog });
+      lastCatalogVersion = current.catalogVersion;
+    }
     const changed =
-      envelope.version !== lastVersion || envelope.daemonOnline !== lastOnline;
+      current.version !== lastVersion || daemonOnline !== lastOnline;
     if (!changed) continue;
-    lastVersion = envelope.version;
-    lastOnline = envelope.daemonOnline;
-    send(ws, { type: "snapshot", snapshot });
+    lastVersion = current.version;
+    lastOnline = daemonOnline;
+    send(ws, {
+      type: "live",
+      live: { ...current, daemonOnline },
+    });
   }
 }
 

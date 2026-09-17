@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import {
   emptyTransport,
+  mergeCatalog,
+  mergeLive,
   parseWireMessage,
   type DjCommandName,
   type DjPending,
@@ -31,6 +33,7 @@ import {
 
 const idleState: DjState = {
   version: 0,
+  catalogVersion: 0,
   daemonOnline: false,
   vibes: [],
   characters: [],
@@ -188,6 +191,7 @@ export function DjApp() {
   const [anthemOpen, setAnthemOpen] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const [localPending, setLocalPending] = useState<DjPending | null>(null);
+  const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const versionRef = useRef(0);
   const sentVersionRef = useRef(0);
@@ -199,10 +203,6 @@ export function DjApp() {
       const pendingLabels: Partial<Record<DjCommandName, string>> = {
         playVibe: "Opening playlist",
         playAnthem: "Playing anthem",
-        next: "Skipping forward",
-        prev: "Skipping back",
-        pause: "Pausing",
-        resume: "Resuming",
       };
       const nextPending =
         pending ??
@@ -217,6 +217,8 @@ export function DjApp() {
         sentVersionRef.current = versionRef.current;
         setLocalPending(nextPending);
       }
+      if (name === "pause") setOptimisticPlaying(false);
+      if (name === "resume") setOptimisticPlaying(true);
       ws.send(
         JSON.stringify({
           type: "command",
@@ -261,6 +263,7 @@ export function DjApp() {
             setState({
               ...message.snapshot,
               daemonOnline: message.daemonOnline,
+              catalogVersion: message.snapshot.catalogVersion ?? 0,
             });
           } else {
             setState((current) => ({
@@ -271,7 +274,16 @@ export function DjApp() {
           return;
         }
         if (message.type === "snapshot") {
-          setState(message.snapshot);
+          setState({
+            ...message.snapshot,
+            catalogVersion: message.snapshot.catalogVersion ?? 0,
+          });
+        }
+        if (message.type === "live") {
+          setState((current) => mergeLive(current, message.live));
+        }
+        if (message.type === "catalog") {
+          setState((current) => mergeCatalog(current, message.catalog));
         }
       });
 
@@ -306,6 +318,13 @@ export function DjApp() {
     return () => window.clearTimeout(timer);
   }, [localPending]);
 
+  useEffect(() => {
+    if (optimisticPlaying === null) return;
+    if (state.transport.playing === optimisticPlaying) {
+      setOptimisticPlaying(null);
+    }
+  }, [optimisticPlaying, state.transport.playing]);
+
   const vibes = state.vibes.length > 0 ? state.vibes : fallbackVibes;
   const pending = localPending ?? state.pending ?? null;
   const switching = pending?.action === "playVibe" || pending?.action === "playAnthem";
@@ -314,17 +333,18 @@ export function DjApp() {
   const activeVibe = vibes.find((vibe) => vibe.id === activeVibeId) ?? null;
   const currentTrackId = state.transport.queue[state.transport.queueIndex];
   const live = socketOpen && state.daemonOnline;
-  const title = pending
-    ? pending.label
+  const playing = optimisticPlaying ?? state.transport.playing;
+  const title = switching
+    ? pending?.label || "Opening playlist"
     : state.nowPlaying?.title || "Silence in the quarter";
-  const artist = pending
+  const artist = switching
     ? "Waiting on TIDAL…"
     : state.nowPlaying?.artist || "Waiting on the daemon";
   const pill = !socketOpen
     ? "Connecting"
     : !state.daemonOnline
       ? "Daemon dark"
-      : pending
+      : switching
         ? "Working"
         : "Live";
 
@@ -332,6 +352,11 @@ export function DjApp() {
     if (!activeVibe) return [];
     return activeVibe.tracks;
   }, [activeVibe]);
+
+  useEffect(() => {
+    if (!playlistOpen || !live || !activeVibeId) return;
+    send("refreshVibe", { vibeId: activeVibeId });
+  }, [playlistOpen, live, activeVibeId, send]);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-5 sm:px-6">
@@ -344,7 +369,7 @@ export function DjApp() {
           <span
             className="dj-dot"
             data-on={live ? "true" : "false"}
-            data-busy={pending ? "true" : "false"}
+            data-busy={switching ? "true" : "false"}
           />
           {pill}
         </span>
@@ -352,11 +377,11 @@ export function DjApp() {
 
       <section
         className="rounded-sm border border-[var(--dj-line)] bg-[var(--dj-panel)] p-4 shadow-[var(--dj-shadow)]"
-        aria-busy={pending ? true : undefined}
+        aria-busy={switching ? true : undefined}
       >
-        <p className="dj-kicker">{pending ? "Working" : "Now playing"}</p>
+        <p className="dj-kicker">{switching ? "Working" : "Now playing"}</p>
         <p className="mt-2 font-[family-name:var(--font-dj-display)] text-2xl leading-tight">
-          {pending ? (
+          {switching ? (
             <span className="dj-pending-title">
               <LoaderCircle className="dj-spinner" aria-hidden="true" />
               {title}
@@ -374,7 +399,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live || Boolean(pending)}
+            disabled={!live}
             aria-label="Previous"
             onClick={() => send("prev")}
           >
@@ -383,11 +408,11 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn dj-transport-play"
-            disabled={!live || Boolean(pending)}
-            aria-label={state.transport.playing ? "Pause" : "Play"}
-            onClick={() => send(state.transport.playing ? "pause" : "resume")}
+            disabled={!live}
+            aria-label={playing ? "Pause" : "Play"}
+            onClick={() => send(playing ? "pause" : "resume")}
           >
-            {state.transport.playing ? (
+            {playing ? (
               <Pause aria-hidden="true" />
             ) : (
               <Play aria-hidden="true" />
@@ -396,7 +421,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live || Boolean(pending)}
+            disabled={!live}
             aria-label="Next"
             onClick={() => send("next")}
           >
@@ -405,7 +430,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live || !state.transport.vibeId || Boolean(pending)}
+            disabled={!live || !state.transport.vibeId || switching}
             aria-label="Restart vibe"
             onClick={() =>
               state.transport.vibeId &&
@@ -439,11 +464,7 @@ export function DjApp() {
                 data-hue={vibe.hue}
                 data-active={active ? "true" : "false"}
                 data-pending={opening ? "true" : "false"}
-                disabled={
-                  !live ||
-                  vibe.tracks.length === 0 ||
-                  (switching && !opening)
-                }
+                disabled={!live || (switching && !opening)}
                 onClick={() => {
                   setSelectedVibeId(vibe.id);
                   send("playVibe", { vibeId: vibe.id }, {
@@ -487,7 +508,7 @@ export function DjApp() {
                 key={character.id}
                 type="button"
                 className="dj-solid"
-                disabled={!live || !character.anthem || Boolean(pending)}
+                disabled={!live || !character.anthem || switching}
                 onClick={() =>
                   send(
                     "playAnthem",
@@ -514,7 +535,7 @@ export function DjApp() {
             </h2>
             <p className="mt-1 text-sm text-[var(--dj-muted)]">
               {activeVibe
-                ? `${activeVibe.tracks.length} tracks`
+                ? `${activeVibe.tracks.length} tracks on TIDAL`
                 : "Choose a vibe"}
             </p>
           </div>
@@ -607,6 +628,24 @@ export function DjApp() {
             event.preventDefault();
             if (!activeVibe || !trackInput.trim()) return;
             send("addTrack", { vibeId: activeVibe.id, input: trackInput.trim() });
+            setState((current) => ({
+              ...current,
+              vibes: current.vibes.map((vibe) =>
+                vibe.id === activeVibe.id
+                  ? {
+                      ...vibe,
+                      tracks: [
+                        ...vibe.tracks,
+                        {
+                          id: `tmp-${crypto.randomUUID()}`,
+                          title: trackInput.trim(),
+                          artist: "Adding to TIDAL…",
+                        },
+                      ],
+                    }
+                  : vibe,
+              ),
+            }));
             setTrackInput("");
           }}
         >
@@ -646,6 +685,14 @@ export function DjApp() {
                 onAdd={() => {
                   if (!activeVibe) return;
                   send("addTrack", { vibeId: activeVibe.id, track });
+                  setState((current) => ({
+                    ...current,
+                    vibes: current.vibes.map((vibe) =>
+                      vibe.id === activeVibe.id
+                        ? { ...vibe, tracks: [...vibe.tracks, { ...track, id: `tmp-${track.id}` }] }
+                        : vibe,
+                    ),
+                  }));
                 }}
               />
             ))}
@@ -653,14 +700,17 @@ export function DjApp() {
         ) : null}
         {queueTracks.length === 0 ? (
           <p className="text-[var(--dj-muted)]">
-            Empty. Paste a TIDAL link or search from the Mac’s signed-in app.
+            This TIDAL playlist is empty. Add a track here or in the TIDAL app.
           </p>
         ) : (
           queueTracks.map((track, index) => (
             <div
               key={track.id}
               className="dj-track"
-              data-current={track.id === currentTrackId}
+              data-current={
+                track.id === currentTrackId ||
+                Boolean(state.nowPlaying?.title && track.title === state.nowPlaying.title)
+              }
             >
               <div>
                 <p>

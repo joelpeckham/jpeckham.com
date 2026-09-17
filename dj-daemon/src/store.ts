@@ -31,70 +31,87 @@ export function createTrack(partial: Partial<DjTrack> & { title: string }): DjTr
   };
 }
 
-function repairSeededTracks(saved: DjState, seed: SeedFile): DjState {
-  for (const seedVibe of seed.vibes) {
-    let vibe = saved.vibes.find((item) => item.id === seedVibe.id);
-    if (!vibe) {
-      saved.vibes.push({
-        ...seedVibe,
-        tracks: seedVibe.tracks.map((track) => ({ ...track })),
-      });
-      continue;
-    }
-    const extras = vibe.tracks.filter(
-      (track) => !seedVibe.tracks.some((item) => item.id === track.id),
-    );
-    const existing = new Map(vibe.tracks.map((track) => [track.id, track]));
-    const counts = new Map<string, number>();
-    for (const track of [...seedVibe.tracks, ...vibe.tracks]) {
-      if (!track.tidalId) continue;
-      counts.set(track.tidalId, (counts.get(track.tidalId) ?? 0) + 1);
-    }
-    vibe.tracks = [
-      ...seedVibe.tracks.map((seedTrack) => {
-        const current = existing.get(seedTrack.id);
-        const candidate = current?.tidalId ?? seedTrack.tidalId;
-        const unique = candidate && (counts.get(candidate) ?? 0) <= 1;
-        return {
-          ...seedTrack,
-          tidalId: unique ? candidate : undefined,
-          tidalUrl: unique ? current?.tidalUrl ?? seedTrack.tidalUrl : undefined,
-        };
-      }),
-      ...extras,
-    ];
-    vibe.shuffle = true;
-    if (vibe.tidalPlaylistId && !/^[0-9a-f-]{36}$/i.test(vibe.tidalPlaylistId)) {
-      vibe.tidalPlaylistId = undefined;
+function isPlaylistUuid(value: string | undefined): value is string {
+  return Boolean(value && /^[0-9a-f-]{36}$/i.test(value));
+}
+
+function readSeed(): SeedFile {
+  return JSON.parse(readFileSync(seedPath, "utf8")) as SeedFile;
+}
+
+export function getSeedTracks(vibeId: string): DjTrack[] {
+  const seedVibe = readSeed().vibes.find((item) => item.id === vibeId);
+  return seedVibe?.tracks.map((track) => ({ ...track })) ?? [];
+}
+
+export function reconcileTracks(
+  previous: DjTrack[],
+  incoming: Array<Partial<DjTrack> & { title: string; tidalId: string }>,
+): DjTrack[] {
+  const byTidal = new Map<string, DjTrack>();
+  for (const track of previous) {
+    if (track.tidalId && !byTidal.has(track.tidalId)) {
+      byTidal.set(track.tidalId, track);
     }
   }
-  return saved;
+  return incoming.map((item) => {
+    const existing = byTidal.get(item.tidalId);
+    if (existing) {
+      return {
+        ...existing,
+        title: item.title,
+        artist: item.artist ?? existing.artist,
+        tidalId: item.tidalId,
+        tidalUrl: item.tidalUrl ?? existing.tidalUrl,
+      };
+    }
+    return createTrack(item);
+  });
+}
+
+function hydrateFromSeed(saved: DjState | undefined, seed: SeedFile): DjState {
+  const savedById = new Map((saved?.vibes ?? []).map((vibe) => [vibe.id, vibe]));
+  const vibes = seed.vibes.map((seedVibe) => {
+    const current = savedById.get(seedVibe.id);
+    const playlistId = isPlaylistUuid(current?.tidalPlaylistId)
+      ? current.tidalPlaylistId
+      : isPlaylistUuid(seedVibe.tidalPlaylistId)
+        ? seedVibe.tidalPlaylistId
+        : undefined;
+    return {
+      id: seedVibe.id,
+      name: seedVibe.name,
+      hue: seedVibe.hue,
+      shuffle: true,
+      tidalPlaylistId: playlistId,
+      tracks:
+        current?.tracks && current.tracks.length > 0
+          ? current.tracks
+          : seedVibe.tracks.map((track) => ({ ...track })),
+    };
+  });
+
+  return {
+    version: saved?.version ?? 1,
+    catalogVersion: saved?.catalogVersion ?? 0,
+    daemonOnline: true,
+    vibes,
+    characters: saved?.characters ?? seed.characters ?? [],
+    transport: saved?.transport ?? emptyTransport(),
+    nowPlaying: saved?.nowPlaying ?? null,
+    search: null,
+    pending: null,
+    lastError: undefined,
+  };
 }
 
 export function loadState(): DjState {
-  const seed = JSON.parse(readFileSync(seedPath, "utf8")) as SeedFile;
+  const seed = readSeed();
   try {
     const saved = JSON.parse(readFileSync(statePath, "utf8")) as DjState;
-    return repairSeededTracks(
-      {
-        ...saved,
-        daemonOnline: true,
-        pending: null,
-        version: saved.version ?? 1,
-      },
-      seed,
-    );
+    return hydrateFromSeed(saved, seed);
   } catch {
-    return {
-      version: 1,
-      daemonOnline: true,
-      vibes: seed.vibes,
-      characters: seed.characters ?? [],
-      transport: emptyTransport(),
-      nowPlaying: null,
-      search: null,
-      pending: null,
-    };
+    return hydrateFromSeed(undefined, seed);
   }
 }
 
@@ -103,12 +120,30 @@ export function saveState(state: DjState) {
   writeFileSync(statePath, JSON.stringify(state, null, 2));
 }
 
-export function persistResolvedIds(state: DjState) {
-  const seed = JSON.parse(readFileSync(seedPath, "utf8")) as SeedFile;
+export function persistVibeMeta(state: DjState) {
+  const seed = readSeed();
   let changed = false;
   for (const vibe of state.vibes) {
     const seedVibe = seed.vibes.find((item) => item.id === vibe.id);
     if (!seedVibe) continue;
+    if (vibe.tidalPlaylistId && seedVibe.tidalPlaylistId !== vibe.tidalPlaylistId) {
+      seedVibe.tidalPlaylistId = vibe.tidalPlaylistId;
+      changed = true;
+    }
+  }
+  if (changed) writeFileSync(seedPath, JSON.stringify(seed, null, 2) + "\n");
+}
+
+export function persistResolvedIds(state: DjState) {
+  const seed = readSeed();
+  let changed = false;
+  for (const vibe of state.vibes) {
+    const seedVibe = seed.vibes.find((item) => item.id === vibe.id);
+    if (!seedVibe) continue;
+    if (vibe.tidalPlaylistId && seedVibe.tidalPlaylistId !== vibe.tidalPlaylistId) {
+      seedVibe.tidalPlaylistId = vibe.tidalPlaylistId;
+      changed = true;
+    }
     for (const track of vibe.tracks) {
       const seedTrack = seedVibe.tracks.find((item) => item.id === track.id);
       if (!seedTrack || !track.tidalId) continue;
@@ -126,6 +161,15 @@ export function bump(state: DjState): DjState {
   state.version += 1;
   state.daemonOnline = true;
   return state;
+}
+
+export function bumpCatalog(state: DjState): DjState {
+  state.catalogVersion = (state.catalogVersion ?? 0) + 1;
+  return bump(state);
+}
+
+export function vibeSignature(vibe: DjVibe): string {
+  return `${vibe.tidalPlaylistId ?? ""}:${vibe.tracks.map((track) => track.tidalId ?? track.id).join(",")}`;
 }
 
 export function findVibe(state: DjState, vibeId: string): DjVibe | undefined {
