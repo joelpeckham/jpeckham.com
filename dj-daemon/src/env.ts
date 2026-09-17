@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-function parseEnvFile(path: string) {
+function parseEnvFile(
+  path: string,
+  options: { override: boolean; locked: Set<string> },
+) {
   try {
     const text = readFileSync(path, "utf8");
     for (const line of text.split("\n")) {
@@ -17,7 +20,9 @@ function parseEnvFile(path: string) {
       ) {
         value = value.slice(1, -1);
       }
-      if (!(key in process.env)) process.env[key] = value;
+      if (options.locked.has(key)) continue;
+      if (!options.override && key in process.env) continue;
+      process.env[key] = value;
     }
   } catch {
     // optional
@@ -25,9 +30,10 @@ function parseEnvFile(path: string) {
 }
 
 export function loadDaemonEnv() {
+  const locked = new Set(Object.keys(process.env));
   const root = resolve(import.meta.dirname, "../..");
-  parseEnvFile(resolve(root, ".env"));
-  parseEnvFile(resolve(root, ".env.local"));
+  parseEnvFile(resolve(root, ".env"), { override: false, locked });
+  parseEnvFile(resolve(root, ".env.local"), { override: true, locked });
 }
 
 export function requiredEnv(name: string): string {

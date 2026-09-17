@@ -221,11 +221,15 @@ export function clearCapturedAuthorization() {
   capturedAuthorization = "";
 }
 
-export async function captureAuthorization(): Promise<string> {
+export async function captureAuthorization(
+  options?: { force?: boolean },
+): Promise<string> {
+  const previous = capturedAuthorization;
+  if (options?.force) capturedAuthorization = "";
   if (capturedAuthorization) return capturedAuthorization;
   await ensureSession();
   await evaluate(
-    "fetch('https://api.tidal.com/v1/sessions?countryCode=US',{headers:{accept:'application/json'}}).catch(()=>{})",
+    "fetch('https://api.tidal.com/v1/sessions',{headers:{accept:'application/json'}}).catch(()=>{})",
     { awaitPromise: true },
   );
   const start = Date.now();
@@ -241,6 +245,9 @@ export async function captureAuthorization(): Promise<string> {
     }
   }
   if (!capturedAuthorization) throw new Error("Could not capture TIDAL session");
+  if (options?.force && previous && capturedAuthorization === previous) {
+    throw new Error("Could not capture a fresh TIDAL session");
+  }
   return capturedAuthorization;
 }
 
@@ -418,19 +425,65 @@ async function clickPlaylistTrackPlay(tidalId: string): Promise<boolean> {
   );
 }
 
-async function waitUntilPlaying(timeoutMs = 2500): Promise<boolean> {
+async function waitForPlaylistStart(
+  previous: PlayerBarInfo,
+  allowedTidalIds?: string[],
+  timeoutMs = 5000,
+): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if ((await readPlayerBar()).isPlaying) return true;
+    const info = await readPlayerBar();
+    if (!info.isPlaying || !info.tidalId) {
+      await delay(200);
+      continue;
+    }
+    if (allowedTidalIds?.length) {
+      if (allowedTidalIds.includes(info.tidalId)) return true;
+    } else if (info.tidalId !== previous.tidalId) {
+      return true;
+    }
     await delay(200);
   }
-  return (await readPlayerBar()).isPlaying;
+  return false;
+}
+
+async function waitForPlaylistTrack(
+  playlistId: string,
+  tidalId: string,
+  timeoutMs = 4000,
+): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const ready = await evaluate<boolean>(
+      `(() => {
+        const id = ${JSON.stringify(tidalId)};
+        const onPage = location.pathname.includes("/playlist/" + ${JSON.stringify(playlistId)});
+        const rows = [...document.querySelectorAll('[data-test="tracklist-row"]')].filter(
+          (row) =>
+            !row.closest('[data-test="media-table-suggested-items"]') &&
+            !row.querySelector('[data-test="add-suggested-item-to-playlist-button"]'),
+        );
+        return Boolean(
+          onPage &&
+            rows.some((item) => {
+              const href = item.querySelector('a[href*="/track/"]')?.getAttribute("href") || "";
+              return href.includes("/track/" + id);
+            }),
+        );
+      })()`,
+    );
+    if (ready) return true;
+    await delay(200);
+  }
+  return false;
 }
 
 export async function playTidalPlaylist(
   playlistId: string,
   expectedTidalId?: string,
+  allowedTidalIds?: string[],
 ): Promise<boolean> {
+  const previous = await readPlayerBar();
   const path = await currentPath();
   const onPage = path.includes(`/playlist/${playlistId}`);
   if (!onPage) {
@@ -445,11 +498,16 @@ export async function playTidalPlaylist(
     // already on the page; keep going even if rows are still painting
   }
   await setShuffleOn();
-  if (expectedTidalId && (await clickPlaylistTrackPlay(expectedTidalId))) {
-    return waitForPlayingTrack(expectedTidalId, 4000);
+  if (expectedTidalId) {
+    if (!(await waitForPlaylistTrack(playlistId, expectedTidalId))) return false;
+    if (await clickPlaylistTrackPlay(expectedTidalId)) {
+      return waitForPlayingTrack(expectedTidalId, 4000);
+    }
+    return false;
   }
-  if (await clickPlaylistShuffleAll()) return waitUntilPlaying();
-  if (await clickHeroPlay()) return waitUntilPlaying();
+  if (await clickPlaylistShuffleAll()) {
+    return waitForPlaylistStart(previous, allowedTidalIds);
+  }
   return false;
 }
 
@@ -480,16 +538,26 @@ export async function setShuffleOn(): Promise<void> {
 }
 
 export async function skipPlayback(direction: "next" | "prev"): Promise<boolean> {
+  const previous = await readPlayerBar();
   const item = direction === "next" ? "Next" : "Previous";
-  if (clickPlaybackMenu(item)) return true;
-  const labels =
-    direction === "next"
-      ? ["Next", "Next track"]
-      : ["Previous", "Previous track"];
-  for (const label of labels) {
-    if (await clickTransport(label)) return true;
-  }
-  return false;
+  const clicked =
+    clickPlaybackMenu(item) ||
+    (await (async () => {
+      const labels =
+        direction === "next"
+          ? ["Next", "Next track"]
+          : ["Previous", "Previous track"];
+      for (const label of labels) {
+        if (await clickTransport(label)) return true;
+      }
+      return false;
+    })());
+  if (!clicked) return false;
+  const next = await waitForPlayerChange(previous, 2000);
+  return Boolean(
+    (next.tidalId && next.tidalId !== previous.tidalId) ||
+      (next.title && previous.title && next.title !== previous.title),
+  );
 }
 
 export async function pausePlayback(): Promise<boolean> {
@@ -517,10 +585,10 @@ function clickPlaybackMenu(item: string): boolean {
 export async function setVolume(level: number): Promise<boolean> {
   const clamped = Math.max(0, Math.min(100, Math.round(level)));
   try {
-    execSync(
-      `osascript -e 'set volume without output muted' -e 'set volume output volume ${clamped}'`,
-      { timeout: 3000, stdio: "ignore" },
-    );
+    execSync(`osascript -e 'set volume output volume ${clamped}'`, {
+      timeout: 3000,
+      stdio: "ignore",
+    });
     return true;
   } catch (error) {
     console.error("system volume failed", error);
@@ -538,11 +606,12 @@ export type PlayerBarInfo = {
 export async function readPlayerBar(): Promise<PlayerBarInfo> {
   const result = await evaluate<PlayerBarInfo>(
     `(() => {
-      const hasPause = !!document.querySelector('button[aria-label="Pause"]');
-      const links = [...document.querySelectorAll("a")].filter((a) => {
-        const r = a.getBoundingClientRect();
-        return r.top > window.innerHeight - 120 && r.top < window.innerHeight;
-      });
+      const root =
+        document.querySelector('[data-test="footer-player"]') ||
+        document.querySelector('[data-test="play-controls"]')?.closest("footer, aside, div") ||
+        document;
+      const hasPause = !!root.querySelector('button[aria-label="Pause"]');
+      const links = [...root.querySelectorAll("a")];
       const trackLink = links.find((a) => a.href?.includes("/track/"));
       const artistLink = links.find((a) => a.href?.includes("/artist/"));
       const id = trackLink?.href?.match(/\\/track\\/(\\d+)/)?.[1] || null;

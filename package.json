@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "refman:fetch": "node scripts/fetch-mysql-refman.mjs",
-    "dj": "caffeinate -i tsx dj-daemon/src/index.ts",
+    "dj": "caffeinate -i -- sh -c 'while true; do tsx dj-daemon/src/index.ts; echo \"dj-daemon exited; restarting in 2s\"; sleep 2; done'",
     "dev:ws": "vercel dev"
   },
   "dependencies": {

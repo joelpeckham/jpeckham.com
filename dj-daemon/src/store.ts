@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
   emptyTransport,
@@ -10,6 +10,8 @@ import {
 
 const seedPath = resolve(import.meta.dirname, "../data/seed.json");
 const statePath = resolve(import.meta.dirname, "../data/state.json");
+const stateTmpPath = `${statePath}.tmp`;
+const stateBakPath = `${statePath}.bak`;
 
 type SeedFile = {
   vibes: DjVibe[];
@@ -52,6 +54,7 @@ export function reconcileTracks(
   return incoming.map((item) => {
     const existing = byTidal.get(item.tidalId);
     if (existing) {
+      byTidal.delete(item.tidalId);
       return {
         ...existing,
         title: item.title,
@@ -62,6 +65,17 @@ export function reconcileTracks(
     }
     return createTrack(item);
   });
+}
+
+function readSavedState(): DjState | undefined {
+  for (const path of [statePath, stateBakPath]) {
+    try {
+      return JSON.parse(readFileSync(path, "utf8")) as DjState;
+    } catch {
+      // try next
+    }
+  }
+  return undefined;
 }
 
 function hydrateFromSeed(saved: DjState | undefined, seed: SeedFile): DjState {
@@ -79,10 +93,9 @@ function hydrateFromSeed(saved: DjState | undefined, seed: SeedFile): DjState {
       hue: seedVibe.hue,
       shuffle: true,
       tidalPlaylistId: playlistId,
-      tracks:
-        current?.tracks && current.tracks.length > 0
-          ? current.tracks
-          : seedVibe.tracks.map((track) => ({ ...track })),
+      tracks: current?.tracks
+        ? current.tracks
+        : seedVibe.tracks.map((track) => ({ ...track })),
     };
   });
 
@@ -96,36 +109,29 @@ function hydrateFromSeed(saved: DjState | undefined, seed: SeedFile): DjState {
     nowPlaying: saved?.nowPlaying ?? null,
     pending: null,
     lastError: undefined,
+    health: saved?.health ?? { cdp: false, tidal: false },
   };
 }
 
 export function loadState(): DjState {
   const seed = readSeed();
-  try {
-    const saved = JSON.parse(readFileSync(statePath, "utf8")) as DjState;
-    return hydrateFromSeed(saved, seed);
-  } catch {
-    return hydrateFromSeed(undefined, seed);
-  }
+  return hydrateFromSeed(readSavedState(), seed);
 }
 
 export function saveState(state: DjState) {
   mkdirSync(dirname(statePath), { recursive: true });
-  writeFileSync(statePath, JSON.stringify(state, null, 2));
+  const json = JSON.stringify(state, null, 2);
+  writeFileSync(stateTmpPath, json);
+  try {
+    copyFileSync(statePath, stateBakPath);
+  } catch {
+    // first write
+  }
+  renameSync(stateTmpPath, statePath);
 }
 
-export function persistVibeMeta(state: DjState) {
-  const seed = readSeed();
-  let changed = false;
-  for (const vibe of state.vibes) {
-    const seedVibe = seed.vibes.find((item) => item.id === vibe.id);
-    if (!seedVibe) continue;
-    if (vibe.tidalPlaylistId && seedVibe.tidalPlaylistId !== vibe.tidalPlaylistId) {
-      seedVibe.tidalPlaylistId = vibe.tidalPlaylistId;
-      changed = true;
-    }
-  }
-  if (changed) writeFileSync(seedPath, JSON.stringify(seed, null, 2) + "\n");
+export function persistVibeMeta(_state: DjState) {
+  // seed.json stays read-only; playlist ids live in state.json
 }
 
 export function bump(state: DjState): DjState {

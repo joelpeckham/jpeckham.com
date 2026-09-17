@@ -1,5 +1,5 @@
 import type { DjTrack } from "@/lib/dj/protocol";
-import { searchTracksApi } from "./tidal-api";
+import { searchTracksApi, tidalCountry } from "./tidal-api";
 import { searchTidal, type SearchHit } from "./tidal";
 
 function normalize(value: string): string {
@@ -21,8 +21,10 @@ function scoreHit(hit: SearchHit, title?: string, artist?: string): number {
   }
   if (artist) {
     const hitArtist = normalize(hit.artist);
-    const wantArtist = normalize(artist).split(" ")[0] ?? "";
-    if (wantArtist && hitArtist.includes(wantArtist)) score += 1;
+    const wantArtist = normalize(artist);
+    const first = wantArtist.split(" ")[0] ?? "";
+    if (wantArtist && hitArtist.includes(wantArtist)) score += 2;
+    else if (first && hitArtist.includes(first)) score += 1;
   }
   return score;
 }
@@ -32,11 +34,11 @@ function pickSearchHit(
   fallback?: { title?: string; artist?: string },
 ): SearchHit | undefined {
   if (hits.length === 0) return undefined;
-  if (!fallback?.title) return hits[0];
+  if (!fallback?.title) return undefined;
   const ranked = hits
     .map((hit) => ({ hit, score: scoreHit(hit, fallback.title, fallback.artist) }))
     .sort((a, b) => b.score - a.score);
-  return ranked[0] && ranked[0].score >= 1 ? ranked[0].hit : hits[0];
+  return ranked[0] && ranked[0].score >= 2 ? ranked[0].hit : undefined;
 }
 
 export function searchQuery(title: string, artist: string): string {
@@ -72,7 +74,7 @@ export function parseSpotifyTrackUrl(input: string): string | null {
 
 export async function resolveViaOdesli(url: string): Promise<Partial<DjTrack> | null> {
   try {
-    const endpoint = `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(url)}&userCountry=US`;
+    const endpoint = `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(url)}&userCountry=${encodeURIComponent(tidalCountry())}`;
     const response = await fetch(endpoint, {
       headers: { "User-Agent": "asperabad-dj/1.0" },
     });
@@ -108,7 +110,8 @@ export async function resolveTrackInput(
   options?: { allowNavigate?: boolean },
 ): Promise<Partial<DjTrack>> {
   const tidal = parseTidalUrl(input);
-  if (tidal?.type === "track") {
+  if (tidal) {
+    if (tidal.type !== "track") return {};
     return {
       tidalId: tidal.id,
       tidalUrl: `https://listen.tidal.com/track/${tidal.id}`,
@@ -138,8 +141,8 @@ export async function resolveTrackInput(
   const query = fallback?.title
     ? searchQuery(fallback.title, fallback.artist ?? "")
     : input;
-  const sessionHits = await searchTracksApi(query).catch(() => []);
-  const sessionMatch = pickSearchHit(sessionHits, fallback);
+  const sessionHits = await searchTracksApi(query);
+  const sessionMatch = pickSearchHit(sessionHits, fallback ?? { title: query });
   if (sessionMatch?.tidalId) {
     return {
       tidalId: sessionMatch.tidalId,
@@ -152,7 +155,7 @@ export async function resolveTrackInput(
   if (!options?.allowNavigate) return {};
 
   const hits = await searchTidal(query);
-  const match = pickSearchHit(hits, fallback);
+  const match = pickSearchHit(hits, fallback ?? { title: query });
   if (!match) return {};
   return {
     title: fallback?.title ?? match.title,

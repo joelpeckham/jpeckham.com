@@ -51,3 +51,5 @@ next-env.d.ts
 
 # DJ daemon runtime state (seed.json is committed)
 /dj-daemon/data/state.json
+/dj-daemon/data/state.json.bak
+/dj-daemon/data/state.json.tmp

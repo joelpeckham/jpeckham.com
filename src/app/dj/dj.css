@@ -1,4 +1,5 @@
 .dj-root {
+  padding-bottom: env(safe-area-inset-bottom);
   --dj-bg: #0c0908;
   --dj-bg-2: #16110e;
   --dj-panel: #1c1511;
@@ -175,6 +176,15 @@
   gap: 0.7rem;
 }
 
+.dj-icon-btn:focus-visible,
+.dj-ghost:focus-visible,
+.dj-solid:focus-visible,
+.dj-vibe:focus-visible,
+.dj-field:focus-visible {
+  outline: 2px solid var(--dj-gold);
+  outline-offset: 2px;
+}
+
 .dj-icon-btn,
 .dj-ghost,
 .dj-solid {
@@ -245,11 +255,11 @@
 .dj-modal {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 80;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  background: rgba(6, 4, 3, 0.72);
+  background: rgba(6, 4, 3, 0.82);
   padding: 0.75rem;
 }
 
