@@ -1,5 +1,55 @@
 import type { DjTrack } from "@/lib/dj/protocol";
-import { searchTidal } from "./tidal";
+import { searchTidal, searchTidalInSession, type SearchHit } from "./tidal";
+
+function normalize(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function scoreHit(hit: SearchHit, title?: string, artist?: string): number {
+  if (!title) return 0;
+  const hitTitle = normalize(hit.title);
+  const wantTitle = normalize(title);
+  if (!hitTitle || !wantTitle) return 0;
+  let score = 0;
+  if (hitTitle === wantTitle) score += 4;
+  else if (hitTitle.includes(wantTitle) || wantTitle.includes(hitTitle)) score += 3;
+  else {
+    const words = wantTitle.split(" ").filter((word) => word.length > 3);
+    const matched = words.filter((word) => hitTitle.includes(word)).length;
+    if (words.length && matched / words.length >= 0.6) score += 2;
+  }
+  if (artist) {
+    const hitArtist = normalize(hit.artist);
+    const wantArtist = normalize(artist).split(" ")[0] ?? "";
+    if (wantArtist && hitArtist.includes(wantArtist)) score += 1;
+  }
+  return score;
+}
+
+function pickSearchHit(
+  hits: SearchHit[],
+  fallback?: { title?: string; artist?: string },
+): SearchHit | undefined {
+  if (hits.length === 0) return undefined;
+  if (!fallback?.title) return hits[0];
+  const ranked = hits
+    .map((hit) => ({ hit, score: scoreHit(hit, fallback.title, fallback.artist) }))
+    .sort((a, b) => b.score - a.score);
+  return ranked[0] && ranked[0].score >= 1 ? ranked[0].hit : hits[0];
+}
+
+export function searchQuery(title: string, artist: string): string {
+  const composer = (artist.split(",")[0] ?? "").trim();
+  const lastName = composer.split(/\s+/).filter(Boolean).at(-1) ?? composer;
+  const work =
+    title.match(
+      /symphony no\.?\s*\d+|serenade|cello concerto|violin concerto|romeo and juliet|the planets|second waltz|new world|water goblin|lilac|lvst|intercessor|dance of the knights/i,
+    )?.[0] ?? title.split(/[:(\u2013]/)[0]?.trim() ?? title;
+  const movement = title.match(
+    /allegretto|adagio|scherzo|finale|allegro|waltz|mars|molto vivace|con fuoco/i,
+  )?.[0];
+  return [lastName, work, movement].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
 
 export function parseTidalUrl(input: string): { type: string; id: string } | null {
   const urlMatch = input.match(
@@ -54,6 +104,7 @@ export async function resolveViaOdesli(url: string): Promise<Partial<DjTrack> | 
 export async function resolveTrackInput(
   input: string,
   fallback?: { title?: string; artist?: string },
+  options?: { allowNavigate?: boolean },
 ): Promise<Partial<DjTrack>> {
   const tidal = parseTidalUrl(input);
   if (tidal?.type === "track") {
@@ -84,15 +135,28 @@ export async function resolveTrackInput(
   }
 
   const query = fallback?.title
-    ? `${fallback.title} ${fallback.artist ?? ""}`.trim()
+    ? searchQuery(fallback.title, fallback.artist ?? "")
     : input;
+  const sessionHits = await searchTidalInSession(query);
+  const sessionMatch = pickSearchHit(sessionHits, fallback);
+  if (sessionMatch?.tidalId) {
+    return {
+      tidalId: sessionMatch.tidalId,
+      tidalUrl: sessionMatch.tidalUrl,
+      title: fallback?.title ?? sessionMatch.title,
+      artist: fallback?.artist ?? sessionMatch.artist,
+    };
+  }
+
+  if (!options?.allowNavigate) return {};
+
   const hits = await searchTidal(query);
-  const first = hits[0];
-  if (!first) return {};
+  const match = pickSearchHit(hits, fallback);
+  if (!match) return {};
   return {
-    title: first.title,
-    artist: first.artist,
-    tidalId: first.tidalId,
-    tidalUrl: first.tidalUrl,
+    title: fallback?.title ?? match.title,
+    artist: fallback?.artist ?? match.artist,
+    tidalId: match.tidalId,
+    tidalUrl: match.tidalUrl,
   };
 }

@@ -195,17 +195,21 @@ async function waitForTracks(timeoutMs = 10000): Promise<number> {
   return 0;
 }
 
-async function clickInlinePlay(): Promise<boolean> {
+async function clickHeroPlay(): Promise<boolean> {
   return (
     (await evaluate<boolean>(
       `(() => {
         const playBtns = [...document.querySelectorAll('button[aria-label="Play"]')];
-        const inline = playBtns.filter((b) => {
+        const hero = playBtns.find((b) => {
           const r = b.getBoundingClientRect();
-          return r.width <= 20 && r.width > 0;
+          return r.width >= 36 && r.height >= 36 && r.top > 40 && r.top < window.innerHeight * 0.62;
         });
-        if (inline[0]) { inline[0].click(); return true; }
-        if (playBtns[0]) { playBtns[0].click(); return true; }
+        if (hero) { hero.click(); return true; }
+        const footerPlay = playBtns.find((b) => {
+          const r = b.getBoundingClientRect();
+          return r.top > window.innerHeight - 140 && r.width > 0;
+        });
+        if (footerPlay) { footerPlay.click(); return true; }
         return false;
       })()`,
     )) === true
@@ -238,48 +242,50 @@ async function clickTransport(label: string): Promise<boolean> {
 export async function playTidalTrack(tidalId: string): Promise<boolean> {
   await spaNavigate(`/track/${tidalId}`);
   await waitForTracks();
-  return clickInlinePlay();
+  return clickHeroPlay();
 }
 
 export async function pausePlayback(): Promise<boolean> {
+  if (clickPlaybackMenu("Pause")) return true;
   return clickTransport("Pause");
 }
 
 export async function resumePlayback(): Promise<boolean> {
+  if (clickPlaybackMenu("Play")) return true;
   return clickTransport("Play");
 }
 
-export async function nextTrack(): Promise<boolean> {
-  return clickTransport("Next");
-}
-
-export async function previousTrack(): Promise<boolean> {
-  return clickTransport("Previous");
+function clickPlaybackMenu(item: string): boolean {
+  try {
+    execSync(
+      `osascript -e 'tell application "System Events" to tell process "TIDAL" to click menu item "${item}" of menu "Playback" of menu bar 1'`,
+      { timeout: 4000, stdio: "ignore" },
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function setVolume(level: number): Promise<boolean> {
   const clamped = Math.max(0, Math.min(100, Math.round(level)));
-  const result = await evaluate<string>(
-    `(() => {
-      const open = document.querySelector('button[aria-label="Volume"]');
-      if (open) open.click();
-      const slider = document.querySelector('input[type="range"][aria-label*="olume"], input[type="range"][data-test*="olume"]');
-      if (!slider) return "missing";
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-      if (!setter) return "no_setter";
-      setter.call(slider, ${clamped});
-      slider.dispatchEvent(new Event("input", { bubbles: true }));
-      slider.dispatchEvent(new Event("change", { bubbles: true }));
-      return "set";
-    })()`,
-  );
-  return result === "set";
+  try {
+    execSync(
+      `osascript -e 'set volume without output muted' -e 'set volume output volume ${clamped}'`,
+      { timeout: 3000, stdio: "ignore" },
+    );
+    return true;
+  } catch (error) {
+    console.error("system volume failed", error);
+    return false;
+  }
 }
 
 export type PlayerBarInfo = {
   isPlaying: boolean;
   title: string | null;
   artist: string | null;
+  tidalId: string | null;
 };
 
 export async function readPlayerBar(): Promise<PlayerBarInfo> {
@@ -292,14 +298,16 @@ export async function readPlayerBar(): Promise<PlayerBarInfo> {
       });
       const trackLink = links.find((a) => a.href?.includes("/track/"));
       const artistLink = links.find((a) => a.href?.includes("/artist/"));
+      const id = trackLink?.href?.match(/\\/track\\/(\\d+)/)?.[1] || null;
       return {
         isPlaying: hasPause,
         title: trackLink?.textContent?.trim() || null,
         artist: artistLink?.textContent?.trim() || null,
+        tidalId: id,
       };
     })()`,
   );
-  return result ?? { isPlaying: false, title: null, artist: null };
+  return result ?? { isPlaying: false, title: null, artist: null, tidalId: null };
 }
 
 export type SearchHit = {
@@ -309,7 +317,48 @@ export type SearchHit = {
   tidalUrl: string;
 };
 
+export async function searchTidalInSession(query: string): Promise<SearchHit[]> {
+  const hits = await evaluate<SearchHit[]>(
+    `(() => {
+      const query = ${JSON.stringify(query)};
+      const urls = [
+        "/v1/search/top-hits?query=" + encodeURIComponent(query) + "&limit=10&offset=0&types=TRACKS&countryCode=US",
+        "/v1/search?query=" + encodeURIComponent(query) + "&limit=10&offset=0&types=TRACKS&countryCode=US",
+      ];
+      const parse = (data) => {
+        const items = data?.tracks?.items || data?.items || [];
+        return items.slice(0, 8).map((item) => {
+          const id = String(item.id ?? item.tidalId ?? "");
+          const artist = item.artist?.name
+            || (item.artists || []).map((a) => a.name).filter(Boolean).join(", ");
+          return {
+            tidalId: id,
+            title: item.title || item.name || "",
+            artist: artist || "",
+            tidalUrl: id ? "https://listen.tidal.com/track/" + id : "",
+          };
+        }).filter((row) => row.tidalId && row.title);
+      };
+      return (async () => {
+        for (const url of urls) {
+          try {
+            const response = await fetch(url, { credentials: "include" });
+            if (!response.ok) continue;
+            const rows = parse(await response.json());
+            if (rows.length) return rows;
+          } catch {}
+        }
+        return [];
+      })();
+    })()`,
+    { awaitPromise: true, timeoutMs: 8000 },
+  );
+  return Array.isArray(hits) ? hits : [];
+}
+
 export async function searchTidal(query: string): Promise<SearchHit[]> {
+  const sessionHits = await searchTidalInSession(query);
+  if (sessionHits.length > 0) return sessionHits;
   const path = `/search/${encodeURIComponent(query)}`;
   await spaNavigate(path);
   await delay(2000);
