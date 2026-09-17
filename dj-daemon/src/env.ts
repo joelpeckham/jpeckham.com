@@ -44,6 +44,14 @@ export function requiredEnv(name: string): string {
   return value;
 }
 
+export function assertDistinctSecrets() {
+  const daemon = process.env.DJ_DAEMON_SECRET;
+  const remote = process.env.DJ_REMOTE_SECRET;
+  if (daemon && remote && daemon === remote) {
+    throw new Error("DJ_DAEMON_SECRET and DJ_REMOTE_SECRET must be different");
+  }
+}
+
 export function wsUrl(): string {
   return process.env.DJ_WS_URL ?? "wss://jpeckham.com/api/dj/ws/";
 }

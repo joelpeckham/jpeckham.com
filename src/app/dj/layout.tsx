@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Asperabad DJ",
   description: "Private table remote for the Fall of Asperabad.",
   robots: { index: false, follow: false },
+  referrer: "no-referrer",
 };
 
 export default function DjLayout({ children }: { children: ReactNode }) {

@@ -49,11 +49,14 @@ function wsUrl() {
 
 function readStoredPin(): string {
   if (typeof window === "undefined") return "";
-  const fromQuery = new URLSearchParams(window.location.search).get("k");
-  if (fromQuery) {
-    sessionStorage.setItem(PIN_KEY, fromQuery);
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const fromHash = new URLSearchParams(hash).get("k");
+  if (fromHash) {
+    sessionStorage.setItem(PIN_KEY, fromHash);
     window.history.replaceState({}, "", window.location.pathname);
-    return fromQuery;
+    return fromHash;
   }
   return sessionStorage.getItem(PIN_KEY) ?? "";
 }
@@ -62,16 +65,20 @@ function DjModal({
   title,
   open,
   onClose,
+  portalRoot,
   children,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
+  portalRoot: HTMLElement | null;
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
-  closeRef.current = onClose;
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
   const [box, setBox] = useState({
     top: 0,
     left: 0,
@@ -84,8 +91,8 @@ function DjModal({
     const update = () => {
       const vv = window.visualViewport;
       setBox({
-        top: window.scrollY + (vv?.offsetTop ?? 0),
-        left: window.scrollX + (vv?.offsetLeft ?? 0),
+        top: vv?.offsetTop ?? 0,
+        left: vv?.offsetLeft ?? 0,
         width: vv?.width ?? window.innerWidth,
         height: vv?.height ?? window.innerHeight,
       });
@@ -111,7 +118,8 @@ function DjModal({
     const focusable = panel?.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
-    focusable?.[0]?.focus();
+    const firstField = panel?.querySelector<HTMLElement>("input, textarea, select");
+    (firstField ?? focusable?.[0])?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeRef.current();
@@ -136,7 +144,8 @@ function DjModal({
     };
   }, [open]);
 
-  if (!open || typeof document === "undefined") return null;
+  const host = portalRoot ?? (typeof document === "undefined" ? null : document.body);
+  if (!open || !host) return null;
 
   return createPortal(
     <div
@@ -169,7 +178,7 @@ function DjModal({
         {children}
       </div>
     </div>,
-    document.body,
+    host,
   );
 }
 
@@ -187,6 +196,7 @@ const VolumeSlider = memo(function VolumeSlider({
   const draggingRef = useRef(false);
   const lastSentRef = useRef(remoteVolume);
   const timerRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (draggingRef.current) return;
@@ -210,12 +220,16 @@ const VolumeSlider = memo(function VolumeSlider({
     [onCommit],
   );
 
-  const endDrag = (input: HTMLInputElement, commit: boolean) => {
+  const endDrag = (input: HTMLInputElement | null, commit: boolean) => {
     draggingRef.current = false;
-    try {
-      input.releasePointerCapture(input.dataset.pointerId ? Number(input.dataset.pointerId) : 0);
-    } catch {
-      // ignore
+    const pointerId = input?.dataset.pointerId;
+    if (input && pointerId) {
+      try {
+        input.releasePointerCapture(Number(pointerId));
+      } catch {
+        // ignore
+      }
+      delete input.dataset.pointerId;
     }
     if (timerRef.current) window.clearTimeout(timerRef.current);
     if (commit) flush(valueRef.current);
@@ -226,10 +240,15 @@ const VolumeSlider = memo(function VolumeSlider({
     }
   };
 
+  useEffect(() => {
+    if (disabled) draggingRef.current = false;
+  }, [disabled]);
+
   return (
     <label className="mt-4 block text-sm text-[var(--dj-muted)]">
       System volume
       <input
+        ref={inputRef}
         className="dj-range mt-2"
         type="range"
         min={0}
@@ -238,11 +257,18 @@ const VolumeSlider = memo(function VolumeSlider({
         disabled={disabled}
         onPointerDown={(event) => {
           draggingRef.current = true;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          event.currentTarget.dataset.pointerId = String(event.pointerId);
+          try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            event.currentTarget.dataset.pointerId = String(event.pointerId);
+          } catch {
+            // iOS Safari may reject capture on range inputs
+          }
         }}
         onPointerUp={(event) => endDrag(event.currentTarget, true)}
         onPointerCancel={(event) => endDrag(event.currentTarget, false)}
+        onLostPointerCapture={(event) => {
+          if (draggingRef.current) endDrag(event.currentTarget, true);
+        }}
         onChange={(event) => {
           const next = Number(event.target.value);
           valueRef.current = next;
@@ -273,8 +299,14 @@ export function DjApp() {
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null);
   const [dismissedError, setDismissedError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const pendingIdRef = useRef<string | null>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLDivElement | null>(null);
   const catalogWaitRef = useRef(0);
+  const pendingById = useRef(new Map<string, "play" | "character" | "playlist" | "transport">());
+  const playInFlight = useRef(false);
+  const transportBusyRef = useRef(false);
+  const characterCommandId = useRef<string | null>(null);
+  const playlistCommandId = useRef<string | null>(null);
+  const [transportBusy, setTransportBusy] = useState(false);
 
   useEffect(() => {
     setPin(readStoredPin());
@@ -290,12 +322,60 @@ export function DjApp() {
     setPin(next);
   };
 
+  const clearLocalWork = useCallback(() => {
+    playInFlight.current = false;
+    transportBusyRef.current = false;
+    pendingById.current.clear();
+    characterCommandId.current = null;
+    playlistCommandId.current = null;
+    setLocalPending(null);
+    setOptimisticPlaying(null);
+    setCharacterBusy(false);
+    setPlaylistBusy(null);
+    setTransportBusy(false);
+  }, []);
+
+  const applyAck = useCallback((ack: { id: string; ok: boolean }) => {
+    const kind = pendingById.current.get(ack.id);
+    if (!kind) return;
+    pendingById.current.delete(ack.id);
+    if (kind === "play") {
+      playInFlight.current = false;
+      setLocalPending(null);
+    }
+    if (kind === "character" && characterCommandId.current === ack.id) {
+      characterCommandId.current = null;
+      setCharacterBusy(false);
+      if (ack.ok) {
+        setCharacterName("");
+        setCharacterInput("");
+      }
+    }
+    if (kind === "playlist" && playlistCommandId.current === ack.id) {
+      playlistCommandId.current = null;
+      setPlaylistBusy(null);
+    }
+    if (kind === "transport") {
+      transportBusyRef.current = false;
+      setTransportBusy(false);
+      setOptimisticPlaying(null);
+    }
+  }, []);
+
   const send = useCallback(
     (name: DjCommandName, payload: Record<string, unknown> = {}, pending?: DjPending) => {
       const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        setSessionError("Not connected");
+        return null;
+      }
+      if ((name === "playVibe" || name === "playAnthem") && playInFlight.current) {
+        return null;
+      }
+      if ((name === "next" || name === "prev") && transportBusyRef.current) {
+        return null;
+      }
       const id = crypto.randomUUID();
-      pendingIdRef.current = id;
       const pendingLabels: Partial<Record<DjCommandName, string>> = {
         playVibe: "Opening playlist",
         playAnthem: "Playing anthem",
@@ -313,7 +393,24 @@ export function DjApp() {
       if (nextPending) setLocalPending({ ...nextPending, commandId: id });
       if (name === "pause") setOptimisticPlaying(false);
       if (name === "resume") setOptimisticPlaying(true);
+      if (name === "playVibe" || name === "playAnthem") {
+        pendingById.current.set(id, "play");
+        playInFlight.current = true;
+      } else if (name === "addCharacter") {
+        pendingById.current.set(id, "character");
+        characterCommandId.current = id;
+      } else if (name === "refreshVibe") {
+        pendingById.current.set(id, "playlist");
+        playlistCommandId.current = id;
+      } else if (name === "next" || name === "prev" || name === "pause" || name === "resume") {
+        pendingById.current.set(id, "transport");
+        if (name === "next" || name === "prev") {
+          transportBusyRef.current = true;
+          setTransportBusy(true);
+        }
+      }
       ws.send(JSON.stringify({ type: "command", id, name, payload }));
+      return id;
     },
     [],
   );
@@ -359,12 +456,16 @@ export function DjApp() {
             return;
           }
           setSessionError(message.message);
+          clearLocalWork();
+          return;
+        }
+        if (message.type === "ack") {
+          applyAck(message);
+          if (message.ok) setSessionError(null);
           return;
         }
         if (message.type === "ready") {
-          setLocalPending(null);
-          setOptimisticPlaying(null);
-          pendingIdRef.current = null;
+          clearLocalWork();
           if (message.snapshot) {
             setState({
               ...message.snapshot,
@@ -387,6 +488,8 @@ export function DjApp() {
         }
         if (message.type === "live") {
           setState((current) => mergeLive(current, message.live));
+          if (message.live.lastAck) applyAck(message.live.lastAck);
+          if (message.live.lastAck?.ok) setSessionError(null);
         }
         if (message.type === "catalog") {
           setState((current) => mergeCatalog(current, message.catalog));
@@ -396,8 +499,7 @@ export function DjApp() {
       ws.addEventListener("close", () => {
         if (wsRef.current !== ws) return;
         setSocketOpen(false);
-        setLocalPending(null);
-        setOptimisticPlaying(null);
+        clearLocalWork();
         if (cancelled || rejected) return;
         timer = window.setTimeout(connect, retry);
         retry = Math.min(retry * 2, 8000);
@@ -410,22 +512,7 @@ export function DjApp() {
       window.clearTimeout(timer);
       wsRef.current?.close();
     };
-  }, [pin, pinReady, unauthorized]);
-
-  useEffect(() => {
-    const ack = state.lastAck;
-    if (!ack || !pendingIdRef.current || ack.id !== pendingIdRef.current) return;
-    pendingIdRef.current = null;
-    setLocalPending(null);
-    setOptimisticPlaying(null);
-    if (characterBusy) {
-      if (ack.ok) {
-        setCharacterName("");
-        setCharacterInput("");
-      }
-      setCharacterBusy(false);
-    }
-  }, [state.lastAck, characterBusy]);
+  }, [pin, pinReady, unauthorized, applyAck, clearLocalWork]);
 
   useEffect(() => {
     if (!localPending) return;
@@ -443,11 +530,24 @@ export function DjApp() {
   }, [optimisticPlaying, state.transport.playing]);
 
   useEffect(() => {
-    if (!playlistBusy) return;
+    if (!playlistBusy || !playlistCommandId.current) return;
     const catalogDone = state.catalogVersion > catalogWaitRef.current;
-    const failed = Boolean(state.lastError && state.lastAck && !state.lastAck.ok);
-    if (catalogDone || failed) setPlaylistBusy(null);
-  }, [playlistBusy, state.catalogVersion, state.lastError, state.lastAck]);
+    const failed =
+      state.lastAck?.id === playlistCommandId.current && state.lastAck.ok === false;
+    if (catalogDone || failed) {
+      playlistCommandId.current = null;
+      setPlaylistBusy(null);
+    }
+  }, [playlistBusy, state.catalogVersion, state.lastAck]);
+
+  useEffect(() => {
+    if (!characterBusy) return;
+    const timer = window.setTimeout(() => {
+      characterCommandId.current = null;
+      setCharacterBusy(false);
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [characterBusy]);
 
   useEffect(() => {
     if (!playlistBusy) return;
@@ -563,7 +663,10 @@ export function DjApp() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-5 sm:px-6">
+    <div
+      ref={setPortalRoot}
+      className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-5 sm:px-6"
+    >
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="dj-kicker">The Fall of Asperabad</p>
@@ -619,7 +722,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live}
+            disabled={!live || switching || transportBusy}
             aria-label={oneshot && resumeVibe ? `Back to ${resumeVibe.name}` : "Previous"}
             onClick={() => send("prev")}
           >
@@ -628,7 +731,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn dj-transport-play"
-            disabled={!live || (!playing && !canResume)}
+            disabled={!live || switching || (!playing && !canResume)}
             aria-label={playing ? "Pause" : "Play"}
             onClick={() => send(playing ? "pause" : "resume")}
           >
@@ -637,7 +740,7 @@ export function DjApp() {
           <button
             type="button"
             className="dj-icon-btn"
-            disabled={!live}
+            disabled={!live || switching || transportBusy}
             aria-label={oneshot && resumeVibe ? `Back to ${resumeVibe.name}` : "Next"}
             onClick={() => send("next")}
           >
@@ -674,7 +777,11 @@ export function DjApp() {
           <h2 className="dj-title text-2xl">Vibes</h2>
         </div>
         {!catalogReady ? (
-          <p className="text-[var(--dj-muted)]">Loading catalog…</p>
+          <p className="text-[var(--dj-muted)]">
+            {state.daemonOnline
+              ? "Daemon has not published a catalog"
+              : "Loading catalog…"}
+          </p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {vibes.map((vibe) => {
@@ -784,8 +891,8 @@ export function DjApp() {
             disabled={!live || !activeVibe}
             onClick={() => {
               if (!activeVibeId) return;
-              send("refreshVibe", { vibeId: activeVibeId });
-              beginPlaylistEdit("Refreshing TIDAL…");
+              const id = send("refreshVibe", { vibeId: activeVibeId });
+              if (id) beginPlaylistEdit("Refreshing TIDAL…");
             }}
           >
             Refresh
@@ -835,7 +942,12 @@ export function DjApp() {
         )}
       </section>
 
-      <DjModal title="Add anthem" open={anthemOpen} onClose={closeAnthem}>
+      <DjModal
+        title="Add anthem"
+        open={anthemOpen}
+        onClose={closeAnthem}
+        portalRoot={portalRoot}
+      >
         {state.characters.length > 0 ? (
           <div className="mb-4">
             {state.characters.map((character) => (
@@ -864,10 +976,11 @@ export function DjApp() {
             event.preventDefault();
             if (!characterName.trim() || characterBusy) return;
             setCharacterBusy(true);
-            send("addCharacter", {
+            const id = send("addCharacter", {
               name: characterName.trim(),
               input: characterInput.trim(),
             });
+            if (!id) setCharacterBusy(false);
           }}
         >
           <label className="text-sm text-[var(--dj-muted)]" htmlFor="dj-character-name">

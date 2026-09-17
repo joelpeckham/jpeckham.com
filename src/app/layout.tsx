@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Jost, JetBrains_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { SiteAnalytics } from "@/components/site-analytics";
 import { SiteChrome } from "@/components/site-chrome";
 import { defaultOgImage, siteName, siteUrl } from "@/lib/site";
 
@@ -81,7 +81,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full min-w-0 flex-col overflow-x-clip font-sans">
         <SiteChrome>{children}</SiteChrome>
-        <Analytics />
+        <SiteAnalytics />
         <SpeedInsights />
       </body>
     </html>

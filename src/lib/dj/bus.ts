@@ -1,7 +1,10 @@
 import { Redis } from "@upstash/redis";
+import { commandStillFresh, shouldAcceptEnqueue } from "./policy";
 import {
   mergeParts,
+  parseDjCatalog,
   parseDjCommand,
+  parseDjLive,
   type DjCatalog,
   type DjCommand,
   type DjLive,
@@ -42,8 +45,13 @@ export function getDjRedis(): Redis {
   return redis;
 }
 
-function parseCommand(raw: unknown): DjCommand | null {
-  if (!raw) return null;
+export type QueuedCommand = {
+  command: DjCommand | null;
+  expired: DjCommand | null;
+};
+
+export function inspectQueuedCommand(raw: unknown, now = Date.now()): QueuedCommand {
+  if (!raw) return { command: null, expired: null };
   const value =
     typeof raw === "object"
       ? raw
@@ -55,32 +63,39 @@ function parseCommand(raw: unknown): DjCommand | null {
           }
         })();
   const command = parseDjCommand(value);
-  if (!command) return null;
-  if (
-    command.enqueuedAt &&
-    Date.now() - command.enqueuedAt > DJ_COMMAND_TTL_MS
-  ) {
-    return null;
+  if (!command) return { command: null, expired: null };
+  if (!commandStillFresh(command.enqueuedAt, now, DJ_COMMAND_TTL_MS)) {
+    return { command: null, expired: command };
   }
-  return command;
+  return { command, expired: null };
+}
+
+function parseCommand(raw: unknown): DjCommand | null {
+  return inspectQueuedCommand(raw).command;
 }
 
 export async function pushCommand(command: DjCommand): Promise<boolean> {
-  if (!(await readDaemonOnline())) return false;
   const client = getDjRedis();
-  const length = await client.llen(DJ_COMMANDS_KEY);
-  if (length >= DJ_MAX_COMMANDS) return false;
-  await client.rpush(
-    DJ_COMMANDS_KEY,
-    JSON.stringify({ ...command, enqueuedAt: Date.now() }),
+  const payload = JSON.stringify({ ...command, enqueuedAt: Date.now() });
+  const accepted = await client.eval<[number, string], number>(
+    `if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
+     if redis.call('LLEN', KEYS[2]) >= tonumber(ARGV[1]) then return 0 end
+     redis.call('RPUSH', KEYS[2], ARGV[2])
+     return 1`,
+    [DJ_DAEMON_KEY, DJ_COMMANDS_KEY],
+    [DJ_MAX_COMMANDS, payload],
   );
-  return true;
+  return accepted === 1;
 }
 
 export async function requeueCommand(command: DjCommand): Promise<void> {
+  const enqueuedAt = command.enqueuedAt ?? Date.now();
+  if (!commandStillFresh(enqueuedAt, Date.now(), DJ_COMMAND_TTL_MS)) return;
+  const length = await getDjRedis().llen(DJ_COMMANDS_KEY);
+  if (!shouldAcceptEnqueue(length, DJ_MAX_COMMANDS)) return;
   await getDjRedis().lpush(
     DJ_COMMANDS_KEY,
-    JSON.stringify({ ...command, enqueuedAt: Date.now() }),
+    JSON.stringify({ ...command, enqueuedAt }),
   );
 }
 
@@ -93,7 +108,10 @@ export async function popCommand(): Promise<DjCommand | null> {
   return parseCommand(raw);
 }
 
-async function blpopCommand(timeoutSec: number): Promise<unknown> {
+async function blpopCommand(
+  timeoutSec: number,
+  signal?: AbortSignal,
+): Promise<unknown> {
   const url =
     process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
   const token =
@@ -108,7 +126,11 @@ async function blpopCommand(timeoutSec: number): Promise<unknown> {
       "content-type": "application/json",
     },
     body: JSON.stringify(["BLPOP", DJ_COMMANDS_KEY, String(timeoutSec)]),
+    signal,
   });
+  if (!response.ok) {
+    throw new Error(`blpop http ${response.status}`);
+  }
   const json = (await response.json()) as { result?: unknown; error?: string };
   if (json.error) throw new Error(json.error);
   const result = json.result;
@@ -119,21 +141,20 @@ async function blpopCommand(timeoutSec: number): Promise<unknown> {
 
 export async function popCommandBlocking(
   timeoutSec = 10,
-): Promise<DjCommand | null> {
+  signal?: AbortSignal,
+): Promise<QueuedCommand> {
   try {
-    return parseCommand(await blpopCommand(timeoutSec));
+    return inspectQueuedCommand(await blpopCommand(timeoutSec, signal));
   } catch (error) {
-    console.error("dj relay: blpop failed, falling back to lpop", error);
-    const command = await popCommand();
-    if (!command) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    return command;
+    if (signal?.aborted) return { command: null, expired: null };
+    console.error("dj relay: blpop failed", error);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return { command: null, expired: null };
   }
 }
 
 function isLeaseValue(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value !== "0";
+  return typeof value === "string" && value.length > 0 && value !== "0" && value !== "1";
 }
 
 export async function readDaemonGeneration(): Promise<string | null> {
@@ -141,24 +162,31 @@ export async function readDaemonGeneration(): Promise<string | null> {
   return isLeaseValue(value) ? value : null;
 }
 
-export async function claimDaemonLease(generation: string): Promise<void> {
+export async function claimDaemonLease(generation: string): Promise<boolean> {
   const client = getDjRedis();
-  await Promise.all([
-    client.set(DJ_DAEMON_KEY, generation, { ex: DJ_LEASE_TTL_SEC }),
-    flushCommands(),
-  ]);
+  const created = await client.set(DJ_DAEMON_KEY, generation, {
+    ex: DJ_LEASE_TTL_SEC,
+    nx: true,
+  });
+  if (created === "OK") return true;
+  const current = await readDaemonGeneration();
+  if (current === generation) {
+    await client.set(DJ_DAEMON_KEY, generation, { ex: DJ_LEASE_TTL_SEC });
+    return true;
+  }
+  return false;
 }
 
 export async function refreshDaemonLease(generation: string): Promise<boolean> {
   const current = await readDaemonGeneration();
-  if (current && current !== "1" && current !== generation) return false;
+  if (current !== generation) return false;
   await getDjRedis().set(DJ_DAEMON_KEY, generation, { ex: DJ_LEASE_TTL_SEC });
   return true;
 }
 
 export async function ownsDaemonLease(generation: string): Promise<boolean> {
   const current = await readDaemonGeneration();
-  return !current || current === "1" || current === generation;
+  return current === generation;
 }
 
 export async function writeLive(
@@ -167,7 +195,7 @@ export async function writeLive(
 ): Promise<boolean> {
   if (generation && !(await ownsDaemonLease(generation))) return false;
   const existing = await readLive();
-  if (existing && existing.version > live.version) return false;
+  if (existing && existing.version >= live.version) return false;
   const client = getDjRedis();
   await Promise.all([
     client.set(DJ_LIVE_KEY, live),
@@ -184,7 +212,7 @@ export async function writeCatalog(
 ): Promise<boolean> {
   if (generation && !(await ownsDaemonLease(generation))) return false;
   const existing = await readCatalog();
-  if (existing && existing.catalogVersion > catalog.catalogVersion) return false;
+  if (existing && existing.catalogVersion >= catalog.catalogVersion) return false;
   await getDjRedis().set(DJ_CATALOG_KEY, catalog);
   return true;
 }
@@ -195,7 +223,7 @@ export async function writeSnapshot(
 ): Promise<boolean> {
   if (generation && !(await ownsDaemonLease(generation))) return false;
   const existing = await readLive();
-  if (existing && existing.version > state.version) return false;
+  if (existing && existing.version >= state.version) return false;
   const live: DjLive = {
     version: state.version,
     catalogVersion: state.catalogVersion ?? 0,
@@ -231,11 +259,11 @@ export async function writeSnapshot(
 }
 
 export async function readLive(): Promise<DjLive | null> {
-  return getDjRedis().get<DjLive>(DJ_LIVE_KEY);
+  return parseDjLive(await getDjRedis().get(DJ_LIVE_KEY));
 }
 
 export async function readCatalog(): Promise<DjCatalog | null> {
-  return getDjRedis().get<DjCatalog>(DJ_CATALOG_KEY);
+  return parseDjCatalog(await getDjRedis().get(DJ_CATALOG_KEY));
 }
 
 export async function markDaemonOffline(generation: string): Promise<void> {

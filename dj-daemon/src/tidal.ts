@@ -82,7 +82,13 @@ export async function ensureTidalWithCdp(): Promise<void> {
   console.error(`Launching TIDAL with --remote-debugging-port=${tidalCdpPort}`);
   spawn(
     "open",
-    ["-a", tidalAppPath, "--args", `--remote-debugging-port=${tidalCdpPort}`],
+    [
+      "-a",
+      tidalAppPath,
+      "--args",
+      `--remote-debugging-port=${tidalCdpPort}`,
+      "--remote-debugging-address=127.0.0.1",
+    ],
     { detached: true, stdio: "ignore" },
   ).unref();
 
@@ -437,9 +443,14 @@ async function waitForPlaylistStart(
       await delay(200);
       continue;
     }
+    const switched = info.tidalId !== previous.tidalId || !previous.tidalId;
+    if (!switched) {
+      await delay(200);
+      continue;
+    }
     if (allowedTidalIds?.length) {
       if (allowedTidalIds.includes(info.tidalId)) return true;
-    } else if (info.tidalId !== previous.tidalId) {
+    } else {
       return true;
     }
     await delay(200);
@@ -553,7 +564,7 @@ export async function skipPlayback(direction: "next" | "prev"): Promise<boolean>
       return false;
     })());
   if (!clicked) return false;
-  const next = await waitForPlayerChange(previous, 2000);
+  const next = await waitForPlayerChange(previous, 5000);
   return Boolean(
     (next.tidalId && next.tidalId !== previous.tidalId) ||
       (next.title && previous.title && next.title !== previous.title),
@@ -568,6 +579,19 @@ export async function pausePlayback(): Promise<boolean> {
 export async function resumePlayback(): Promise<boolean> {
   if (clickPlaybackMenu("Play")) return true;
   return clickTransport("Play");
+}
+
+export async function waitForPlayingState(
+  wantPlaying: boolean,
+  timeoutMs = 4000,
+): Promise<PlayerBarInfo> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const info = await readPlayerBar();
+    if (info.isPlaying === wantPlaying) return info;
+    await delay(150);
+  }
+  return readPlayerBar();
 }
 
 function clickPlaybackMenu(item: string): boolean {

@@ -8,7 +8,8 @@ import {
   type DjState,
   type DjTrack,
 } from "@/lib/dj/protocol";
-import { loadDaemonEnv, requiredEnv, wsUrl } from "./env";
+import { finalizeCommandError, oneshotResumeDecision } from "@/lib/dj/policy";
+import { assertDistinctSecrets, loadDaemonEnv, requiredEnv, wsUrl } from "./env";
 import {
   bump,
   bumpCatalog,
@@ -31,12 +32,14 @@ import {
   skipPlayback,
   setVolume,
   waitForPlayerChange,
+  waitForPlayingState,
   type PlayerBarInfo,
 } from "./tidal";
 import { loadVibePlaylist, syncAnthemPlaylist } from "./tidal-api";
 import { resolveTrackInput } from "./resolve";
 
 loadDaemonEnv();
+assertDistinctSecrets();
 
 const secret = requiredEnv("DJ_DAEMON_SECRET");
 let state: DjState = loadState();
@@ -45,6 +48,7 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let volumeTimer: ReturnType<typeof setTimeout> | null = null;
 let socket: WebSocket | null = null;
 let reconnectDelay = 1000;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let connectGen = 0;
 let navigating = false;
 let commandTail: Promise<void> = Promise.resolve();
@@ -55,6 +59,10 @@ let lastUnknownTidalId: string | null = null;
 let unknownPullTries = 0;
 let lastPongAt = 0;
 let seenCommandIds = new Set<string>();
+let oneshotArmedAt = 0;
+let oneshotMismatchCount = 0;
+let oneshotStoppedCount = 0;
+let oneshotResumeQueued = false;
 
 function persistSoon() {
   if (persistTimer) clearTimeout(persistTimer);
@@ -77,11 +85,26 @@ function sendDaemon(payload: unknown) {
   }
 }
 
-function setHealth(next: Partial<DjHealth>) {
-  state.health = {
-    cdp: next.cdp ?? state.health?.cdp ?? false,
-    tidal: next.tidal ?? state.health?.tidal ?? false,
-  };
+function setHealth(next: Partial<DjHealth>): boolean {
+  const cdp = next.cdp ?? state.health?.cdp ?? false;
+  const tidal = next.tidal ?? state.health?.tidal ?? false;
+  const changed = cdp !== state.health?.cdp || tidal !== state.health?.tidal;
+  state.health = { cdp, tidal };
+  return changed;
+}
+
+function resetOneshotWatch() {
+  oneshotArmedAt = Date.now();
+  oneshotMismatchCount = 0;
+  oneshotStoppedCount = 0;
+  oneshotResumeQueued = false;
+}
+
+function cancelUnknownPull() {
+  if (unknownPullTimer) {
+    clearTimeout(unknownPullTimer);
+    unknownPullTimer = null;
+  }
 }
 
 function publishLive() {
@@ -142,8 +165,27 @@ function applyNowPlaying(info: PlayerBarInfo) {
 
   const oneshot = state.transport.oneshot;
   if (oneshot) {
-    if (info.tidalId && info.tidalId !== oneshot.tidalId) {
-      commandTail = commandTail.then(() => resumeFromOneshot());
+    const decision = oneshotResumeDecision({
+      oneshotTidalId: oneshot.tidalId,
+      infoTidalId: info.tidalId,
+      isPlaying: info.isPlaying,
+      now: Date.now(),
+      armedAt: oneshotArmedAt,
+      mismatchCount: oneshotMismatchCount,
+      stoppedCount: oneshotStoppedCount,
+    });
+    oneshotMismatchCount = decision.mismatchCount;
+    oneshotStoppedCount = decision.stoppedCount;
+    if (decision.resume && !oneshotResumeQueued) {
+      oneshotResumeQueued = true;
+      enqueue(async () => {
+        try {
+          await resumeFromOneshot();
+          publishLive();
+        } finally {
+          oneshotResumeQueued = false;
+        }
+      });
     }
     return;
   }
@@ -159,7 +201,9 @@ function applyNowPlaying(info: PlayerBarInfo) {
 }
 
 function scheduleUnknownTrackPull(tidalId: string) {
+  if (state.transport.oneshot) return;
   if (lastUnknownTidalId === tidalId && unknownPullTries >= 4) return;
+  if (lastUnknownTidalId === tidalId && unknownPullTimer) return;
   if (lastUnknownTidalId !== tidalId) {
     lastUnknownTidalId = tidalId;
     unknownPullTries = 0;
@@ -224,7 +268,7 @@ async function refreshAllVibes(options?: { clearEtags?: boolean }) {
         return await refreshVibeFromTidal(vibe);
       } catch (error) {
         console.error(`playlist pull failed for ${vibe.name}`, error);
-        setHealth({ tidal: false });
+        if (setHealth({ tidal: false })) publishLive();
         return false;
       }
     }),
@@ -237,15 +281,12 @@ async function playVibePlaylist(vibeId: string) {
   const vibe = findVibe(state, vibeId);
   if (!vibe) return;
   navigating = true;
-  state.transport.vibeId = vibeId;
-  state.transport.queueIndex = -1;
   try {
     await refreshVibeFromTidal(vibe);
     if (!vibe.tidalPlaylistId || vibe.tracks.length === 0) {
       state.lastError = `${vibe.name} has no tracks on TIDAL yet`;
       return;
     }
-    state.transport.queue = vibe.tracks.map((track) => track.id);
     const allowed = vibe.tracks
       .map((track) => track.tidalId)
       .filter((id): id is string => Boolean(id));
@@ -255,9 +296,11 @@ async function playVibePlaylist(vibeId: string) {
       return;
     }
     state.lastError = undefined;
+    state.transport.vibeId = vibeId;
+    state.transport.queue = vibe.tracks.map((track) => track.id);
+    state.transport.queueIndex = -1;
     applyNowPlaying(await readPlayerBar());
     state.transport.playing = true;
-    state.transport.vibeId = vibeId;
   } finally {
     navigating = false;
   }
@@ -266,9 +309,7 @@ async function playVibePlaylist(vibeId: string) {
 async function resumeFromOneshot() {
   const oneshot = state.transport.oneshot;
   if (!oneshot) return;
-  state.transport.oneshot = null;
   if (oneshot.resumeVibeId) {
-    state.transport.vibeId = oneshot.resumeVibeId;
     const vibe = findVibe(state, oneshot.resumeVibeId);
     if (vibe) {
       state.transport.queue =
@@ -280,6 +321,8 @@ async function resumeFromOneshot() {
     const trackId = state.transport.queue[oneshot.resumeIndex];
     const track = trackId ? findTrack(state, trackId) : undefined;
     if (vibe?.tidalPlaylistId && track?.tidalId) {
+      state.transport.oneshot = null;
+      state.transport.vibeId = oneshot.resumeVibeId;
       navigating = true;
       try {
         const started = await playTidalPlaylist(vibe.tidalPlaylistId, track.tidalId);
@@ -291,12 +334,22 @@ async function resumeFromOneshot() {
         navigating = false;
       }
     }
+    state.transport.oneshot = null;
     await playVibePlaylist(oneshot.resumeVibeId);
     return;
   }
+  state.transport.oneshot = null;
   const previous = await readPlayerBar();
   const skipped = await skipPlayback("next");
-  if (skipped) applyNowPlaying(await waitForPlayerChange(previous));
+  if (skipped) applyNowPlaying(await readPlayerBar());
+  else applyNowPlaying(await waitForPlayerChange(previous, 5000));
+}
+
+function playerChanged(previous: PlayerBarInfo, next: PlayerBarInfo) {
+  return Boolean(
+    (next.tidalId && next.tidalId !== previous.tidalId) ||
+      (next.title && previous.title && next.title !== previous.title),
+  );
 }
 
 async function advance(delta: number) {
@@ -306,11 +359,14 @@ async function advance(delta: number) {
   }
   const previous = await readPlayerBar();
   const skipped = await skipPlayback(delta > 0 ? "next" : "prev");
-  if (!skipped) {
-    state.lastError = delta > 0 ? "Could not skip forward" : "Could not skip back";
+  const after = await readPlayerBar();
+  if (playerChanged(previous, after)) {
+    applyNowPlaying(after);
     return;
   }
-  applyNowPlaying(await waitForPlayerChange(previous));
+  if (!skipped) {
+    state.lastError = delta > 0 ? "Could not skip forward" : "Could not skip back";
+  }
 }
 
 async function runCommand(command: DjCommand) {
@@ -323,7 +379,7 @@ async function runCommand(command: DjCommand) {
       const vibe = findVibe(state, vibeId);
       if (!vibe) throw new Error("Unknown vibe");
       state.transport.oneshot = null;
-      state.transport.vibeId = vibeId;
+      resetOneshotWatch();
       state.pending = {
         action: "playVibe",
         vibeId,
@@ -345,6 +401,7 @@ async function runCommand(command: DjCommand) {
         commandId: command.id,
       };
       publishLive();
+      cancelUnknownPull();
       const resume = {
         characterId,
         resumeVibeId: state.transport.vibeId,
@@ -365,6 +422,7 @@ async function runCommand(command: DjCommand) {
           return;
         }
         state.transport.oneshot = { ...resume, tidalId: anthem.tidalId };
+        resetOneshotWatch();
         state.nowPlaying = {
           title: anthem.title,
           artist: anthem.artist,
@@ -380,7 +438,7 @@ async function runCommand(command: DjCommand) {
 
     if (name === "pause") {
       await pausePlayback();
-      const info = await readPlayerBar();
+      const info = await waitForPlayingState(false, 4000);
       state.transport.playing = info.isPlaying;
       if (state.nowPlaying) state.nowPlaying.isPlaying = info.isPlaying;
       if (info.isPlaying) state.lastError = "Could not pause";
@@ -394,20 +452,21 @@ async function runCommand(command: DjCommand) {
         if (state.nowPlaying) state.nowPlaying.isPlaying = true;
         return;
       }
-      const resumed = await resumePlayback();
-      const after = await readPlayerBar();
-      if (resumed || after.isPlaying) {
+      await resumePlayback();
+      let after = await waitForPlayingState(true, 2500);
+      if (after.isPlaying) {
         state.transport.playing = true;
         if (state.nowPlaying) state.nowPlaying.isPlaying = true;
         return;
       }
-      if (state.transport.oneshot) {
-        state.lastError = "Could not resume";
+      await resumePlayback();
+      after = await waitForPlayingState(true, 2500);
+      if (after.isPlaying) {
+        state.transport.playing = true;
+        if (state.nowPlaying) state.nowPlaying.isPlaying = true;
         return;
       }
-      if (state.transport.vibeId) {
-        await playVibePlaylist(state.transport.vibeId);
-      }
+      state.lastError = "Could not resume";
       return;
     }
 
@@ -428,7 +487,9 @@ async function runCommand(command: DjCommand) {
       if (volumeTimer) clearTimeout(volumeTimer);
       volumeTimer = setTimeout(() => {
         volumeTimer = null;
-        void setVolume(state.transport.volume);
+        enqueue(async () => {
+          await setVolume(state.transport.volume);
+        });
       }, 180);
       return;
     }
@@ -527,25 +588,14 @@ async function handleCommand(command: DjCommand) {
   if (seenCommandIds.size > 200) {
     seenCommandIds = new Set([...seenCommandIds].slice(-80));
   }
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-  }, 8000);
-  try {
-    await runCommand(command);
-    if (timedOut && !state.lastError) {
-      state.lastError = "Command timed out";
-    }
-  } finally {
-    clearTimeout(timer);
-  }
+  await runCommand(command);
+  state.lastError = finalizeCommandError(state.lastError, false);
 }
 
 async function pollNowPlaying() {
   if (navigating) return;
   try {
     const info = await readPlayerBar();
-    setHealth({ cdp: true, tidal: true });
     const changed =
       info.isPlaying !== (state.nowPlaying?.isPlaying ?? false) ||
       (info.title ?? "") !== (state.nowPlaying?.title ?? "") ||
@@ -553,7 +603,12 @@ async function pollNowPlaying() {
       (info.tidalId ?? undefined) !== state.nowPlaying?.tidalId;
     const previousIndex = state.transport.queueIndex;
     const previousVibeId = state.transport.vibeId;
+    const previousTidalId = state.nowPlaying?.tidalId;
+    const skipError = state.lastError?.startsWith("Could not skip");
     applyNowPlaying(info);
+    if (skipError && info.tidalId && info.tidalId !== previousTidalId) {
+      state.lastError = undefined;
+    }
     if (
       info.tidalId &&
       !state.transport.oneshot &&
@@ -561,8 +616,11 @@ async function pollNowPlaying() {
     ) {
       scheduleUnknownTrackPull(info.tidalId);
     }
+    const healthChanged = setHealth({ cdp: true, tidal: true });
     if (
       changed ||
+      healthChanged ||
+      skipError !== Boolean(state.lastError?.startsWith("Could not skip")) ||
       state.transport.queueIndex !== previousIndex ||
       state.transport.vibeId !== previousVibeId
     ) {
@@ -571,7 +629,8 @@ async function pollNowPlaying() {
   } catch (error) {
     console.error("now playing poll failed", error);
     const cdp = await isCdpAvailable();
-    setHealth({ cdp, tidal: false });
+    const healthChanged = setHealth({ cdp, tidal: false });
+    if (healthChanged) publishLive();
     if (!cdp) {
       state.daemonOnline = true;
       publishLive();
@@ -625,6 +684,13 @@ function connect() {
     if (message.type === "ready") {
       lastPongAt = Date.now();
       state.daemonOnline = true;
+      if (message.snapshot) {
+        state.version = Math.max(state.version, message.snapshot.version);
+        state.catalogVersion = Math.max(
+          state.catalogVersion,
+          message.snapshot.catalogVersion,
+        );
+      }
       publishCatalog();
       console.error("Daemon connected");
       return;
@@ -650,6 +716,7 @@ function connect() {
 }
 
 function scheduleReconnect() {
+  if (reconnectTimer) return;
   if (socket) {
     try {
       socket.terminate();
@@ -658,7 +725,10 @@ function scheduleReconnect() {
     }
   }
   socket = null;
-  setTimeout(connect, reconnectDelay);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 2, 15000);
 }
 
