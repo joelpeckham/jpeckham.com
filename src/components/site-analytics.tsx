@@ -8,7 +8,12 @@ export function SiteAnalytics() {
       beforeSend={(event) => {
         try {
           const url = new URL(event.url);
-          if (url.pathname === "/dj" || url.pathname.startsWith("/dj/")) {
+          if (
+            url.pathname === "/dj" ||
+            url.pathname.startsWith("/dj/") ||
+            url.pathname === "/vikram" ||
+            url.pathname.startsWith("/vikram/")
+          ) {
             url.search = "";
             url.hash = "";
             return { ...event, url: url.toString() };

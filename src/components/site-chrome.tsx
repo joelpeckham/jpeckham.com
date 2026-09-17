@@ -7,9 +7,13 @@ import { SiteHeader } from "@/components/site-header";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isDj = pathname === "/dj" || pathname.startsWith("/dj/");
+  const isTableTool =
+    pathname === "/dj" ||
+    pathname.startsWith("/dj/") ||
+    pathname === "/vikram" ||
+    pathname.startsWith("/vikram/");
 
-  if (isDj) {
+  if (isTableTool) {
     return <div className="min-h-full flex-1">{children}</div>;
   }
 
