@@ -71,6 +71,7 @@ async function runDaemonSocket(ws: WebSocket) {
     });
   });
 
+  await refreshDaemonHeartbeat();
   const initial = await readSnapshot();
   send(ws, {
     type: "ready",
@@ -109,13 +110,17 @@ async function runRemoteSocket(ws: WebSocket) {
   });
 
   let lastVersion = -1;
+  let lastOnline = false;
   const first = await readSnapshot();
   send(ws, {
     type: "ready",
     daemonOnline: first.daemonOnline,
-    snapshot: first.state,
+    snapshot: first.state
+      ? { ...first.state, daemonOnline: first.daemonOnline }
+      : null,
   });
   lastVersion = first.version;
+  lastOnline = first.daemonOnline;
 
   while (alive && ws.readyState === ws.OPEN) {
     await sleep(350);
@@ -123,36 +128,28 @@ async function runRemoteSocket(ws: WebSocket) {
     const envelope = await readSnapshot();
     const snapshot: DjState | null = envelope.state
       ? { ...envelope.state, daemonOnline: envelope.daemonOnline }
-      : envelope.daemonOnline
-        ? null
-        : ({
-            version: envelope.version,
-            daemonOnline: false,
-            vibes: [],
-            characters: [],
-            transport: {
-              playing: false,
-              vibeId: null,
-              queue: [],
-              queueIndex: 0,
-              volume: 80,
-              oneshot: null,
-            },
-            nowPlaying: null,
-            search: null,
-          } satisfies DjState);
-    if (envelope.version !== lastVersion) {
-      lastVersion = envelope.version;
-      if (snapshot) {
-        send(ws, { type: "snapshot", snapshot });
-      } else {
-        send(ws, {
-          type: "ready",
+      : {
+          version: envelope.version,
           daemonOnline: envelope.daemonOnline,
-          snapshot: null,
-        });
-      }
-    }
+          vibes: [],
+          characters: [],
+          transport: {
+            playing: false,
+            vibeId: null,
+            queue: [],
+            queueIndex: 0,
+            volume: 80,
+            oneshot: null,
+          },
+          nowPlaying: null,
+          search: null,
+        };
+    const changed =
+      envelope.version !== lastVersion || envelope.daemonOnline !== lastOnline;
+    if (!changed) continue;
+    lastVersion = envelope.version;
+    lastOnline = envelope.daemonOnline;
+    send(ws, { type: "snapshot", snapshot });
   }
 }
 

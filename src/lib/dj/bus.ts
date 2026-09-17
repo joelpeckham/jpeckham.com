@@ -76,23 +76,28 @@ export async function refreshDaemonHeartbeat(): Promise<void> {
   await getDjRedis().set(DJ_DAEMON_KEY, "1", { ex: 20 });
 }
 
+function isDaemonFlag(value: unknown): boolean {
+  return value === "1" || value === 1 || value === true;
+}
+
 export async function readSnapshot(): Promise<SnapshotEnvelope> {
   const [envelope, online] = await Promise.all([
     getDjRedis().get<SnapshotEnvelope>(DJ_SNAPSHOT_KEY),
     getDjRedis().get<string>(DJ_DAEMON_KEY),
   ]);
+  const daemonOnline = isDaemonFlag(online);
   if (!envelope) {
     return {
       version: 0,
-      daemonOnline: online === "1",
+      daemonOnline,
       state: null,
     };
   }
   return {
     ...envelope,
-    daemonOnline: online === "1" || envelope.daemonOnline,
+    daemonOnline: daemonOnline || Boolean(envelope.daemonOnline),
     state: envelope.state
-      ? { ...envelope.state, daemonOnline: online === "1" }
+      ? { ...envelope.state, daemonOnline }
       : null,
   };
 }

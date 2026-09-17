@@ -78,8 +78,12 @@ export function DjApp() {
         const message = parseWireMessage(String(event.data));
         if (!message) return;
         if (message.type === "ready") {
-          if (message.snapshot) setState(message.snapshot);
-          else {
+          if (message.snapshot) {
+            setState({
+              ...message.snapshot,
+              daemonOnline: message.daemonOnline || message.snapshot.daemonOnline,
+            });
+          } else {
             setState((current) => ({
               ...current,
               daemonOnline: message.daemonOnline,

@@ -391,14 +391,18 @@ function connect() {
   ws.on("open", () => {
     reconnectDelay = 1000;
     ws.send(JSON.stringify({ type: "hello", role: "daemon", secret }));
-    state.daemonOnline = true;
-    publish();
-    console.error("Daemon connected");
+    console.error("Daemon hello sent");
   });
 
   ws.on("message", (data) => {
     const message = parseWireMessage(data.toString());
     if (!message) return;
+    if (message.type === "ready") {
+      state.daemonOnline = true;
+      publish();
+      console.error("Daemon connected");
+      return;
+    }
     if (message.type === "command") {
       void handleCommand(message);
     }
