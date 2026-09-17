@@ -22,14 +22,18 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "refman:fetch": "node scripts/fetch-mysql-refman.mjs"
+    "refman:fetch": "node scripts/fetch-mysql-refman.mjs",
+    "dj": "caffeinate -i tsx dj-daemon/src/index.ts",
+    "dev:ws": "vercel dev"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@next/mdx": "^16.2.10",
     "@tailwindcss/typography": "^0.5.20",
+    "@upstash/redis": "^1.38.4",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.9.8",
     "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -43,7 +47,8 @@
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -52,12 +57,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "opentype.js": "^2.0.0",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^3.2.4"
   }

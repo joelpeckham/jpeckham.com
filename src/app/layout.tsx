@@ -3,8 +3,7 @@ import { Jost, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteChrome } from "@/components/site-chrome";
 import { defaultOgImage, siteName, siteUrl } from "@/lib/site";
 
 const jost = Jost({
@@ -81,17 +80,7 @@ export default function RootLayout({
       className={`${jost.variable} ${jetbrainsMono.variable} h-full overflow-x-clip`}
     >
       <body className="flex min-h-full min-w-0 flex-col overflow-x-clip font-sans">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-5 focus:top-5 focus:z-[100] focus:border-2 focus:border-ink focus:bg-paper focus:px-4 focus:py-2 focus:font-mono focus:text-sm focus:uppercase focus:tracking-[0.06em]"
-        >
-          Skip to main content
-        </a>
-        <SiteHeader />
-        <main id="main" className="min-w-0 flex-1">
-          {children}
-        </main>
-        <SiteFooter />
+        <SiteChrome>{children}</SiteChrome>
         <Analytics />
         <SpeedInsights />
       </body>

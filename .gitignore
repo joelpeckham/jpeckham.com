@@ -45,3 +45,9 @@ next-env.d.ts
 
 # Oracle MySQL Reference Manual (local only; not redistributable)
 /sources/mysql-refman-*/
+
+# Laravel docs (MIT; local study copy, not republished)
+/sources/laravel-docs-*/
+
+# DJ daemon runtime state (seed.json is committed)
+/dj-daemon/data/state.json

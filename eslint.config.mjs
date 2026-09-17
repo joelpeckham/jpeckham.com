@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     "public/lander/jszip.min.js",
     "public/lander/FileSaver.min.js",
     "public/**",
+    "dj-daemon/**",
   ]),
 ]);
 
