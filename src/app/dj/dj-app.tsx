@@ -4,7 +4,6 @@ import {
   memo,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -15,7 +14,6 @@ import {
   Play,
   Plus,
   RotateCcw,
-  Settings,
   SkipBack,
   SkipForward,
   X,
@@ -59,6 +57,10 @@ const fallbackVibes = [
 function wsUrl() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${protocol}://${window.location.host}/api/dj/ws/`;
+}
+
+function looksLikeTrackLink(value: string) {
+  return /https?:\/\//i.test(value) || /(?:listen\.)?tidal\.com|open\.spotify\.com/i.test(value);
 }
 
 function DjModal({
@@ -189,12 +191,14 @@ export function DjApp() {
   const [characterName, setCharacterName] = useState("");
   const [characterInput, setCharacterInput] = useState("");
   const [anthemOpen, setAnthemOpen] = useState(false);
-  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [playlistBusy, setPlaylistBusy] = useState<string | null>(null);
   const [localPending, setLocalPending] = useState<DjPending | null>(null);
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const versionRef = useRef(0);
   const sentVersionRef = useRef(0);
+  const catalogWaitRef = useRef(0);
+  const editVersionRef = useRef(0);
 
   const send = useCallback(
     (name: DjCommandName, payload: Record<string, unknown> = {}, pending?: DjPending) => {
@@ -238,7 +242,6 @@ export function DjApp() {
     [send],
   );
   const closeAnthem = useCallback(() => setAnthemOpen(false), []);
-  const closePlaylist = useCallback(() => setPlaylistOpen(false), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,6 +328,19 @@ export function DjApp() {
     }
   }, [optimisticPlaying, state.transport.playing]);
 
+  useEffect(() => {
+    if (!playlistBusy) return;
+    const catalogDone = state.catalogVersion > catalogWaitRef.current;
+    const failed = Boolean(state.lastError) && state.version > editVersionRef.current;
+    if (catalogDone || failed) setPlaylistBusy(null);
+  }, [playlistBusy, state.catalogVersion, state.lastError, state.version]);
+
+  useEffect(() => {
+    if (!playlistBusy) return;
+    const timer = window.setTimeout(() => setPlaylistBusy(null), 20000);
+    return () => window.clearTimeout(timer);
+  }, [playlistBusy]);
+
   const vibes = state.vibes.length > 0 ? state.vibes : fallbackVibes;
   const pending = localPending ?? state.pending ?? null;
   const switching = pending?.action === "playVibe" || pending?.action === "playAnthem";
@@ -348,15 +364,12 @@ export function DjApp() {
         ? "Working"
         : "Live";
 
-  const queueTracks = useMemo(() => {
-    if (!activeVibe) return [];
-    return activeVibe.tracks;
-  }, [activeVibe]);
-
-  useEffect(() => {
-    if (!playlistOpen || !live || !activeVibeId) return;
-    send("refreshVibe", { vibeId: activeVibeId });
-  }, [playlistOpen, live, activeVibeId, send]);
+  const queueTracks = activeVibe?.tracks ?? [];
+  const beginPlaylistEdit = (label: string) => {
+    catalogWaitRef.current = state.catalogVersion;
+    editVersionRef.current = state.version;
+    setPlaylistBusy(label);
+  };
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-6 px-4 py-5 sm:px-6">
@@ -527,27 +540,142 @@ export function DjApp() {
         </div>
       </section>
 
-      <section className="pb-10">
+      <section className="dj-playlist pb-10">
         <div className="dj-section-head">
           <div>
             <h2 className="dj-title text-2xl">
-              {activeVibe ? activeVibe.name : "Playlist"}
+              {activeVibe ? `${activeVibe.name}` : "Playlist"}
             </h2>
             <p className="mt-1 text-sm text-[var(--dj-muted)]">
-              {activeVibe
-                ? `${activeVibe.tracks.length} tracks on TIDAL`
-                : "Choose a vibe"}
+              {playlistBusy
+                ? playlistBusy
+                : activeVibe
+                  ? `${activeVibe.tracks.length} tracks on TIDAL`
+                  : "Choose a vibe"}
             </p>
           </div>
           <button
             type="button"
-            className="dj-icon-btn"
-            aria-label="Edit playlist"
-            onClick={() => setPlaylistOpen(true)}
+            className="dj-ghost"
+            disabled={!live || !activeVibe}
+            onClick={() => {
+              if (!activeVibeId) return;
+              send("refreshVibe", { vibeId: activeVibeId });
+              beginPlaylistEdit("Refreshing TIDAL…");
+            }}
           >
-            <Settings aria-hidden="true" />
+            Refresh
           </button>
         </div>
+
+        <div className="mb-3 flex flex-wrap gap-2">
+          {vibes.map((vibe) => (
+            <button
+              key={vibe.id}
+              type="button"
+              className="dj-ghost"
+              data-active={vibe.id === activeVibeId ? "true" : "false"}
+              onClick={() => setSelectedVibeId(vibe.id)}
+            >
+              {vibe.name}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className="dj-playlist-actions"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!activeVibe || !trackInput.trim() || !live) return;
+            const value = trackInput.trim();
+            if (looksLikeTrackLink(value)) {
+              send("addTrack", { vibeId: activeVibe.id, input: value });
+              beginPlaylistEdit("Adding to TIDAL…");
+              setTrackInput("");
+              return;
+            }
+            send("search", {
+              requestId: crypto.randomUUID(),
+              query: value,
+            });
+          }}
+        >
+          <input
+            className="dj-field"
+            placeholder="Search TIDAL or paste a link"
+            value={trackInput}
+            onChange={(event) => setTrackInput(event.target.value)}
+          />
+          <button
+            type="submit"
+            className="dj-solid"
+            disabled={!live || !activeVibe || !trackInput.trim()}
+          >
+            {looksLikeTrackLink(trackInput) ? "Add" : "Search"}
+          </button>
+        </form>
+
+        {state.search?.status === "searching" ? (
+          <p className="mb-3 text-[var(--dj-muted)]">Searching TIDAL…</p>
+        ) : null}
+        {state.search?.results?.length ? (
+          <div className="mb-4">
+            {state.search.results.map((track) => (
+              <SearchRow
+                key={track.id}
+                track={track}
+                disabled={!live || !activeVibe || Boolean(playlistBusy)}
+                onAdd={() => {
+                  if (!activeVibe) return;
+                  send("addTrack", { vibeId: activeVibe.id, track });
+                  beginPlaylistEdit(`Adding ${track.title}…`);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {queueTracks.length === 0 ? (
+          <p className="text-[var(--dj-muted)]">
+            Empty on TIDAL. Search above or add tracks in the TIDAL app.
+          </p>
+        ) : (
+          queueTracks.map((track, index) => (
+            <div
+              key={`${track.tidalId ?? track.id}-${index}`}
+              className="dj-track"
+              data-current={
+                track.id === currentTrackId ||
+                Boolean(state.nowPlaying?.title && track.title === state.nowPlaying.title)
+              }
+            >
+              <div>
+                <p>
+                  <span className="mr-2 text-[var(--dj-muted)]">{index + 1}.</span>
+                  {track.title}
+                </p>
+                <p className="text-sm text-[var(--dj-muted)]">{track.artist}</p>
+              </div>
+              <button
+                type="button"
+                className="dj-ghost"
+                disabled={!live || !activeVibe || Boolean(playlistBusy)}
+                onClick={() => {
+                  if (!activeVibe) return;
+                  send("removeTrack", {
+                    vibeId: activeVibe.id,
+                    trackId: track.id,
+                    tidalId: track.tidalId,
+                    index,
+                  });
+                  beginPlaylistEdit("Removing from TIDAL…");
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ))
+        )}
       </section>
 
       <DjModal title="Add anthem" open={anthemOpen} onClose={closeAnthem}>
@@ -604,136 +732,6 @@ export function DjApp() {
         </form>
       </DjModal>
 
-      <DjModal
-        title={activeVibe ? `${activeVibe.name} playlist` : "Playlist"}
-        open={playlistOpen}
-        onClose={closePlaylist}
-      >
-        <div className="mb-3 flex flex-wrap gap-2">
-          {vibes.map((vibe) => (
-            <button
-              key={vibe.id}
-              type="button"
-              className="dj-ghost"
-              data-active={vibe.id === activeVibeId ? "true" : "false"}
-              onClick={() => setSelectedVibeId(vibe.id)}
-            >
-              {vibe.name}
-            </button>
-          ))}
-        </div>
-        <form
-          className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!activeVibe || !trackInput.trim()) return;
-            send("addTrack", { vibeId: activeVibe.id, input: trackInput.trim() });
-            setState((current) => ({
-              ...current,
-              vibes: current.vibes.map((vibe) =>
-                vibe.id === activeVibe.id
-                  ? {
-                      ...vibe,
-                      tracks: [
-                        ...vibe.tracks,
-                        {
-                          id: `tmp-${crypto.randomUUID()}`,
-                          title: trackInput.trim(),
-                          artist: "Adding to TIDAL…",
-                        },
-                      ],
-                    }
-                  : vibe,
-              ),
-            }));
-            setTrackInput("");
-          }}
-        >
-          <input
-            className="dj-field"
-            placeholder="Paste a TIDAL/Spotify URL or search"
-            value={trackInput}
-            onChange={(event) => setTrackInput(event.target.value)}
-          />
-          <button
-            type="button"
-            className="dj-ghost"
-            disabled={!live || !trackInput.trim()}
-            onClick={() =>
-              send("search", {
-                requestId: crypto.randomUUID(),
-                query: trackInput.trim(),
-              })
-            }
-          >
-            Search
-          </button>
-          <button type="submit" className="dj-solid" disabled={!live || !activeVibe}>
-            Add
-          </button>
-        </form>
-        {state.search?.status === "searching" ? (
-          <p className="mb-3 text-[var(--dj-muted)]">Searching TIDAL…</p>
-        ) : null}
-        {state.search?.results?.length ? (
-          <div className="mb-4">
-            {state.search.results.map((track) => (
-              <SearchRow
-                key={track.id}
-                track={track}
-                disabled={!live || !activeVibe}
-                onAdd={() => {
-                  if (!activeVibe) return;
-                  send("addTrack", { vibeId: activeVibe.id, track });
-                  setState((current) => ({
-                    ...current,
-                    vibes: current.vibes.map((vibe) =>
-                      vibe.id === activeVibe.id
-                        ? { ...vibe, tracks: [...vibe.tracks, { ...track, id: `tmp-${track.id}` }] }
-                        : vibe,
-                    ),
-                  }));
-                }}
-              />
-            ))}
-          </div>
-        ) : null}
-        {queueTracks.length === 0 ? (
-          <p className="text-[var(--dj-muted)]">
-            This TIDAL playlist is empty. Add a track here or in the TIDAL app.
-          </p>
-        ) : (
-          queueTracks.map((track, index) => (
-            <div
-              key={track.id}
-              className="dj-track"
-              data-current={
-                track.id === currentTrackId ||
-                Boolean(state.nowPlaying?.title && track.title === state.nowPlaying.title)
-              }
-            >
-              <div>
-                <p>
-                  <span className="mr-2 text-[var(--dj-muted)]">{index + 1}.</span>
-                  {track.title}
-                </p>
-                <p className="text-sm text-[var(--dj-muted)]">{track.artist}</p>
-              </div>
-              <button
-                type="button"
-                className="dj-ghost"
-                disabled={!live || !activeVibe}
-                onClick={() =>
-                  activeVibe &&
-                  send("removeTrack", { vibeId: activeVibe.id, trackId: track.id })
-                }
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        )}
-      </DjModal>
     </div>
   );
 }

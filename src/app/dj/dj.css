@@ -318,3 +318,17 @@
   height: 2rem;
   touch-action: none;
 }
+
+.dj-playlist {
+  border: 1px solid var(--dj-line);
+  background: var(--dj-panel);
+  box-shadow: var(--dj-shadow);
+  padding: 1rem 1rem 1.25rem;
+}
+
+.dj-playlist-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}

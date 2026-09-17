@@ -175,6 +175,12 @@ export async function playlistItems(uuid: string): Promise<PlaylistTrack[]> {
   return tracks;
 }
 
+function tidalFailure(action: string, result: { status: number; json: unknown }) {
+  const json = result.json as { userMessage?: string; subStatus?: number } | null;
+  const detail = json?.userMessage ? `: ${json.userMessage}` : "";
+  return new Error(`Could not ${action} (${result.status}${detail})`);
+}
+
 export async function addTracks(uuid: string, trackIds: string[]) {
   if (trackIds.length === 0) return;
   const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
@@ -190,24 +196,27 @@ export async function addTracks(uuid: string, trackIds: string[]) {
     },
   );
   if (added.status >= 400) {
-    throw new Error(`Could not add tracks to TIDAL playlist (${added.status})`);
+    console.error("TIDAL add failed", added.status, added.json);
+    throw tidalFailure("add tracks to TIDAL playlist", added);
   }
 }
 
-export async function removePlaylistItem(uuid: string, index: number) {
+async function deletePlaylistItems(uuid: string, indices: number[]) {
+  if (indices.length === 0) return { status: 200, json: null };
+  const unique = [...new Set(indices.filter((index) => index >= 0))].sort((a, b) => b - a);
   const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
-  const removed = await tidalRequestRetry(
+  return tidalRequestRetry(
     "DELETE",
-    `/v1/playlists/${uuid}/items?countryCode=US`,
-    {
-      form: new URLSearchParams({
-        order: String(index),
-      }),
-      headers: { "if-none-match": meta.etag ?? "*" },
-    },
+    `/v1/playlists/${uuid}/items/${unique.join(",")}?countryCode=US`,
+    { headers: { "if-none-match": meta.etag ?? "*" } },
   );
+}
+
+export async function removePlaylistItem(uuid: string, index: number) {
+  const removed = await deletePlaylistItems(uuid, [index]);
   if (removed.status >= 400) {
-    throw new Error(`Could not remove track from TIDAL playlist (${removed.status})`);
+    console.error("TIDAL remove failed", removed.status, removed.json);
+    throw tidalFailure("remove track from TIDAL playlist", removed);
   }
 }
 
@@ -278,18 +287,14 @@ async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean>
   const current = (await playlistItems(uuid)).map((track) => track.tidalId);
   if (sameTrackSet(current, trackIds)) return true;
   if (current.length > 0) {
-    const meta = await tidalRequestRetry("GET", `/v1/playlists/${uuid}?countryCode=US`);
-    const removed = await tidalRequestRetry(
-      "DELETE",
-      `/v1/playlists/${uuid}/items?countryCode=US`,
-      {
-        form: new URLSearchParams({
-          order: current.map((_, index) => String(index)).join(","),
-        }),
-        headers: { "if-none-match": meta.etag ?? "*" },
-      },
+    const removed = await deletePlaylistItems(
+      uuid,
+      current.map((_, index) => index),
     );
-    if (removed.status >= 400) return false;
+    if (removed.status >= 400) {
+      console.error("TIDAL replace-delete failed", removed.status, removed.json);
+      return false;
+    }
   }
   await addTracks(uuid, trackIds);
   const next = (await playlistItems(uuid)).map((track) => track.tidalId);
