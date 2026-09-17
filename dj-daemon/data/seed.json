@@ -137,83 +137,73 @@
       "tracks": [
         {
           "id": "tav-01",
-          "title": "Astrakan Café - 1",
+          "title": "Astrakan Café",
           "artist": "Anouar Brahem",
-          "spotifyUrl": "https://open.spotify.com/track/3w6Q4UYdUbAkwT4Plhh3Tp",
-          "tidalId": "77699329",
-          "tidalUrl": "https://listen.tidal.com/track/77699329"
+          "tidalId": "77699317",
+          "tidalUrl": "https://listen.tidal.com/track/77699317"
         },
         {
           "id": "tav-02",
-          "title": "The Wind, Pt. II",
-          "artist": "Kayhan Kalhor, Erdal Erzincan",
-          "spotifyUrl": "https://open.spotify.com/track/2SrWbZoQ8NDXvKbMprJ0Y1",
-          "tidalId": "179669719",
-          "tidalUrl": "https://listen.tidal.com/track/179669719"
-        },
-        {
-          "id": "tav-03",
-          "title": "Arabian Waltz",
-          "artist": "Rabih Abou-Khalil, Michel Godard, Nabil Khaiat, Balanescu Quartet",
-          "spotifyUrl": "https://open.spotify.com/track/0JKBXg59YS0mVuUHo5tQ2O",
-          "tidalId": "16649912",
-          "tidalUrl": "https://listen.tidal.com/track/16649912"
-        },
-        {
-          "id": "tav-04",
-          "title": "Hasret",
-          "artist": "Omar Faruk Tekbilek",
-          "spotifyUrl": "https://open.spotify.com/track/7Hw2XpM0HJsVhNo5btPUzH",
-          "tidalId": "20126709",
-          "tidalUrl": "https://listen.tidal.com/track/20126709"
-        },
-        {
-          "id": "tav-05",
-          "title": "Taqsîm En Maqâm Nahawand",
-          "artist": "Munir Bashir",
-          "spotifyUrl": "https://open.spotify.com/track/5E5zxKsobIxEm1qzG3ULE6",
-          "tidalId": "17226316",
-          "tidalUrl": "https://listen.tidal.com/track/17226316"
-        },
-        {
-          "id": "tav-06",
-          "title": "Masâr",
-          "artist": "Le Trio Joubran",
-          "spotifyUrl": "https://open.spotify.com/track/5Qoiye82nndkkeGCbZKs9r",
-          "tidalId": "14513907",
-          "tidalUrl": "https://listen.tidal.com/track/14513907"
-        },
-        {
-          "id": "tav-07",
           "title": "Üsküdar",
-          "artist": "Jordi Savall, Traditional, Gursoy Dinçer",
-          "spotifyUrl": "https://open.spotify.com/track/16i29VLcEeqW1CMNG1iEDR",
+          "artist": "traditional & Gursoy Dinçer & Jordi Savall",
           "tidalId": "11222234",
           "tidalUrl": "https://listen.tidal.com/track/11222234"
         },
         {
+          "id": "tav-03",
+          "title": "The Wind",
+          "artist": "Kayhan Kalhor",
+          "tidalId": "21657265",
+          "tidalUrl": "https://listen.tidal.com/track/21657265"
+        },
+        {
+          "id": "tav-04",
+          "title": "Majâz",
+          "artist": "Le Trio Joubran",
+          "tidalId": "14513911",
+          "tidalUrl": "https://listen.tidal.com/track/14513911"
+        },
+        {
+          "id": "tav-05",
+          "title": "Lamma Bada",
+          "artist": "Radio Tarifa",
+          "tidalId": "491687054",
+          "tidalUrl": "https://listen.tidal.com/track/491687054"
+        },
+        {
+          "id": "tav-06",
+          "title": "Rast Ney Taksim",
+          "artist": "Kudsi Erguner Ensemble",
+          "tidalId": "9109291",
+          "tidalUrl": "https://listen.tidal.com/track/9109291"
+        },
+        {
+          "id": "tav-07",
+          "title": "A Girl from Istanbul",
+          "artist": "Derya Turkan",
+          "tidalId": "38195351",
+          "tidalUrl": "https://listen.tidal.com/track/38195351"
+        },
+        {
           "id": "tav-08",
-          "title": "A Girl From İstanbul",
-          "artist": "Renaud Garcia-Fons, Derya Türkan",
-          "spotifyUrl": "https://open.spotify.com/track/5RV8VfLLNho6HuPlnj2B7M",
-          "tidalId": "202904205",
-          "tidalUrl": "https://listen.tidal.com/track/202904205"
+          "title": "Nihawend lunga",
+          "artist": "Anouar Brahem",
+          "tidalId": "77699320",
+          "tidalUrl": "https://listen.tidal.com/track/77699320"
         },
         {
           "id": "tav-09",
-          "title": "Dance With Waves",
-          "artist": "Anouar Brahem",
-          "spotifyUrl": "https://open.spotify.com/track/2ckijmqhUrHpuXS33ufDkU",
-          "tidalId": "77699279",
-          "tidalUrl": "https://listen.tidal.com/track/77699279"
+          "title": "Taqsîm en maqâm : Nahawand-kabîr",
+          "artist": "Munir Bashir",
+          "tidalId": "17226316",
+          "tidalUrl": "https://listen.tidal.com/track/17226316"
         },
         {
           "id": "tav-10",
-          "title": "Lamma Bada",
-          "artist": "Radio Tarifa",
-          "spotifyUrl": "https://open.spotify.com/track/43FK7E4hbYblbl9d2aXQa1",
-          "tidalId": "9296876",
-          "tidalUrl": "https://listen.tidal.com/track/9296876"
+          "title": "The Lover Of Beirut",
+          "artist": "Anouar Brahem",
+          "tidalId": "77699278",
+          "tidalUrl": "https://listen.tidal.com/track/77699278"
         }
       ],
       "tidalPlaylistId": "f5172455-8f37-4d10-89d5-279144cef7c1"
@@ -226,83 +216,73 @@
       "tracks": [
         {
           "id": "str-01",
-          "title": "Yulunga (Spirit Dance)",
-          "artist": "Dead Can Dance",
-          "spotifyUrl": "https://open.spotify.com/track/3wVh8HFJfI443LhUtya7qw",
-          "tidalId": "2205805",
-          "tidalUrl": "https://listen.tidal.com/track/2205805"
-        },
-        {
-          "id": "str-02",
-          "title": "The Feeling Begins",
-          "artist": "Peter Gabriel",
-          "spotifyUrl": "https://open.spotify.com/track/2PlU8ZztxOD48Q6edTGL4R",
-          "tidalId": "93235012",
-          "tidalUrl": "https://listen.tidal.com/track/93235012"
-        },
-        {
-          "id": "str-03",
-          "title": "Rakim (Live Remastered)",
-          "artist": "Dead Can Dance",
-          "spotifyUrl": "https://open.spotify.com/track/4KQ2yW8BrFRkgvSx7uDito",
-          "tidalId": "2206457",
-          "tidalUrl": "https://listen.tidal.com/track/2206457"
-        },
-        {
-          "id": "str-04",
-          "title": "Persian Traditional Avaz-e Dashti",
-          "artist": "Traditional, Kayhan Kalhor, Siamak Jahangiri, Siamak Aghaei, Yo-Yo Ma, Silkroad Ensemble",
-          "spotifyUrl": "https://open.spotify.com/track/3o8GYZRm7CnESk1c7w2OrT",
-          "tidalId": "22447460",
-          "tidalUrl": "https://listen.tidal.com/track/22447460"
-        },
-        {
-          "id": "str-05",
-          "title": "Blue As The Turquoise Night of Neyshabur",
-          "artist": "Kayhan Kalhor, Yo-Yo Ma, Silkroad Ensemble",
-          "spotifyUrl": "https://open.spotify.com/track/3fDbF12XdhgW5DYXEvH2LC",
-          "tidalId": "22447462",
-          "tidalUrl": "https://listen.tidal.com/track/22447462"
-        },
-        {
-          "id": "str-06",
-          "title": "Sacrifice",
-          "artist": "Lisa Gerrard, Pieter Bourke",
-          "spotifyUrl": "https://open.spotify.com/track/53qMNaWGzzYZGItbjeldC5",
-          "tidalId": "153856542",
-          "tidalUrl": "https://listen.tidal.com/track/153856542"
-        },
-        {
-          "id": "str-07",
-          "title": "Procession of the Sardar from Caucasian Sketches, Op.10 - Instrumental",
-          "artist": "Mikhail Ippolitov-Ivanov, Eugene Ormandy, Philadelphia Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/2u4KJB9Bcha7WgK5eER3Qz",
+          "title": "Procession of the Sardar from Caucasian Sketches, Op.10",
+          "artist": "Eugene Ormandy",
           "tidalId": "1835748",
           "tidalUrl": "https://listen.tidal.com/track/1835748"
         },
         {
+          "id": "str-02",
+          "title": "Tempest",
+          "artist": "Lisa Gerrard",
+          "tidalId": "153856535",
+          "tidalUrl": "https://listen.tidal.com/track/153856535"
+        },
+        {
+          "id": "str-03",
+          "title": "Zaar",
+          "artist": "Peter Gabriel",
+          "tidalId": "45110704",
+          "tidalUrl": "https://listen.tidal.com/track/45110704"
+        },
+        {
+          "id": "str-04",
+          "title": "Arezou",
+          "artist": "Niyaz",
+          "tidalId": "2656084",
+          "tidalUrl": "https://listen.tidal.com/track/2656084"
+        },
+        {
+          "id": "str-05",
+          "title": "Golzar",
+          "artist": "Niyaz",
+          "tidalId": "2656088",
+          "tidalUrl": "https://listen.tidal.com/track/2656088"
+        },
+        {
+          "id": "str-06",
+          "title": "Cantara",
+          "artist": "Dead Can Dance",
+          "tidalId": "2216220",
+          "tidalUrl": "https://listen.tidal.com/track/2216220"
+        },
+        {
+          "id": "str-07",
+          "title": "Saltarello",
+          "artist": "Dead Can Dance",
+          "tidalId": "2216702",
+          "tidalUrl": "https://listen.tidal.com/track/2216702"
+        },
+        {
           "id": "str-08",
-          "title": "Blending Souls & Shades (To Shiraz)",
-          "artist": "Dhafer Youssef",
-          "spotifyUrl": "https://open.spotify.com/track/35CIh7X8GyzJMKdsRYHVTN",
-          "tidalId": "296952133",
-          "tidalUrl": "https://listen.tidal.com/track/296952133"
+          "title": "Of These, Hope",
+          "artist": "Peter Gabriel",
+          "tidalId": "93235032",
+          "tidalUrl": "https://listen.tidal.com/track/93235032"
         },
         {
           "id": "str-09",
-          "title": "Dilruba",
-          "artist": "Niyaz",
-          "spotifyUrl": "https://open.spotify.com/track/0XmHcefGAMurJ6Tx1HajDP",
-          "tidalId": "2656081",
-          "tidalUrl": "https://listen.tidal.com/track/2656081"
+          "title": "Hagia Sophia",
+          "artist": "Irfan",
+          "tidalId": "96070703",
+          "tidalUrl": "https://listen.tidal.com/track/96070703"
         },
         {
           "id": "str-10",
-          "title": "Return to Outremer",
-          "artist": "Irfan",
-          "spotifyUrl": "https://open.spotify.com/track/667Zhsq8Zcs9iPhb5jJVeo",
-          "tidalId": "96070709",
-          "tidalUrl": "https://listen.tidal.com/track/96070709"
+          "title": "Allahi Allah",
+          "artist": "Niyaz",
+          "tidalId": "2656085",
+          "tidalUrl": "https://listen.tidal.com/track/2656085"
         }
       ],
       "tidalPlaylistId": "559d74bb-968a-44f9-891c-e13a4418d341"
@@ -315,83 +295,73 @@
       "tracks": [
         {
           "id": "crt-01",
-          "title": "Pavane pour une infante défunte, M. 19a",
-          "artist": "Maurice Ravel, Berliner Philharmoniker, Herbert von Karajan",
-          "spotifyUrl": "https://open.spotify.com/track/1kn06U6b1zpNLvQu7yudpC",
+          "title": "Ravel: Pavane pour une infante défunte, M. 19a",
+          "artist": "Berliner Philharmoniker",
           "tidalId": "4351122",
           "tidalUrl": "https://listen.tidal.com/track/4351122"
         },
         {
           "id": "crt-02",
-          "title": "Masquerade: Waltz",
-          "artist": "Aram Khachaturian, London Symphony Orchestra, Yuri Ahronovitch",
-          "spotifyUrl": "https://open.spotify.com/track/3eCRPMJfd2NFeOuZQWPl9E",
-          "tidalId": "6575739",
-          "tidalUrl": "https://listen.tidal.com/track/6575739"
+          "title": "Fauré: Pavane, Op. 50",
+          "artist": "Academy of St Martin in the Fields",
+          "tidalId": "4488263",
+          "tidalUrl": "https://listen.tidal.com/track/4488263"
         },
         {
           "id": "crt-03",
-          "title": "Khachaturian: Spartacus: Adagio of Spartacus and Phrygia",
-          "artist": "Aram Khachaturian, Royal Philharmonic Orchestra, Yuri Temirkanov",
-          "spotifyUrl": "https://open.spotify.com/track/63qxB5KFg75QJOdPNZ0Gr4",
-          "tidalId": "134530530",
-          "tidalUrl": "https://listen.tidal.com/track/134530530"
-        },
-        {
-          "id": "crt-04",
-          "title": "Méditation from 'Thaïs'",
-          "artist": "Jules Massenet, Anne-Sophie Mutter, Herbert von Karajan, Berliner Philharmoniker",
-          "spotifyUrl": "https://open.spotify.com/track/4iVgi8TZH1cs3UktuaBBb4",
-          "tidalId": "34514024",
-          "tidalUrl": "https://listen.tidal.com/track/34514024"
-        },
-        {
-          "id": "crt-05",
-          "title": "Scheherazade - The Young Prince and the Young Princess",
-          "artist": "Nikolai Rimsky-Korsakov, Fritz Reiner, Chicago Symphony Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/76b2aP47FuzdC8PJcHzcnO",
-          "tidalId": "12139921",
-          "tidalUrl": "https://listen.tidal.com/track/12139921"
-        },
-        {
-          "id": "crt-06",
-          "title": "Masked Ball",
-          "artist": "Jocelyn Pook",
-          "spotifyUrl": "https://open.spotify.com/track/4QUQneYyf8xKMt8x6cooTy",
-          "tidalId": "333353392",
-          "tidalUrl": "https://listen.tidal.com/track/333353392"
-        },
-        {
-          "id": "crt-07",
-          "title": "Vide Cor Meum",
-          "artist": "Patrick Cassidy, Anthony Hopkins, Danielle de Niese, Bruno Lazzaretti, Libera, The Lyndhurst Orchestra, Gavin Greenaway",
-          "spotifyUrl": "https://open.spotify.com/track/4AyRUVc4sDfVFJOgJvApie",
-          "tidalId": "4444008",
-          "tidalUrl": "https://listen.tidal.com/track/4444008"
-        },
-        {
-          "id": "crt-08",
-          "title": "Fauré: Pavane, Op. 50 (Instrumental Version)",
-          "artist": "Gabriel Fauré, Sir Neville Marriner, Academy of St. Martin in the Fields",
-          "spotifyUrl": "https://open.spotify.com/track/3sg7nnmspc5BJZRumucr7i",
-          "tidalId": "36091290",
-          "tidalUrl": "https://listen.tidal.com/track/36091290"
-        },
-        {
-          "id": "crt-09",
-          "title": "Les Barricades mystérieuses",
-          "artist": "François Couperin, David Greilsammer",
-          "spotifyUrl": "https://open.spotify.com/track/2XqvLbQiIGzVHSDGeKynlc",
+          "title": "Les Barricades Mystérieuses",
+          "artist": "Khatia Buniatishvili",
           "tidalId": "155964923",
           "tidalUrl": "https://listen.tidal.com/track/155964923"
         },
         {
-          "id": "crt-10",
-          "title": "Daramad",
+          "id": "crt-04",
+          "title": "Masquerade Suite: Nocturne",
+          "artist": "Aram Ilyich Khachaturian",
+          "tidalId": "14719594",
+          "tidalUrl": "https://listen.tidal.com/track/14719594"
+        },
+        {
+          "id": "crt-05",
+          "title": "Tchaikovsky: Eugene Onegin, Op. 24, TH 5: Waltz",
+          "artist": "Erich Kunzel",
+          "tidalId": "232965711",
+          "tidalUrl": "https://listen.tidal.com/track/232965711"
+        },
+        {
+          "id": "crt-06",
+          "title": "Handel: Solomon, HWV 67, Act III: The Arrival of the Queen of Sheba",
+          "artist": "Academy of St Martin in the Fields",
+          "tidalId": "5245642",
+          "tidalUrl": "https://listen.tidal.com/track/5245642"
+        },
+        {
+          "id": "crt-07",
+          "title": "Sibelius: Karelia Suite, Op. 11: 1. Intermezzo (Moderato)",
+          "artist": "Berliner Philharmoniker",
+          "tidalId": "4912073",
+          "tidalUrl": "https://listen.tidal.com/track/4912073"
+        },
+        {
+          "id": "crt-08",
+          "title": "Pishdaramad Bayat Shiraz",
           "artist": "Hossein Alizadeh",
-          "spotifyUrl": "https://open.spotify.com/track/3OQfnbtzE3NcTeuo5ktCPv",
-          "tidalId": "87558417",
-          "tidalUrl": "https://listen.tidal.com/track/87558417"
+          "tidalId": "108349550",
+          "tidalUrl": "https://listen.tidal.com/track/108349550"
+        },
+        {
+          "id": "crt-09",
+          "title": "Boccherini: String Quintet in E Major, G. 275 (Op. 11/5): Minuet",
+          "artist": "Orpheus Chamber Orchestra",
+          "tidalId": "4625614",
+          "tidalUrl": "https://listen.tidal.com/track/4625614"
+        },
+        {
+          "id": "crt-10",
+          "title": "Water Music: Suite No.2 in D Major, HWV 349: II. Alla Hornpipe",
+          "artist": "George Frideric Handel",
+          "tidalId": "23490143",
+          "tidalUrl": "https://listen.tidal.com/track/23490143"
         }
       ],
       "tidalPlaylistId": "e8676577-2394-4e18-a5ba-ae181a11a103"
@@ -404,83 +374,73 @@
       "tracks": [
         {
           "id": "ten-01",
-          "title": "Dawn: V. Offering",
-          "artist": "Kayhan Kalhor, Rembrandt Frerichs Trio",
-          "spotifyUrl": "https://open.spotify.com/track/6LfWqv7ZKglbQ3rmJmQhO5",
-          "tidalId": "104991451",
-          "tidalUrl": "https://listen.tidal.com/track/104991451"
-        },
-        {
-          "id": "ten-02",
-          "title": "Cornfield Chase",
-          "artist": "Hans Zimmer",
-          "spotifyUrl": "https://open.spotify.com/track/3PrLXpTfUdi9iE1PA82sS3",
-          "tidalId": "156749595",
-          "tidalUrl": "https://listen.tidal.com/track/156749595"
-        },
-        {
-          "id": "ten-03",
-          "title": "The Astounding Eyes Of Rita",
-          "artist": "Anouar Brahem",
-          "spotifyUrl": "https://open.spotify.com/track/6NAXW6IwUyswJk9bHe4y9S",
-          "tidalId": "77699281",
-          "tidalUrl": "https://listen.tidal.com/track/77699281"
-        },
-        {
-          "id": "ten-04",
-          "title": "A Breath of Coolness Could Be Felt",
-          "artist": "Djivan Gasparyan, Vachagan Avakyan",
-          "spotifyUrl": "https://open.spotify.com/track/4bEl3Aku8Wrnfpj1RYUJeq",
-          "tidalId": "165811066",
-          "tidalUrl": "https://listen.tidal.com/track/165811066"
-        },
-        {
-          "id": "ten-05",
-          "title": "Promentory",
-          "artist": "Trevor Jones",
-          "spotifyUrl": "https://open.spotify.com/track/0l4seNH8AyE2kvjxFfpWi1",
-          "tidalId": "35353522",
-          "tidalUrl": "https://listen.tidal.com/track/35353522"
-        },
-        {
-          "id": "ten-06",
-          "title": "Ripples in the Sand",
-          "artist": "Hans Zimmer",
-          "spotifyUrl": "https://open.spotify.com/track/1gqCO3x2MO4KbQfN9pGUlH",
-          "tidalId": "195894570",
-          "tidalUrl": "https://listen.tidal.com/track/195894570"
-        },
-        {
-          "id": "ten-07",
-          "title": "Herald of the Change",
-          "artist": "Hans Zimmer",
-          "spotifyUrl": "https://open.spotify.com/track/4eYtg015W15Ik5dUGzFXje",
-          "tidalId": "195894563",
-          "tidalUrl": "https://listen.tidal.com/track/195894563"
-        },
-        {
-          "id": "ten-08",
           "title": "Atmosphères",
-          "artist": "György Ligeti, Wiener Philharmoniker, Claudio Abbado",
-          "spotifyUrl": "https://open.spotify.com/track/0WIHtvXbp9mTw0WDRg8pUO",
+          "artist": "Jonathan Nott, Berlin Philharmonic Orchestra & Ligeti Project",
           "tidalId": "162802476",
           "tidalUrl": "https://listen.tidal.com/track/162802476"
         },
         {
-          "id": "ten-09",
+          "id": "ten-02",
           "title": "Music for Strings, Percussion and Celesta, Sz. 106: III. Adagio",
-          "artist": "Béla Bartók, Zoltan Pesko, SWR Symphony Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/1kIrc5W434j0GFETAohXTq",
+          "artist": "L'orchestre De La Suisse Romande",
           "tidalId": "33137261",
           "tidalUrl": "https://listen.tidal.com/track/33137261"
         },
         {
-          "id": "ten-10",
+          "id": "ten-03",
+          "title": "Ripples in the Sand",
+          "artist": "Hans Zimmer",
+          "tidalId": "195894570",
+          "tidalUrl": "https://listen.tidal.com/track/195894570"
+        },
+        {
+          "id": "ten-04",
+          "title": "Herald of the Change",
+          "artist": "Hans Zimmer",
+          "tidalId": "195894563",
+          "tidalUrl": "https://listen.tidal.com/track/195894563"
+        },
+        {
+          "id": "ten-05",
           "title": "Fratres",
-          "artist": "Arvo Pärt, Gidon Kremer, Keith Jarrett",
-          "spotifyUrl": "https://open.spotify.com/track/1gRJOkMPSNUddnnfb0g2fF",
+          "artist": "Arvo Pärt",
           "tidalId": "37651055",
           "tidalUrl": "https://listen.tidal.com/track/37651055"
+        },
+        {
+          "id": "ten-06",
+          "title": "Lontano (1967)",
+          "artist": "György Ligeti",
+          "tidalId": "11157594",
+          "tidalUrl": "https://listen.tidal.com/track/11157594"
+        },
+        {
+          "id": "ten-07",
+          "title": "The Lord's Prayer",
+          "artist": "Jóhann Jóhannsson",
+          "tidalId": "105267934",
+          "tidalUrl": "https://listen.tidal.com/track/105267934"
+        },
+        {
+          "id": "ten-08",
+          "title": "Drywall",
+          "artist": "Jóhann Jóhannsson",
+          "tidalId": "50958089",
+          "tidalUrl": "https://listen.tidal.com/track/50958089"
+        },
+        {
+          "id": "ten-09",
+          "title": "Gom Jabbar",
+          "artist": "Hans Zimmer",
+          "tidalId": "195894565",
+          "tidalUrl": "https://listen.tidal.com/track/195894565"
+        },
+        {
+          "id": "ten-10",
+          "title": "Armoured Vehicle",
+          "artist": "Jóhann Jóhannsson",
+          "tidalId": "50958086",
+          "tidalUrl": "https://listen.tidal.com/track/50958086"
         }
       ],
       "tidalPlaylistId": "4dea23d0-6fc6-4fad-829d-4bc66c1dde13"
@@ -493,83 +453,73 @@
       "tracks": [
         {
           "id": "cbt-01",
-          "title": "Gallop of a Thousand Horses",
-          "artist": "Kronos Quartet, Kayhan Kalhor, Ziya Tabassian",
-          "spotifyUrl": "https://open.spotify.com/track/5qDBSMtOnSVP2c4yOSvMSo",
-          "tidalId": "257310",
-          "tidalUrl": "https://listen.tidal.com/track/257310"
-        },
-        {
-          "id": "cbt-02",
-          "title": "Carmina Burana: I. O fortuna",
-          "artist": "Carl Orff, Orchester der Deutschen Oper Berlin, Eugen Jochum, Chor der Deutschen Oper Berlin",
-          "spotifyUrl": "https://open.spotify.com/track/3N4AYhPy58i0ruuiCL6n2m",
-          "tidalId": "22529705",
-          "tidalUrl": "https://listen.tidal.com/track/22529705"
-        },
-        {
-          "id": "cbt-03",
-          "title": "Prince Igor: Polovtsian Dances (Without Chorus)",
-          "artist": "Alexander Borodin, Berliner Philharmoniker, Herbert von Karajan",
-          "spotifyUrl": "https://open.spotify.com/track/0qW7Z4MN8QnTtgDGZUj6nB",
-          "tidalId": "7579893",
-          "tidalUrl": "https://listen.tidal.com/track/7579893"
-        },
-        {
-          "id": "cbt-04",
-          "title": "Elk Hunt",
-          "artist": "Trevor Jones",
-          "spotifyUrl": "https://open.spotify.com/track/4RCbY1l6vtaNSFq6GLFke2",
-          "tidalId": "35353518",
-          "tidalUrl": "https://listen.tidal.com/track/35353518"
-        },
-        {
-          "id": "cbt-05",
-          "title": "Riddle of Steel / Riders of Doom",
-          "artist": "Basil Poledouris",
-          "spotifyUrl": "https://open.spotify.com/track/4DGbsMa3OjXUB87LQ4ilgM",
-          "tidalId": "407561286",
-          "tidalUrl": "https://listen.tidal.com/track/407561286"
-        },
-        {
-          "id": "cbt-06",
           "title": "The Anvil of Crom (Form \"CONAN THE BARBARIAN\")",
           "artist": "Basil Poledouris",
-          "spotifyUrl": "https://open.spotify.com/track/5mxTww2EuHbK0txi7U5C0A",
           "tidalId": "165252995",
           "tidalUrl": "https://listen.tidal.com/track/165252995"
         },
         {
-          "id": "cbt-07",
+          "id": "cbt-02",
+          "title": "Elk Hunt",
+          "artist": "Trevor Jones",
+          "tidalId": "35353518",
+          "tidalUrl": "https://listen.tidal.com/track/35353518"
+        },
+        {
+          "id": "cbt-03",
           "title": "The Battle of Kerak (From \"Kingdom of Heaven\" Soundtrack)",
           "artist": "Harry Gregson-Williams",
-          "spotifyUrl": "https://open.spotify.com/track/12zCPe1s25Snhu6sywPU6O",
           "tidalId": "1266196",
           "tidalUrl": "https://listen.tidal.com/track/1266196"
         },
         {
-          "id": "cbt-08",
+          "id": "cbt-04",
+          "title": "Carmina Burana: I. O Fortuna",
+          "artist": "Carl Orff",
+          "tidalId": "22529705",
+          "tidalUrl": "https://listen.tidal.com/track/22529705"
+        },
+        {
+          "id": "cbt-05",
           "title": "Achilles Leads the Myrmidons",
-          "artist": "James Horner, Tanja Tzarovska",
-          "spotifyUrl": "https://open.spotify.com/track/1wPDLACYsgBsDF3jx7VMTX",
+          "artist": "James Horner",
           "tidalId": "234057",
           "tidalUrl": "https://listen.tidal.com/track/234057"
         },
         {
+          "id": "cbt-06",
+          "title": "Prokofiev: Alexander Nevsky, Op. 78: V. The Battle on Ice",
+          "artist": "London Symphony Orchestra",
+          "tidalId": "4365475",
+          "tidalUrl": "https://listen.tidal.com/track/4365475"
+        },
+        {
+          "id": "cbt-07",
+          "title": "Khachaturian: Gayaneh: Sabre Dance",
+          "artist": "Wiener Philharmoniker",
+          "tidalId": "4600119",
+          "tidalUrl": "https://listen.tidal.com/track/4600119"
+        },
+        {
+          "id": "cbt-08",
+          "title": "Prince Igor, Act II, Polovtsian Dances: Pt. 2, Wild Dance of the Men",
+          "artist": "Sir Thomas Beecham",
+          "tidalId": "1390783",
+          "tidalUrl": "https://listen.tidal.com/track/1390783"
+        },
+        {
           "id": "cbt-09",
-          "title": "The Battle - From \"Gladiator\" Soundtrack",
-          "artist": "Hans Zimmer, Gavin Greenaway, The Lyndhurst Orchestra, Lisa Gerrard",
-          "spotifyUrl": "https://open.spotify.com/track/6W5lBASuW1FOSoDNJe300u",
-          "tidalId": "1266196",
-          "tidalUrl": "https://listen.tidal.com/track/1266196"
+          "title": "The Battle",
+          "artist": "Gavin Greenaway",
+          "tidalId": "4684000",
+          "tidalUrl": "https://listen.tidal.com/track/4684000"
         },
         {
           "id": "cbt-10",
-          "title": "Prokofiev: Alexander Nevsky, Op. 78: V. The Battle on the Ice",
-          "artist": "Sergei Prokofiev, André Previn, London Symphony Chorus, London Symphony Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/2pPMWQexNpzFuFPhbjFzM7",
-          "tidalId": "10581295",
-          "tidalUrl": "https://listen.tidal.com/track/10581295"
+          "title": "Wall Breached (From \"Kingdom of Heaven\" Soundtrack)",
+          "artist": "Harry Gregson-Williams",
+          "tidalId": "1266199",
+          "tidalUrl": "https://listen.tidal.com/track/1266199"
         }
       ],
       "tidalPlaylistId": "ef2ea2ed-43b4-4046-ab30-14ff70e985f1"
@@ -582,83 +532,73 @@
       "tracks": [
         {
           "id": "bos-01",
-          "title": "A Time of Quiet Between the Storms",
-          "artist": "Hans Zimmer",
-          "spotifyUrl": "https://open.spotify.com/track/7lG5m4JN0exualOkghSNXq",
-          "tidalId": "346554610",
-          "tidalUrl": "https://listen.tidal.com/track/346554610"
-        },
-        {
-          "id": "bos-02",
-          "title": "The Beast - From \"Sicario\"",
-          "artist": "Jóhann Jóhannsson",
-          "spotifyUrl": "https://open.spotify.com/track/5KwLjZ0oJ5kNl7jGtdiIOC",
-          "tidalId": "632161",
-          "tidalUrl": "https://listen.tidal.com/track/632161"
-        },
-        {
-          "id": "bos-03",
-          "title": "The Host Of Seraphim (Remastered)",
-          "artist": "Dead Can Dance",
-          "spotifyUrl": "https://open.spotify.com/track/6NfhJnufcldpDimI4UiLof",
-          "tidalId": "32572495",
-          "tidalUrl": "https://listen.tidal.com/track/32572495"
-        },
-        {
-          "id": "bos-04",
-          "title": "Threnody To the Victims of Hiroshima",
-          "artist": "Krzysztof Penderecki, Polish National Radio Symphony Orchestra, Antoni Wit",
-          "spotifyUrl": "https://open.spotify.com/track/6EOD3XhdYMvu4Mj1C3qZGz",
+          "title": "Threnody to the Victims of Hiroshima",
+          "artist": "Cracow Philharmonic Orchestra",
           "tidalId": "283234613",
           "tidalUrl": "https://listen.tidal.com/track/283234613"
         },
         {
-          "id": "bos-05",
-          "title": "Night on Bald Mountain",
-          "artist": "Modest Mussorgsky, Leonard Bernstein, New York Philharmonic",
-          "spotifyUrl": "https://open.spotify.com/track/12pe2mL5SQGMI1gBGcEWKE",
+          "id": "bos-02",
+          "title": "Night On Bald Mountain",
+          "artist": "Modest Mussorgsky",
           "tidalId": "17160020",
           "tidalUrl": "https://listen.tidal.com/track/17160020"
         },
         {
-          "id": "bos-06",
-          "title": "Kiss the Ring",
-          "artist": "Hans Zimmer",
-          "spotifyUrl": "https://open.spotify.com/track/61Ps2sXXwiYCcyAynt81JI",
-          "tidalId": "346554632",
-          "tidalUrl": "https://listen.tidal.com/track/346554632"
-        },
-        {
-          "id": "bos-07",
-          "title": "Death Is the Road to Awe (feat. Kronos Quartet)",
-          "artist": "Clint Mansell, Kronos Quartet",
-          "spotifyUrl": "https://open.spotify.com/track/3RoQX4ou3qYEASsuC7YAWD",
-          "tidalId": "356126",
-          "tidalUrl": "https://listen.tidal.com/track/356126"
-        },
-        {
-          "id": "bos-08",
-          "title": "Messa da Requiem: 2. Dies irae",
-          "artist": "Giuseppe Verdi, Ernst Senff Chor, Berliner Philharmoniker, Carlo Maria Giulini",
-          "spotifyUrl": "https://open.spotify.com/track/2lVgbcehrMg1cGWrWODuof",
+          "id": "bos-03",
+          "title": "Messa da Requiem: Dies irae - Tuba mirum",
+          "artist": "London Philharmonic Orchestra",
           "tidalId": "4608177",
           "tidalUrl": "https://listen.tidal.com/track/4608177"
         },
         {
-          "id": "bos-09",
-          "title": "Requiem: II. Kyrie",
-          "artist": "György Ligeti, Peter Eötvös, WDR Sinfonieorchester, WDR Rundfunkchor, Barbara Hannigan, Susan Parry",
-          "spotifyUrl": "https://open.spotify.com/track/0ih0cY6mPokp2Z8rsI5rjI",
+          "id": "bos-04",
+          "title": "Requiem: II. Kyrie. Molto espressivo",
+          "artist": "Jonathan Nott",
           "tidalId": "314277",
           "tidalUrl": "https://listen.tidal.com/track/314277"
         },
         {
-          "id": "bos-10",
+          "id": "bos-05",
           "title": "The Rite of Spring: Part Two: The Sacrifice: Sacrificial Dance (The Chosen One)",
-          "artist": "Igor Stravinsky, Teodor Currentzis, musicAeterna",
-          "spotifyUrl": "https://open.spotify.com/track/6g4dvPG9jMtSCwQKIHOvo4",
-          "tidalId": "19655684",
-          "tidalUrl": "https://listen.tidal.com/track/19655684"
+          "artist": "Teodor Currentzis",
+          "tidalId": "51263040",
+          "tidalUrl": "https://listen.tidal.com/track/51263040"
+        },
+        {
+          "id": "bos-06",
+          "title": "The Beast",
+          "artist": "Jóhann Jóhannsson",
+          "tidalId": "50958087",
+          "tidalUrl": "https://listen.tidal.com/track/50958087"
+        },
+        {
+          "id": "bos-07",
+          "title": "The Host of Seraphim",
+          "artist": "Dead Can Dance",
+          "tidalId": "2210774",
+          "tidalUrl": "https://listen.tidal.com/track/2210774"
+        },
+        {
+          "id": "bos-08",
+          "title": "Lux Aeterna",
+          "artist": "Clint Mansell",
+          "tidalId": "257439",
+          "tidalUrl": "https://listen.tidal.com/track/257439"
+        },
+        {
+          "id": "bos-09",
+          "title": "Harkonnen Arena",
+          "artist": "Hans Zimmer",
+          "tidalId": "346554615",
+          "tidalUrl": "https://listen.tidal.com/track/346554615"
+        },
+        {
+          "id": "bos-10",
+          "title": "Lisan al Gaib",
+          "artist": "Hans Zimmer",
+          "tidalId": "346554634",
+          "tidalUrl": "https://listen.tidal.com/track/346554634"
         }
       ],
       "tidalPlaylistId": "667c24bf-37a5-4ca8-a2cf-2050c67b5997"
@@ -671,83 +611,73 @@
       "tracks": [
         {
           "id": "sow-01",
-          "title": "I Will Not Stand Alone",
-          "artist": "Kayhan Kalhor, Ali Bahrami Fard",
-          "spotifyUrl": "https://open.spotify.com/track/23ZhMPc2V0sPop786jstrL",
-          "tidalId": "420071258",
-          "tidalUrl": "https://listen.tidal.com/track/420071258"
-        },
-        {
-          "id": "sow-02",
           "title": "Setar Instrumental",
-          "artist": "Mohammad-Reza Shajarian",
-          "spotifyUrl": "https://open.spotify.com/track/0mtckdZm5hiqJ7Mn5stkAh",
+          "artist": "M.R. Shajarian",
           "tidalId": "11067493",
           "tidalUrl": "https://listen.tidal.com/track/11067493"
         },
         {
+          "id": "sow-02",
+          "title": "Richter: On the Nature of Daylight",
+          "artist": "Max Richter",
+          "tidalId": "88455116",
+          "tidalUrl": "https://listen.tidal.com/track/88455116"
+        },
+        {
           "id": "sow-03",
-          "title": "Ney Nava / Darâmad",
-          "artist": "Hossein Alizadeh",
-          "spotifyUrl": "https://open.spotify.com/track/4wfn8715AHkpf2ws6thquz",
-          "tidalId": "503983010",
-          "tidalUrl": "https://listen.tidal.com/track/503983010"
-        },
-        {
-          "id": "sow-04",
-          "title": "Solitude (Improvisation in Esfahan,In Memory of Maestro Alinaqi Vaziri)",
-          "artist": "Keivan Saket",
-          "spotifyUrl": "https://open.spotify.com/track/5iECgclWx2jQ0fihm87mxp",
-          "tidalId": "186060139",
-          "tidalUrl": "https://listen.tidal.com/track/186060139"
-        },
-        {
-          "id": "sow-05",
-          "title": "Barber: Adagio for Strings",
-          "artist": "Samuel Barber, Sir Simon Rattle, Berliner Philharmoniker",
-          "spotifyUrl": "https://open.spotify.com/track/1CSaCKPIp2yCIDL3t7Fyau",
-          "tidalId": "5668931",
-          "tidalUrl": "https://listen.tidal.com/track/5668931"
-        },
-        {
-          "id": "sow-06",
-          "title": "Elgar: Sospiri, Op. 70",
-          "artist": "Edward Elgar, Sir John Barbirolli, New Philharmonia Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/6OGWrTo2MfxlogjtRPyVgg",
-          "tidalId": "10581328",
-          "tidalUrl": "https://listen.tidal.com/track/10581328"
-        },
-        {
-          "id": "sow-07",
           "title": "Cantus in memoriam Benjamin Britten",
-          "artist": "Arvo Pärt, Angèle Dubeau, La Pietà",
-          "spotifyUrl": "https://open.spotify.com/track/1EgMeDgNZqhEolnXUdjBJi",
+          "artist": "Angele Dubeau",
           "tidalId": "3475711",
           "tidalUrl": "https://listen.tidal.com/track/3475711"
         },
         {
+          "id": "sow-04",
+          "title": "Adagio For Strings",
+          "artist": "Samuel Barber",
+          "tidalId": "5668931",
+          "tidalUrl": "https://listen.tidal.com/track/5668931"
+        },
+        {
+          "id": "sow-05",
+          "title": "Elgar: Sospiri, Op. 70",
+          "artist": "Academy of St Martin in the Fields",
+          "tidalId": "18390795",
+          "tidalUrl": "https://listen.tidal.com/track/18390795"
+        },
+        {
+          "id": "sow-06",
+          "title": "Élégie for Cello and Orchestra, Op. 24",
+          "artist": "Gabriel Fauré",
+          "tidalId": "7710346",
+          "tidalUrl": "https://listen.tidal.com/track/7710346"
+        },
+        {
+          "id": "sow-07",
+          "title": "Shur: Daramad-e Aval",
+          "artist": "Hossein Alizadeh",
+          "tidalId": "503752792",
+          "tidalUrl": "https://listen.tidal.com/track/503752792"
+        },
+        {
           "id": "sow-08",
-          "title": "Fauré: Élégie, Op. 24 (Orchestral Version)",
-          "artist": "Gabriel Fauré, Han-Na Chang, London Symphony Orchestra, Mstislav Rostropovich",
-          "spotifyUrl": "https://open.spotify.com/track/3MacOOGmBb1CKeIKyEvxUO",
-          "tidalId": "36091290",
-          "tidalUrl": "https://listen.tidal.com/track/36091290"
+          "title": "Symphony No. 5 in C-Sharp Minor: I. Trauermarsch",
+          "artist": "Leonard Bernstein",
+          "tidalId": "7623143",
+          "tidalUrl": "https://listen.tidal.com/track/7623143"
         },
         {
           "id": "sow-09",
-          "title": "Symphony No. 5: IV. Adagietto. Sehr langsam",
-          "artist": "Gustav Mahler, Berliner Philharmoniker, Claudio Abbado",
-          "spotifyUrl": "https://open.spotify.com/track/1Z1DK8nlqNmV9RywT9QRCB",
-          "tidalId": "7623146",
-          "tidalUrl": "https://listen.tidal.com/track/7623146"
+          "title": "Dusk: III. Autumn Winds",
+          "artist": "Kayhan Kalhor",
+          "tidalId": "104991454",
+          "tidalUrl": "https://listen.tidal.com/track/104991454"
         },
         {
           "id": "sow-10",
-          "title": "On The Nature Of Daylight",
-          "artist": "Max Richter, Louisa Fuller, Natalia Bonner, John Metcalfe, Philip Sheppard, Chris Worsey",
-          "spotifyUrl": "https://open.spotify.com/track/5DFUsGW4Cmltv8Spd0u1aV",
-          "tidalId": "88455116",
-          "tidalUrl": "https://listen.tidal.com/track/88455116"
+          "title": "Foroud",
+          "artist": "Kayhan Kalhor",
+          "tidalId": "190775019",
+          "tidalUrl": "https://listen.tidal.com/track/190775019"
         }
       ],
       "tidalPlaylistId": "df066ac9-ac44-4c80-bdbb-4bce80b29272"
@@ -760,83 +690,73 @@
       "tracks": [
         {
           "id": "tri-01",
-          "title": "Pictures at an Exhibition: The Great Gate of Kiev (Orch. Ravel) - Live At Vienna / 2000",
-          "artist": "Modest Mussorgsky, Wiener Philharmoniker, Valery Gergiev",
-          "spotifyUrl": "https://open.spotify.com/track/4jGFBDNS3WOJK3V4UAuAVi",
+          "title": "Mussorgsky: Pictures at an Exhibition (Orch. Ravel): X. The Great Gate of Kiev",
+          "artist": "Wiener Philharmoniker",
           "tidalId": "77629448",
           "tidalUrl": "https://listen.tidal.com/track/77629448"
         },
         {
           "id": "tri-02",
-          "title": "Finlandia, Op. 26 - Recorded 1984",
-          "artist": "Jean Sibelius, Berliner Philharmoniker, Herbert von Karajan",
-          "spotifyUrl": "https://open.spotify.com/track/39TpeOz8qKPkATICkuIEc4",
-          "tidalId": "4713260",
-          "tidalUrl": "https://listen.tidal.com/track/4713260"
+          "title": "Homage March from Sigurd Jorsalfar, Op. 56",
+          "artist": "Swedish Radio Symphony Orchestra",
+          "tidalId": "34219884",
+          "tidalUrl": "https://listen.tidal.com/track/34219884"
         },
         {
           "id": "tri-03",
-          "title": "Sinfonietta: 1. Allegretto - Allegro - Maestoso",
-          "artist": "Leoš Janáček, Wiener Philharmoniker, Sir Charles Mackerras",
-          "spotifyUrl": "https://open.spotify.com/track/33Ysx9DIBS5SSx2H8HwseT",
+          "title": "Sinfonietta: I. Allegretto - Allegro maestoso (Fanfare)[Live]",
+          "artist": "Leoš Janáček",
           "tidalId": "6452246",
           "tidalUrl": "https://listen.tidal.com/track/6452246"
         },
         {
           "id": "tri-04",
-          "title": "Pines of Rome: The Pines of the Appian Way (I pini della Via Appia)",
-          "artist": "Ottorino Respighi, The Cleveland Orchestra, Lorin Maazel",
-          "spotifyUrl": "https://open.spotify.com/track/3Oa8r7jv1rBOIM5P6Chhhz",
-          "tidalId": "18727823",
-          "tidalUrl": "https://listen.tidal.com/track/18727823"
+          "title": "Fanfare for the Common Man",
+          "artist": "Aaron Copland",
+          "tidalId": "571",
+          "tidalUrl": "https://listen.tidal.com/track/571"
         },
         {
           "id": "tri-05",
-          "title": "Homage March from Sigurd Jorsalfar, Op. 56 - Instrumental",
-          "artist": "Edvard Grieg, Swedish Radio Symphony Orchestra, Esa-Pekka Salonen",
-          "spotifyUrl": "https://open.spotify.com/track/4VXDW8Yp8koGgEHBhzFP2z",
-          "tidalId": "34219884",
-          "tidalUrl": "https://listen.tidal.com/track/34219884"
-        },
-        {
-          "id": "tri-06",
-          "title": "Prayer of St. Gregory, Op. 62b",
-          "artist": "Alan Hovhaness, Charles Butler, Seattle Symphony Orchestra, Gerard Schwarz",
-          "spotifyUrl": "https://open.spotify.com/track/6QAumippn4iEkR5eOLlifu",
-          "tidalId": "500103719",
-          "tidalUrl": "https://listen.tidal.com/track/500103719"
-        },
-        {
-          "id": "tri-07",
-          "title": "Egmont, Op. 84: Overture",
-          "artist": "Ludwig van Beethoven, Berliner Philharmoniker, Herbert von Karajan",
-          "spotifyUrl": "https://open.spotify.com/track/1bTSmcNjiBpLczw7SfBNBa",
-          "tidalId": "67442916",
-          "tidalUrl": "https://listen.tidal.com/track/67442916"
-        },
-        {
-          "id": "tri-08",
           "title": "Mlada, Act II: Cortège - \"Procession of the Nobles\"",
-          "artist": "Nikolai Rimsky-Korsakov, Plovdiv Philharmonic Orchestra, Rouslan Raychev",
-          "spotifyUrl": "https://open.spotify.com/track/6eJl1OdLmREpUo7l2rJcpF",
+          "artist": "Nikolai Rimsky-Korsakov",
           "tidalId": "27791841",
           "tidalUrl": "https://listen.tidal.com/track/27791841"
         },
         {
+          "id": "tri-06",
+          "title": "Elgar: Pomp and Circumstance March No. 1 in D Major, Op. 39/1",
+          "artist": "BBC Symphony Orchestra",
+          "tidalId": "4535835",
+          "tidalUrl": "https://listen.tidal.com/track/4535835"
+        },
+        {
+          "id": "tri-07",
+          "title": "Crown Imperial",
+          "artist": "William Walton",
+          "tidalId": "18492055",
+          "tidalUrl": "https://listen.tidal.com/track/18492055"
+        },
+        {
+          "id": "tri-08",
+          "title": "R. Strauss: Also sprach Zarathustra, Op. 30: I. Prelude. Sonnenaufgang",
+          "artist": "Berliner Philharmoniker",
+          "tidalId": "77612433",
+          "tidalUrl": "https://listen.tidal.com/track/77612433"
+        },
+        {
           "id": "tri-09",
-          "title": "Hymn To The Fallen - Saving Private Ryan/Soundtrack Version",
-          "artist": "John Williams, Boston Symphony Orchestra, Tanglewood Festival Chorus",
-          "spotifyUrl": "https://open.spotify.com/track/1TPh4xLWAKcD4vudcvIWGI",
-          "tidalId": "1229916",
-          "tidalUrl": "https://listen.tidal.com/track/1229916"
+          "title": "Respighi: Pines of Rome, P. 141: IV. I pini della Via Appia",
+          "artist": "Berliner Philharmoniker",
+          "tidalId": "79124961",
+          "tidalUrl": "https://listen.tidal.com/track/79124961"
         },
         {
           "id": "tri-10",
-          "title": "Fanfare for the Common Man",
-          "artist": "Aaron Copland, Leonard Bernstein, New York Philharmonic",
-          "spotifyUrl": "https://open.spotify.com/track/7y3fYjxPF8q0L4M0hzwmTc",
-          "tidalId": "571",
-          "tidalUrl": "https://listen.tidal.com/track/571"
+          "title": "Holst: The Planets, Op. 32: IV. Jupiter, the Bringer of Jollity",
+          "artist": "Berliner Philharmoniker",
+          "tidalId": "4351107",
+          "tidalUrl": "https://listen.tidal.com/track/4351107"
         }
       ],
       "tidalPlaylistId": "ff5e85fb-c5d5-4d8c-9232-e0d4a912b800"
@@ -849,83 +769,73 @@
       "tracks": [
         {
           "id": "trv-01",
-          "title": "In the Steppes of Central Asia",
-          "artist": "Alexander Borodin, Royal Philharmonic Orchestra, Vladimir Ashkenazy",
-          "spotifyUrl": "https://open.spotify.com/track/0XgPWSYgvA56fGa39roY7t",
-          "tidalId": "12139951",
-          "tidalUrl": "https://listen.tidal.com/track/12139951"
-        },
-        {
-          "id": "trv-02",
-          "title": "Má vlast, JB 1:112: II. Vltava \"The Moldau\"",
-          "artist": "Bedřich Smetana, Berliner Philharmoniker, Herbert von Karajan",
-          "spotifyUrl": "https://open.spotify.com/track/6cquW73WemPok56XlDWxNy",
-          "tidalId": "4351116",
-          "tidalUrl": "https://listen.tidal.com/track/4351116"
-        },
-        {
-          "id": "trv-03",
-          "title": "The Hebrides, Op. 26 (Fingal's Cave)",
-          "artist": "Felix Mendelssohn, Wiener Philharmoniker, Christoph von Dohnányi",
-          "spotifyUrl": "https://open.spotify.com/track/3Z9KcnM3rjo4fflHsDSg9Y",
-          "tidalId": "310954884",
-          "tidalUrl": "https://listen.tidal.com/track/310954884"
-        },
-        {
-          "id": "trv-04",
-          "title": "Scheherazade, Op. 35: I. The Sea and Sinbad's Ship",
-          "artist": "Nikolai Rimsky-Korsakov, Chicago Symphony Orchestra, Fritz Reiner",
-          "spotifyUrl": "https://open.spotify.com/track/6PAlOCgFPgWsJRK2JsWWXI",
-          "tidalId": "50156175",
-          "tidalUrl": "https://listen.tidal.com/track/50156175"
-        },
-        {
-          "id": "trv-05",
           "title": "Legend of Herlen",
-          "artist": "Byambasuren Sharav, Yo-Yo Ma, Ganbaatar Khongorzul, Silkroad Ensemble",
-          "spotifyUrl": "https://open.spotify.com/track/4H86lOmXnDWWqJS4laY6XH",
+          "artist": "Yo-Yo Ma",
           "tidalId": "22447454",
           "tidalUrl": "https://listen.tidal.com/track/22447454"
         },
         {
+          "id": "trv-02",
+          "title": "Mendelssohn: The Hebrides, Op. 26 \"Fingal´s Cave\" I",
+          "artist": "Felix Mendelssohn",
+          "tidalId": "310954884",
+          "tidalUrl": "https://listen.tidal.com/track/310954884"
+        },
+        {
+          "id": "trv-03",
+          "title": "Main Titles (From \"Lawrence of Arabia\")",
+          "artist": "Royal Philharmonic Orchestra",
+          "tidalId": "5014846",
+          "tidalUrl": "https://listen.tidal.com/track/5014846"
+        },
+        {
+          "id": "trv-04",
+          "title": "The Call",
+          "artist": "Austin Wintory",
+          "tidalId": "173218664",
+          "tidalUrl": "https://listen.tidal.com/track/173218664"
+        },
+        {
+          "id": "trv-05",
+          "title": "The Road of Trials",
+          "artist": "Austin Wintory",
+          "tidalId": "173218669",
+          "tidalUrl": "https://listen.tidal.com/track/173218669"
+        },
+        {
           "id": "trv-06",
-          "title": "Yanzi (Swallow Song)",
-          "artist": "Traditional, Yo-Yo Ma, Silkroad Ensemble",
-          "spotifyUrl": "https://open.spotify.com/track/1tAPmFQD8UMrJp3cklaiYS",
-          "tidalId": "37898813",
-          "tidalUrl": "https://listen.tidal.com/track/37898813"
+          "title": "Night at the Caravanserai",
+          "artist": "Yo-Yo Ma",
+          "tidalId": "34048043",
+          "tidalUrl": "https://listen.tidal.com/track/34048043"
         },
         {
           "id": "trv-07",
-          "title": "Main Title - From \"The Last Of The Mohicans\"",
-          "artist": "Trevor Jones",
-          "spotifyUrl": "https://open.spotify.com/track/0ZhxXipOfaEFSfbQQbSL2a",
-          "tidalId": "44886069",
-          "tidalUrl": "https://listen.tidal.com/track/44886069"
+          "title": "Summer in the High Grassland",
+          "artist": "Yo-Yo Ma",
+          "tidalId": "34048040",
+          "tidalUrl": "https://listen.tidal.com/track/34048040"
         },
         {
           "id": "trv-08",
-          "title": "Le pas du chat noir",
-          "artist": "Anouar Brahem",
-          "spotifyUrl": "https://open.spotify.com/track/06KoWveyWUuK1BGVU4a0Es",
-          "tidalId": "13264900",
-          "tidalUrl": "https://listen.tidal.com/track/13264900"
+          "title": "Arrival at Auda's Camp",
+          "artist": "Maurice Jarre",
+          "tidalId": "269857008",
+          "tidalUrl": "https://listen.tidal.com/track/269857008"
         },
         {
           "id": "trv-09",
-          "title": "Nascence",
-          "artist": "Austin Wintory",
-          "spotifyUrl": "https://open.spotify.com/track/1Lw8az0pvHNLIhOT2DWQ9W",
-          "tidalId": "215394724",
-          "tidalUrl": "https://listen.tidal.com/track/215394724"
+          "title": "That Is the Desert",
+          "artist": "Maurice Jarre",
+          "tidalId": "269857013",
+          "tidalUrl": "https://listen.tidal.com/track/269857013"
         },
         {
           "id": "trv-10",
-          "title": "The Path (A New Beginning)",
-          "artist": "Gustavo Santaolalla",
-          "spotifyUrl": "https://open.spotify.com/track/1hdDnQRPinE8hxYhW3uy6u",
-          "tidalId": "430950477",
-          "tidalUrl": "https://listen.tidal.com/track/430950477"
+          "title": "Distant Green Valley",
+          "artist": "Yo-Yo Ma",
+          "tidalId": "34048034",
+          "tidalUrl": "https://listen.tidal.com/track/34048034"
         }
       ],
       "tidalPlaylistId": "359e1ed4-ea5e-449d-bf60-d3ca750d94f9"

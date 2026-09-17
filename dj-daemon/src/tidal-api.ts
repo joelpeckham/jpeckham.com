@@ -283,7 +283,27 @@ function sameTrackSet(left: string[], right: string[]) {
   return true;
 }
 
-async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean> {
+export async function getTrack(id: string): Promise<PlaylistTrack | null> {
+  const result = await tidalRequestRetry(
+    "GET",
+    `/v1/tracks/${id}?countryCode=US`,
+  );
+  const item = result.json as {
+    id?: number;
+    title?: string;
+    artist?: { name?: string };
+    artists?: { name?: string }[];
+  } | null;
+  if (result.status >= 400 || !item?.id || !item.title) return null;
+  return {
+    tidalId: String(item.id),
+    title: item.title,
+    artist: artistName(item),
+    tidalUrl: `https://listen.tidal.com/track/${item.id}`,
+  };
+}
+
+export async function replaceTracks(uuid: string, trackIds: string[]): Promise<boolean> {
   const current = (await playlistItems(uuid)).map((track) => track.tidalId);
   if (sameTrackSet(current, trackIds)) return true;
   if (current.length > 0) {
