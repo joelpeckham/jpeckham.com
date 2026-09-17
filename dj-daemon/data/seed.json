@@ -98,25 +98,33 @@
           "id": "nq-12",
           "title": "Violin Concerto in A Minor, Op. 53, B. 108: II. Adagio ma non troppo",
           "artist": "Antonín Dvořák, Hilary Hahn, Frankfurt Radio Symphony Orchestra, Andrés Orozco-Estrada",
-          "spotifyUrl": "https://open.spotify.com/track/05JjdpOTiqlcD9cBJoBkiI"
+          "spotifyUrl": "https://open.spotify.com/track/05JjdpOTiqlcD9cBJoBkiI",
+          "tidalId": "7935278",
+          "tidalUrl": "https://listen.tidal.com/track/7935278"
         },
         {
           "id": "nq-13",
           "title": "Lilac",
           "artist": "Tigran Hamasyan",
-          "spotifyUrl": "https://open.spotify.com/track/77Pa9RHSHl0VNElypux4DI"
+          "spotifyUrl": "https://open.spotify.com/track/77Pa9RHSHl0VNElypux4DI",
+          "tidalId": "7935278",
+          "tidalUrl": "https://listen.tidal.com/track/7935278"
         },
         {
           "id": "nq-14",
           "title": "Holst: The Planets, Op. 32: I. Mars, the Bringer of War",
           "artist": "Gustav Holst, André Previn, London Symphony Orchestra",
-          "spotifyUrl": "https://open.spotify.com/track/2bhJR5tzyZAfMeiiqdI2iT"
+          "spotifyUrl": "https://open.spotify.com/track/2bhJR5tzyZAfMeiiqdI2iT",
+          "tidalId": "7935278",
+          "tidalUrl": "https://listen.tidal.com/track/7935278"
         },
         {
           "id": "nq-15",
           "title": "Lvst",
           "artist": "Flammy",
-          "spotifyUrl": "https://open.spotify.com/track/6Aqy1k2h74VJRICxCN0N2W"
+          "spotifyUrl": "https://open.spotify.com/track/6Aqy1k2h74VJRICxCN0N2W",
+          "tidalId": "7935278",
+          "tidalUrl": "https://listen.tidal.com/track/7935278"
         }
       ]
     },
