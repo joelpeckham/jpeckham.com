@@ -284,7 +284,7 @@ export function DjApp() {
           if (message.snapshot) {
             setState({
               ...message.snapshot,
-              daemonOnline: message.daemonOnline || message.snapshot.daemonOnline,
+              daemonOnline: message.daemonOnline,
             });
           } else {
             setState((current) => ({

@@ -95,7 +95,7 @@ export async function readSnapshot(): Promise<SnapshotEnvelope> {
   }
   return {
     ...envelope,
-    daemonOnline: daemonOnline || Boolean(envelope.daemonOnline),
+    daemonOnline,
     state: envelope.state
       ? { ...envelope.state, daemonOnline }
       : null,
