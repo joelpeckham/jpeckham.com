@@ -13,6 +13,7 @@ export type DjVibe = {
   hue: string;
   shuffle: boolean;
   tracks: DjTrack[];
+  tidalPlaylistId?: string;
 };
 
 export type DjCharacter = {

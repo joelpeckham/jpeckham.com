@@ -245,6 +245,131 @@ export async function playTidalTrack(tidalId: string): Promise<boolean> {
   return clickHeroPlay();
 }
 
+async function waitForPlaylist(playlistId: string, timeoutMs = 12000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const ready = await evaluate<boolean>(
+      `(() => {
+        const id = ${JSON.stringify(playlistId)};
+        const onPage = location.pathname.includes("/playlist/" + id);
+        const playAll = document.querySelector(
+          '[data-test="playlist-header-container"] [data-test="play-all"]',
+        );
+        const rows = [...document.querySelectorAll('[data-test="tracklist-row"]')].filter(
+          (row) =>
+            !row.closest('[data-test="media-table-suggested-items"]') &&
+            !row.querySelector('[data-test="add-suggested-item-to-playlist-button"]'),
+        );
+        return Boolean(onPage && playAll && rows.length > 0);
+      })()`,
+    );
+    if (ready) return true;
+    await delay(350);
+  }
+  return false;
+}
+
+async function clickPlaylistPlayAll(): Promise<boolean> {
+  return (
+    (await evaluate<boolean>(
+      `(() => {
+        const btn =
+          document.querySelector('[data-test="playlist-header-container"] [data-test="play-all"]') ||
+          document.querySelector('[data-test="playlist-page"] [data-test="play-all"]');
+        if (!btn) return false;
+        btn.click();
+        return true;
+      })()`,
+    )) === true
+  );
+}
+
+async function clickPlaylistRowPlay(index: number): Promise<boolean> {
+  return (
+    (await evaluate<boolean>(
+      `(() => {
+        const index = ${JSON.stringify(index)};
+        const rows = [...document.querySelectorAll('[data-test="tracklist-row"]')].filter(
+          (row) =>
+            !row.closest('[data-test="media-table-suggested-items"]') &&
+            !row.querySelector('[data-test="add-suggested-item-to-playlist-button"]'),
+        );
+        const btn = rows[index]?.querySelector('[data-test="play-button"]');
+        if (!btn) return false;
+        btn.click();
+        return true;
+      })()`,
+    )) === true
+  );
+}
+
+export async function playTidalPlaylist(
+  playlistId: string,
+  startIndex = 0,
+  expectedTidalId?: string,
+): Promise<boolean> {
+  await spaNavigate(`/playlist/${playlistId}`);
+  if (!(await waitForPlaylist(playlistId))) {
+    await evaluate(
+      `location.assign(${JSON.stringify(`https://desktop.tidal.com/playlist/${playlistId}`)})`,
+    );
+    await delay(2500);
+    if (!(await waitForPlaylist(playlistId))) return false;
+  }
+  await setShuffleOff();
+  const start = async () =>
+    startIndex > 0
+      ? (await clickPlaylistRowPlay(startIndex)) || (await clickPlaylistPlayAll())
+      : await clickPlaylistPlayAll();
+  if (!(await start())) return false;
+  if (expectedTidalId && !(await waitForPlayingTrack(expectedTidalId))) {
+    await start();
+    if (!(await waitForPlayingTrack(expectedTidalId))) return false;
+  } else {
+    await delay(900);
+  }
+  return true;
+}
+
+async function waitForPlayingTrack(tidalId: string, timeoutMs = 6000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const info = await readPlayerBar();
+    if (info.tidalId === tidalId && info.isPlaying) return true;
+    await delay(350);
+  }
+  return false;
+}
+
+export async function setShuffleOff(): Promise<void> {
+  await evaluate(
+    `(() => {
+      const btn =
+        document.querySelector('[data-test="footer-player"] [data-test="shuffle"]') ||
+        document.querySelector('[data-test="play-controls"] [data-test="shuffle"]');
+      if (!btn) return false;
+      const pressed =
+        btn.getAttribute("aria-pressed") === "true" ||
+        btn.getAttribute("aria-checked") === "true";
+      if (pressed) btn.click();
+      return true;
+    })()`,
+  );
+}
+
+export async function skipPlayback(direction: "next" | "prev"): Promise<boolean> {
+  const item = direction === "next" ? "Next" : "Previous";
+  if (clickPlaybackMenu(item)) return true;
+  const labels =
+    direction === "next"
+      ? ["Next", "Next track"]
+      : ["Previous", "Previous track"];
+  for (const label of labels) {
+    if (await clickTransport(label)) return true;
+  }
+  return false;
+}
+
 export async function pausePlayback(): Promise<boolean> {
   if (clickPlaybackMenu("Pause")) return true;
   return clickTransport("Pause");

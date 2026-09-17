@@ -45,21 +45,27 @@ function repairSeededTracks(saved: DjState, seed: SeedFile): DjState {
       (track) => !seedVibe.tracks.some((item) => item.id === track.id),
     );
     const existing = new Map(vibe.tracks.map((track) => [track.id, track]));
+    const counts = new Map<string, number>();
+    for (const track of [...seedVibe.tracks, ...vibe.tracks]) {
+      if (!track.tidalId) continue;
+      counts.set(track.tidalId, (counts.get(track.tidalId) ?? 0) + 1);
+    }
     vibe.tracks = [
       ...seedVibe.tracks.map((seedTrack) => {
         const current = existing.get(seedTrack.id);
-        const sameSong =
-          current &&
-          current.title === seedTrack.title &&
-          current.artist === seedTrack.artist;
+        const candidate = current?.tidalId ?? seedTrack.tidalId;
+        const unique = candidate && (counts.get(candidate) ?? 0) <= 1;
         return {
           ...seedTrack,
-          tidalId: sameSong ? current.tidalId ?? seedTrack.tidalId : seedTrack.tidalId,
-          tidalUrl: sameSong ? current.tidalUrl ?? seedTrack.tidalUrl : seedTrack.tidalUrl,
+          tidalId: unique ? candidate : undefined,
+          tidalUrl: unique ? current?.tidalUrl ?? seedTrack.tidalUrl : undefined,
         };
       }),
       ...extras,
     ];
+    if (vibe.tidalPlaylistId && !/^[0-9a-f-]{36}$/i.test(vibe.tidalPlaylistId)) {
+      vibe.tidalPlaylistId = undefined;
+    }
   }
   return saved;
 }

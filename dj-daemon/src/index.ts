@@ -20,12 +20,13 @@ import {
 import {
   ensureTidalWithCdp,
   pausePlayback,
-  playTidalTrack,
+  playTidalPlaylist,
   readPlayerBar,
   resumePlayback,
-  searchTidal,
+  skipPlayback,
   setVolume,
 } from "./tidal";
+import { searchTracksApi, syncAnthemPlaylist, syncVibePlaylist } from "./tidal-api";
 import { parseTidalUrl, resolveTrackInput } from "./resolve";
 
 loadDaemonEnv();
@@ -64,7 +65,7 @@ async function ensureResolved(track: DjTrack): Promise<DjTrack> {
       title: track.title,
       artist: track.artist,
     },
-    { allowNavigate: true },
+    { allowNavigate: false },
   );
   if (resolved.tidalId) {
     track.tidalId = resolved.tidalId;
@@ -81,34 +82,6 @@ function titlesMatch(actual: string, expected: string): boolean {
   return a.includes(e.slice(0, 16)) || e.includes(a.slice(0, 16));
 }
 
-async function playResolved(track: DjTrack): Promise<boolean> {
-  busy = true;
-  try {
-    const ready = await ensureResolved(track);
-    if (!ready.tidalId) {
-      state.lastError = `Could not find “${track.title}” on TIDAL`;
-      return false;
-    }
-    state.lastError = undefined;
-    const started = await playTidalTrack(ready.tidalId);
-    if (started) {
-      playingSince = Date.now();
-      lastObservedTitle = ready.title;
-      state.nowPlaying = {
-        title: ready.title,
-        artist: ready.artist,
-        isPlaying: true,
-      };
-      state.transport.playing = true;
-    } else {
-      state.lastError = `TIDAL did not start “${ready.title}”`;
-    }
-    return started;
-  } finally {
-    busy = false;
-  }
-}
-
 function currentQueuedTrack(): DjTrack | undefined {
   const id = state.transport.queue[state.transport.queueIndex];
   return id ? findTrack(state, id) : undefined;
@@ -121,16 +94,46 @@ function buildQueue(vibeId: string): string[] {
   return vibe.shuffle ? shuffleIds(ids) : ids;
 }
 
-async function playQueueIndex(index: number, hops = 0) {
-  const { queue } = state.transport;
-  if (queue.length === 0) return;
-  const nextIndex = ((index % queue.length) + queue.length) % queue.length;
-  state.transport.queueIndex = nextIndex;
-  const track = currentQueuedTrack();
-  if (!track) return;
-  const started = await playResolved(track);
-  if (!started && hops < queue.length - 1) {
-    await playQueueIndex(nextIndex + 1, hops + 1);
+async function playVibePlaylist(vibeId: string, startIndex = 0) {
+  const vibe = findVibe(state, vibeId);
+  if (!vibe) return;
+  busy = true;
+  try {
+    for (const track of vibe.tracks) {
+      if (!track.tidalId) await ensureResolved(track);
+    }
+    const ordered = state.transport.queue
+      .map((id) => findTrack(state, id))
+      .filter((track): track is DjTrack => Boolean(track?.tidalId));
+    if (ordered.length === 0) {
+      state.lastError = `Could not match ${vibe.name} on TIDAL`;
+      return;
+    }
+    const playlistId = await syncVibePlaylist(
+      vibe.name,
+      ordered.map((track) => track.tidalId!),
+      vibe.tidalPlaylistId,
+    );
+    vibe.tidalPlaylistId = playlistId;
+    const started = await playTidalPlaylist(
+      playlistId,
+      startIndex,
+      ordered[Math.min(startIndex, ordered.length - 1)]?.tidalId,
+    );
+    if (!started) {
+      state.lastError = `TIDAL did not start ${vibe.name}`;
+      return;
+    }
+    state.lastError = undefined;
+    playingSince = Date.now();
+    const current = ordered[Math.min(startIndex, ordered.length - 1)];
+    lastObservedTitle = current?.title ?? "";
+    state.nowPlaying = current
+      ? { title: current.title, artist: current.artist, isPlaying: true }
+      : state.nowPlaying;
+    state.transport.playing = true;
+  } finally {
+    busy = false;
   }
 }
 
@@ -141,12 +144,30 @@ async function advance(delta: number) {
     if (resumeVibeId) {
       state.transport.vibeId = resumeVibeId;
       state.transport.queue = resumeQueue;
-      await playQueueIndex(resumeIndex);
+      state.transport.queueIndex = resumeIndex;
+      await playVibePlaylist(resumeVibeId, resumeIndex);
     }
     return;
   }
   if (state.transport.queue.length === 0) return;
-  await playQueueIndex(state.transport.queueIndex + delta);
+  const skipped = await skipPlayback(delta > 0 ? "next" : "prev");
+  if (!skipped) {
+    state.lastError = delta > 0 ? "Could not skip forward" : "Could not skip back";
+    return;
+  }
+  state.transport.queueIndex =
+    (state.transport.queueIndex + delta + state.transport.queue.length) %
+    state.transport.queue.length;
+  playingSince = Date.now();
+  const current = currentQueuedTrack();
+  if (current) {
+    lastObservedTitle = current.title;
+    state.nowPlaying = {
+      title: current.title,
+      artist: current.artist,
+      isPlaying: true,
+    };
+  }
 }
 
 async function handleCommand(command: DjCommand) {
@@ -164,7 +185,8 @@ async function handleCommand(command: DjCommand) {
       state.transport.oneshot = null;
       state.transport.vibeId = vibeId;
       state.transport.queue = buildQueue(vibeId);
-      await playQueueIndex(0);
+      state.transport.queueIndex = 0;
+      await playVibePlaylist(vibeId, 0);
       return;
     }
 
@@ -178,7 +200,23 @@ async function handleCommand(command: DjCommand) {
         resumeQueue: [...state.transport.queue],
         resumeIndex: state.transport.queueIndex,
       };
-      await playResolved(character.anthem);
+      const anthem = await ensureResolved(character.anthem);
+      if (!anthem.tidalId) {
+        state.lastError = `Could not find “${anthem.title}” on TIDAL`;
+        return;
+      }
+      const playlistId = await syncAnthemPlaylist(anthem.tidalId);
+      const started = await playTidalPlaylist(playlistId, 0, anthem.tidalId);
+      if (started) {
+        playingSince = Date.now();
+        lastObservedTitle = anthem.title;
+        state.nowPlaying = {
+          title: anthem.title,
+          artist: anthem.artist,
+          isPlaying: true,
+        };
+        state.transport.playing = true;
+      }
       return;
     }
 
@@ -191,8 +229,8 @@ async function handleCommand(command: DjCommand) {
 
     if (name === "resume") {
       const resumed = await resumePlayback();
-      if (!resumed && currentQueuedTrack()) {
-        await playResolved(currentQueuedTrack()!);
+      if (!resumed && state.transport.vibeId) {
+        await playVibePlaylist(state.transport.vibeId, state.transport.queueIndex);
       } else {
         state.transport.playing = true;
         if (state.nowPlaying) state.nowPlaying.isPlaying = true;
@@ -255,6 +293,9 @@ async function handleCommand(command: DjCommand) {
         return;
       }
       vibe.tracks.push(track);
+      if (state.transport.vibeId === vibe.id) {
+        state.transport.queue = buildQueue(vibe.id);
+      }
       return;
     }
 
@@ -343,7 +384,7 @@ async function handleCommand(command: DjCommand) {
         results: [],
       };
       publish();
-      const hits = await searchTidal(query);
+      const hits = await searchTracksApi(query);
       state.search = {
         requestId,
         query,
@@ -383,26 +424,29 @@ async function pollNowPlaying() {
     };
     state.transport.playing = info.isPlaying;
 
-    const expectedTrack = state.transport.oneshot
-      ? state.characters.find((c) => c.id === state.transport.oneshot?.characterId)
-          ?.anthem
-      : currentQueuedTrack();
-    const expected = expectedTrack?.title ?? "";
-    const onOurTrack =
-      (expectedTrack?.tidalId && info.tidalId === expectedTrack.tidalId) ||
-      titlesMatch(title, expected);
-
-    const watching = Boolean(expectedTrack) && Date.now() - playingSince > 8000;
-    if (watching && title && lastObservedTitle && !onOurTrack) {
+    const queueTracks = state.transport.queue
+      .map((id) => findTrack(state, id))
+      .filter((track): track is DjTrack => Boolean(track));
+    const matchIndex = queueTracks.findIndex(
+      (track) =>
+        (track.tidalId && info.tidalId === track.tidalId) ||
+        titlesMatch(title, track.title),
+    );
+    if (matchIndex >= 0) {
+      state.transport.queueIndex = matchIndex;
       lastObservedTitle = title;
-      await advance(1);
+      if (changed) publish();
       return;
     }
-    if (watching && !info.isPlaying && Date.now() - playingSince > 12000) {
-      await advance(1);
+
+    const watching = Boolean(state.transport.vibeId) && Date.now() - playingSince > 10000;
+    if (watching && title && lastObservedTitle && title !== lastObservedTitle) {
+      lastObservedTitle = title;
+      if (state.transport.vibeId) {
+        await playVibePlaylist(state.transport.vibeId, state.transport.queueIndex);
+      }
       return;
     }
-    if (onOurTrack && title) lastObservedTitle = title;
     if (changed) publish();
   } catch (error) {
     console.error("now playing poll failed", error);
@@ -454,23 +498,8 @@ function scheduleReconnect() {
   reconnectDelay = Math.min(reconnectDelay * 2, 15000);
 }
 
-async function resolveMissingCatalog() {
-  const missing = state.vibes.flatMap((vibe) =>
-    vibe.tracks.filter((track) => !track.tidalId),
-  );
-  if (missing.length === 0) return;
-  console.error(`Resolving ${missing.length} playlist tracks on TIDAL...`);
-  for (const track of missing) {
-    console.error(`  ${track.title}`);
-    await ensureResolved(track);
-    if (!track.tidalId) console.error(`  ! still unresolved`);
-    persistSoon();
-  }
-}
-
 async function main() {
   await ensureTidalWithCdp();
-  await resolveMissingCatalog();
   try {
     await setVolume(state.transport.volume);
   } catch {

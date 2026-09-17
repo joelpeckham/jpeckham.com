@@ -1,5 +1,6 @@
 import type { DjTrack } from "@/lib/dj/protocol";
-import { searchTidal, searchTidalInSession, type SearchHit } from "./tidal";
+import { searchTracksApi } from "./tidal-api";
+import { searchTidal, type SearchHit } from "./tidal";
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -137,7 +138,7 @@ export async function resolveTrackInput(
   const query = fallback?.title
     ? searchQuery(fallback.title, fallback.artist ?? "")
     : input;
-  const sessionHits = await searchTidalInSession(query);
+  const sessionHits = await searchTracksApi(query).catch(() => []);
   const sessionMatch = pickSearchHit(sessionHits, fallback);
   if (sessionMatch?.tidalId) {
     return {
