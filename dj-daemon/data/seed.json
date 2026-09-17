@@ -126,7 +126,8 @@
           "tidalId": "298463631",
           "tidalUrl": "https://listen.tidal.com/track/298463631"
         }
-      ]
+      ],
+      "tidalPlaylistId": "12b09770-5fd4-40a6-8924-1266e62dcd3f"
     },
     {
       "id": "tavern",
@@ -214,7 +215,8 @@
           "tidalId": "9296876",
           "tidalUrl": "https://listen.tidal.com/track/9296876"
         }
-      ]
+      ],
+      "tidalPlaylistId": "f5172455-8f37-4d10-89d5-279144cef7c1"
     },
     {
       "id": "streets",
@@ -302,7 +304,8 @@
           "tidalId": "96070709",
           "tidalUrl": "https://listen.tidal.com/track/96070709"
         }
-      ]
+      ],
+      "tidalPlaylistId": "559d74bb-968a-44f9-891c-e13a4418d341"
     },
     {
       "id": "court",
@@ -390,7 +393,8 @@
           "tidalId": "87558417",
           "tidalUrl": "https://listen.tidal.com/track/87558417"
         }
-      ]
+      ],
+      "tidalPlaylistId": "e8676577-2394-4e18-a5ba-ae181a11a103"
     },
     {
       "id": "tension",
@@ -478,7 +482,8 @@
           "tidalId": "37651055",
           "tidalUrl": "https://listen.tidal.com/track/37651055"
         }
-      ]
+      ],
+      "tidalPlaylistId": "4dea23d0-6fc6-4fad-829d-4bc66c1dde13"
     },
     {
       "id": "combat",
@@ -566,7 +571,8 @@
           "tidalId": "10581295",
           "tidalUrl": "https://listen.tidal.com/track/10581295"
         }
-      ]
+      ],
+      "tidalPlaylistId": "ef2ea2ed-43b4-4046-ab30-14ff70e985f1"
     },
     {
       "id": "boss",
@@ -654,7 +660,8 @@
           "tidalId": "19655684",
           "tidalUrl": "https://listen.tidal.com/track/19655684"
         }
-      ]
+      ],
+      "tidalPlaylistId": "667c24bf-37a5-4ca8-a2cf-2050c67b5997"
     },
     {
       "id": "sorrow",
@@ -742,7 +749,8 @@
           "tidalId": "88455116",
           "tidalUrl": "https://listen.tidal.com/track/88455116"
         }
-      ]
+      ],
+      "tidalPlaylistId": "df066ac9-ac44-4c80-bdbb-4bce80b29272"
     },
     {
       "id": "triumph",
@@ -830,7 +838,8 @@
           "tidalId": "571",
           "tidalUrl": "https://listen.tidal.com/track/571"
         }
-      ]
+      ],
+      "tidalPlaylistId": "ff5e85fb-c5d5-4d8c-9232-e0d4a912b800"
     },
     {
       "id": "travel",
@@ -918,7 +927,8 @@
           "tidalId": "430950477",
           "tidalUrl": "https://listen.tidal.com/track/430950477"
         }
-      ]
+      ],
+      "tidalPlaylistId": "359e1ed4-ea5e-449d-bf60-d3ca750d94f9"
     }
   ],
   "characters": []
