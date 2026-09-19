@@ -13,13 +13,13 @@ import { JsonLd, profilePageJsonLd } from "@/lib/json-ld";
 export const metadata: Metadata = {
   title: { absolute: "About Joel Peckham, Software & AI Developer" },
   description:
-    "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
+    "Joel Peckham is a Senior Product Engineer at Revelation Pharma in Laramie, Wyoming. He builds patient and prescriber portals for HiveRx.",
   alternates: { canonical: "/about/" },
   openGraph: {
     url: "/about/",
     title: "About Joel Peckham",
     description:
-      "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
+      "Joel Peckham is a Senior Product Engineer at Revelation Pharma in Laramie, Wyoming. He builds patient and prescriber portals for HiveRx.",
     images: [
       {
         url: "/snowboard_joel.webp",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "About Joel Peckham",
     description:
-      "Joel Peckham is a software engineer at BetterRx in Laramie, Wyoming. He builds hospice pharmacy software.",
+      "Joel Peckham is a Senior Product Engineer at Revelation Pharma in Laramie, Wyoming. He builds patient and prescriber portals for HiveRx.",
     images: ["/snowboard_joel.webp"],
   },
 };
@@ -41,6 +41,8 @@ export const metadata: Metadata = {
 const stack = [
   { label: "PHP", href: "https://www.php.net/" },
   { label: "Laravel", href: "https://laravel.com/" },
+  { label: "Vue", href: "https://vuejs.org/" },
+  { label: "Inertia", href: "https://inertiajs.com/" },
   { label: "Livewire", href: "https://livewire.laravel.com/" },
   { label: "TypeScript", href: "https://www.typescriptlang.org/" },
   { label: "React", href: "https://react.dev/" },
@@ -70,8 +72,25 @@ export default function AboutPage() {
                 work in both countries. I earned a B.S. in Computer Science in
                 2022. I
                 work across the full stack and I like doing things right{" "}
-                <em>before </em> they come back to bite me. For the last three
-                years I&apos;ve been at{" "}
+                <em>before </em> they come back to bite me. I just started at{" "}
+                <a
+                  href="https://revelationpharma.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
+                >
+                  Revelation Pharma
+                </a>
+                , building patient and prescriber portals for{" "}
+                <a
+                  href="https://www.hiverx.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
+                >
+                  HiveRx
+                </a>
+                . Before that I spent three years at{" "}
                 <a
                   href="https://www.betterrx.com/"
                   target="_blank"
@@ -79,10 +98,9 @@ export default function AboutPage() {
                   className="text-yellow underline decoration-yellow/50 underline-offset-[3px] transition-colors hover:text-yellow-hi hover:decoration-yellow-hi"
                 >
                   BetterRx
-                </a>
-                . We build hospice pharmacy software, and I think it&apos;s the
-                best on the market. When I&apos;m not coding, I&apos;m outside
-                hiking, climbing, or skiing.
+                </a>{" "}
+                building hospice pharmacy software. When I&apos;m not coding,
+                I&apos;m outside hiking, climbing, or skiing.
               </p>
               <div
                 aria-label="Tech stack"

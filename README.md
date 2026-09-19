@@ -4,13 +4,13 @@ This is the source for my personal site. It's basically my resume — except the
 
 **[Live site](https://jpeckham.com)** · **[Resume (PDF)](https://jpeckham.com/Joel_Peckham_Resume.pdf)** · **[Email](mailto:mail@jpeckham.com)** · **[GitHub](https://github.com/joelpeckham)** · **[LinkedIn](https://www.linkedin.com/in/joelpeckham/)** · **[X](https://x.com/peckham_joel)**
 
-Anyway, I'm Joel! – a fullstack and AI developer based in Laramie, Wyoming. For the last three years I've been at [BetterRx](https://www.betterrx.com/) building hospice pharmacy software, and I graduated with a B.S. in Computer Science in 2022.
+Anyway, I'm Joel! – a fullstack and AI developer based in Laramie, Wyoming. I just started at [Revelation Pharma](https://revelationpharma.com/) building patient and prescriber portals for [HiveRx](https://www.hiverx.com/). Before that I spent three years at [BetterRx](https://www.betterrx.com/) building hospice pharmacy software. I graduated with a B.S. in Computer Science in 2022.
 
 I work end-to-end and care about making software that helps people. When I'm not coding I'm outside — hiking, climbing, or skiing.
 
-## What I do when someone's paying me
+## What I did at BetterRx
 
-At BetterRx I own production systems on a platform serving 900+ hospices and 41,000+ active patients. A few things I've shipped:
+At BetterRx I owned production systems on a platform serving 900+ hospices and 41,000+ active patients. A few things I shipped:
 
 - **Saved customers $154,000 a year.** Designed and built a Therapeutic Interchange manager and reporting suite that surfaces lower-cost medication alternatives and tracks the realized savings.
 - **Cut core page load times in half.** Optimized the high-traffic RxQueue clinical screen with deferred loading, batched drug-warning checks, and caching — trimming Livewire payloads across all 900 hospices.

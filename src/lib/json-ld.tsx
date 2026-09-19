@@ -62,11 +62,6 @@ export function personJsonLd() {
     description: PERSON_DESCRIPTION,
     disambiguatingDescription:
       "Software engineer and full-stack developer in Laramie, Wyoming. Dual US and Canadian citizen. Not the poet Joel B. Peckham.",
-    worksFor: {
-      "@type": "Organization",
-      name: "BetterRx",
-      url: "https://www.betterrx.com/",
-    },
     alumniOf: {
       "@type": "CollegeOrUniversity",
       name: "Southern Adventist University",
