@@ -227,33 +227,58 @@ export function clearCapturedAuthorization() {
   capturedAuthorization = "";
 }
 
+function authorizationExpiry(authorization: string): number {
+  try {
+    const payload = authorization.replace(/^Bearer\s+/i, "").split(".")[1];
+    if (!payload) return 0;
+    const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      exp?: number;
+    };
+    return typeof json.exp === "number" ? json.exp * 1000 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function pokeSessionFetch() {
+  await evaluate(
+    "fetch('https://api.tidal.com/v1/sessions',{credentials:'include',headers:{accept:'application/json'}}).catch(()=>{})",
+    { awaitPromise: true },
+  );
+}
+
 export async function captureAuthorization(
   options?: { force?: boolean },
 ): Promise<string> {
   const previous = capturedAuthorization;
   if (options?.force) capturedAuthorization = "";
-  if (capturedAuthorization) return capturedAuthorization;
+  else if (capturedAuthorization) return capturedAuthorization;
   await ensureSession();
-  await evaluate(
-    "fetch('https://api.tidal.com/v1/sessions',{headers:{accept:'application/json'}}).catch(()=>{})",
-    { awaitPromise: true },
-  );
+  await pokeSessionFetch();
   const start = Date.now();
   while (!capturedAuthorization && Date.now() - start < 4000) {
     await delay(100);
   }
   if (!capturedAuthorization) {
-    await evaluate(
-      "(() => { history.pushState({}, '', '/my-collection/playlists'); dispatchEvent(new PopStateEvent('popstate')); return true; })()",
-    );
+    const playing = await readPlayerBar()
+      .then((info) => info.isPlaying)
+      .catch(() => false);
+    if (!playing) {
+      await evaluate(
+        "(() => { history.pushState({}, '', '/my-collection/playlists'); dispatchEvent(new PopStateEvent('popstate')); return true; })()",
+      );
+    } else {
+      await pokeSessionFetch();
+    }
     while (!capturedAuthorization && Date.now() - start < 8000) {
       await delay(100);
     }
   }
-  if (!capturedAuthorization) throw new Error("Could not capture TIDAL session");
-  if (options?.force && previous && capturedAuthorization === previous) {
-    throw new Error("Could not capture a fresh TIDAL session");
+  if (!capturedAuthorization && previous && authorizationExpiry(previous) > Date.now() + 60_000) {
+    capturedAuthorization = previous;
+    return previous;
   }
+  if (!capturedAuthorization) throw new Error("Could not capture TIDAL session");
   return capturedAuthorization;
 }
 

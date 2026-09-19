@@ -282,7 +282,12 @@ async function playVibePlaylist(vibeId: string) {
   if (!vibe) return;
   navigating = true;
   try {
-    await refreshVibeFromTidal(vibe);
+    try {
+      await refreshVibeFromTidal(vibe);
+    } catch (error) {
+      console.error(`playlist refresh failed for ${vibe.name}`, error);
+      if (!vibe.tidalPlaylistId || vibe.tracks.length === 0) throw error;
+    }
     if (!vibe.tidalPlaylistId || vibe.tracks.length === 0) {
       state.lastError = `${vibe.name} has no tracks on TIDAL yet`;
       return;

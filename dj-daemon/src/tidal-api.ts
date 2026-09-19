@@ -78,12 +78,13 @@ async function readSession(authorization: string): Promise<{
   }
 }
 
-async function captureAccessToken(): Promise<Token> {
-  if (cached && cached.expires > Date.now() + 60_000) return cached.token;
+async function captureAccessToken(options?: { force?: boolean }): Promise<Token> {
+  if (!options?.force && cached && cached.expires > Date.now() + 60_000) {
+    return cached.token;
+  }
   if (capturing) return capturing;
   capturing = (async () => {
-    const force = Boolean(cached);
-    const authorization = await captureAuthorization({ force });
+    const authorization = await captureAuthorization({ force: options?.force });
     const jwt = parseJwt(authorization);
     const session = await readSession(authorization);
     const userId = session.userId ?? jwt.userId;
@@ -98,7 +99,7 @@ async function captureAccessToken(): Promise<Token> {
       countryCode: session.countryCode,
       exp,
     };
-    cached = { token, expires: Math.min(exp, Date.now() + 20 * 60_000) };
+    cached = { token, expires: exp };
     return token;
   })();
   try {
